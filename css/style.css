@@ -428,6 +428,23 @@ body {
 .detail-list.omisiones li::before { color: var(--c-enganoso); }
 .detail-list.fuentes   li::before { color: var(--c-parcial); }
 
+/* ── Source links (inside fuentes bullet list) ────────────────────────────── */
+.source-link {
+  color: var(--c-parcial);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: .9rem;
+}
+.source-link:hover { text-decoration: underline; }
+.source-dato {
+  display: block;
+  font-size: .8rem;
+  color: var(--c-text-muted);
+  font-style: italic;
+  margin-top: .2rem;
+  line-height: 1.5;
+}
+
 /* ── Toggle button ────────────────────────────────────────────────────────── */
 .claim-toggle {
   background: var(--c-accent-dim);

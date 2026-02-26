@@ -210,10 +210,10 @@ function claimCard(claim) {
   const resultadoLabel = v ? formatResultado(v.resultado) : 'Sin verificar';
   const score = v && v.confidence_score != null ? Math.round(v.confidence_score * 100) : null;
 
-  // Only show human-readable geo/topic tags — hide technical tipo_claim values
+  // Convert snake_case DB values to readable labels; hide anything that looks purely technical
   const tags = [
-    claim.ambito_tematico   ? `<span class="tag tag-tematico">${escHtml(capitalize(claim.ambito_tematico))}</span>`   : '',
-    claim.ambito_geografico ? `<span class="tag tag-geo">${escHtml(capitalize(claim.ambito_geografico))}</span>` : '',
+    claim.ambito_tematico   ? `<span class="tag tag-tematico">${escHtml(snakeToLabel(claim.ambito_tematico))}</span>`   : '',
+    claim.ambito_geografico ? `<span class="tag tag-geo">${escHtml(snakeToLabel(claim.ambito_geografico))}</span>` : '',
   ].filter(Boolean).join('');
 
   return `
@@ -251,11 +251,8 @@ function claimCard(claim) {
                 <dt>Error detectado</dt>
                 <dd>${escHtml(capitalize(v.errores))}</dd>
               </div>` : ''}
-            ${bulletRow('omisiones', 'Omisiones', v.omisiones)}
-            ${bulletRow('fuentes', 'Fuentes', v.fuentes)}
-            ${detailRow('Potencial de engaño', v.potencial_engano)}
-            ${detailRow('Recomendación de redacción', v.recomendacion_redaccion)}
-            ${isValidValue(v.razonamiento_llm) ? detailRow('Razonamiento del modelo', v.razonamiento_llm) : ''}
+            ${renderOmisiones(v.omisiones)}
+            ${renderFuentes(v.fuentes)}
           </dl>
         </div>
         <button class="claim-toggle">▼ Ver más</button>
@@ -272,6 +269,10 @@ function capitalize(str) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
 
+function snakeToLabel(str) {
+  return capitalize(String(str ?? '').replace(/_/g, ' '));
+}
+
 function toListItems(text) {
   return text
     .split(/\n|;/)
@@ -279,28 +280,46 @@ function toListItems(text) {
     .filter(Boolean);
 }
 
-function bulletRow(type, label, value) {
-  if (!isValidValue(value)) return '';
-  const items = toListItems(value);
-  if (items.length <= 1) {
-    return `<div class="detail-row">
-      <dt>${label}</dt>
-      <dd>${escHtml(capitalize(value.trim()))}</dd>
-    </div>`;
-  }
+function renderOmisiones(raw) {
+  if (!isValidValue(raw)) return '';
+  let items = [];
+  try { items = JSON.parse(raw); } catch { items = toListItems(raw); }
+  if (!Array.isArray(items) || !items.length) return '';
   return `<div class="detail-row">
-    <dt>${label}</dt>
-    <dd><ul class="detail-list ${type}">${items.map(i => `<li>${escHtml(capitalize(i))}</li>`).join('')}</ul></dd>
+    <dt>Omisiones</dt>
+    <dd><ul class="detail-list omisiones">
+      ${items.map(i => `<li>${escHtml(capitalize(String(i)))}</li>`).join('')}
+    </ul></dd>
   </div>`;
 }
 
-function detailRow(label, value) {
-  if (!isValidValue(value)) return '';
-  return `
-    <div class="detail-row">
-      <dt>${label}</dt>
-      <dd>${escHtml(capitalize(String(value)))}</dd>
+function renderFuentes(raw) {
+  if (!isValidValue(raw)) return '';
+  let items = [];
+  try { items = JSON.parse(raw); } catch {
+    // Not JSON — fall back to plain text list
+    const plain = toListItems(raw);
+    if (!plain.length) return '';
+    return `<div class="detail-row">
+      <dt>Fuentes</dt>
+      <dd><ul class="detail-list fuentes">${plain.map(i => `<li>${escHtml(i)}</li>`).join('')}</ul></dd>
     </div>`;
+  }
+  if (!Array.isArray(items) || !items.length) return '';
+  const bullets = items.map(s => {
+    const name = escHtml(s.nombre ?? 'Fuente');
+    const link = s.url
+      ? `<a class="source-link" href="${escHtml(s.url)}" target="_blank" rel="noopener">${name}</a>`
+      : `<span>${name}</span>`;
+    const dato = s.dato_especifico
+      ? `<span class="source-dato">${escHtml(s.dato_especifico)}</span>`
+      : '';
+    return `<li>${link}${dato}</li>`;
+  }).join('');
+  return `<div class="detail-row">
+    <dt>Fuentes</dt>
+    <dd><ul class="detail-list fuentes">${bullets}</ul></dd>
+  </div>`;
 }
 
 function resultadoToClass(resultado) {
