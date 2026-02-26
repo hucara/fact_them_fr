@@ -210,13 +210,11 @@ function claimCard(claim) {
   const resultadoLabel = v ? formatResultado(v.resultado) : 'Sin verificar';
   const score = v && v.confidence_score != null ? Math.round(v.confidence_score * 100) : null;
 
-  const tags = [claim.ambito_tematico, claim.ambito_geografico]
-    .filter(Boolean)
-    .map(t => `<span class="tag">${escHtml(t)}</span>`)
-    .join('');
-  const tipoTag = claim.tipo_claim
-    ? `<span class="tag tag-tipo">${escHtml(claim.tipo_claim)}</span>`
-    : '';
+  // Only show human-readable geo/topic tags — hide technical tipo_claim values
+  const tags = [
+    claim.ambito_tematico   ? `<span class="tag tag-tematico">${escHtml(capitalize(claim.ambito_tematico))}</span>`   : '',
+    claim.ambito_geografico ? `<span class="tag tag-geo">${escHtml(capitalize(claim.ambito_geografico))}</span>` : '',
+  ].filter(Boolean).join('');
 
   return `
     <article class="claim-card" data-resultado="${resultadoClass}">
@@ -232,7 +230,7 @@ function claimCard(claim) {
       </header>
 
       <blockquote class="claim-text" title="${escHtml(claim.texto_original)}">
-        ${escHtml(claim.texto_normalizado)}
+        ${escHtml(capitalize(claim.texto_normalizado))}
       </blockquote>
 
       ${score !== null ? `
@@ -243,18 +241,21 @@ function claimCard(claim) {
           <span class="confidence-label">${score}% confianza</span>
         </div>` : ''}
 
-      ${(tags || tipoTag) ? `<div class="claim-tags">${tags}${tipoTag}</div>` : ''}
+      ${tags ? `<div class="claim-tags">${tags}</div>` : ''}
 
       ${v ? `
         <div class="claim-detail">
           <dl>
-            ${detailRow('Afirmación correcta', v.afirmacion_correcta)}
-            ${detailRow('Errores detectados', v.errores)}
-            ${detailRow('Omisiones', v.omisiones)}
+            ${isValidValue(v.errores) ? `
+              <div class="detail-row detail-errores">
+                <dt>Error detectado</dt>
+                <dd>${escHtml(capitalize(v.errores))}</dd>
+              </div>` : ''}
+            ${bulletRow('omisiones', 'Omisiones', v.omisiones)}
+            ${bulletRow('fuentes', 'Fuentes', v.fuentes)}
             ${detailRow('Potencial de engaño', v.potencial_engano)}
-            ${detailRow('Fuentes', v.fuentes)}
             ${detailRow('Recomendación de redacción', v.recomendacion_redaccion)}
-            ${v.razonamiento_llm ? detailRow('Razonamiento del modelo', v.razonamiento_llm) : ''}
+            ${isValidValue(v.razonamiento_llm) ? detailRow('Razonamiento del modelo', v.razonamiento_llm) : ''}
           </dl>
         </div>
         <button class="claim-toggle">▼ Ver más</button>
@@ -262,12 +263,43 @@ function claimCard(claim) {
     </article>`;
 }
 
+function isValidValue(v) {
+  return v && v !== 'N/A' && v !== '-' && v !== 'n/a';
+}
+
+function capitalize(str) {
+  const s = String(str ?? '').trim();
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
+
+function toListItems(text) {
+  return text
+    .split(/\n|;/)
+    .map(s => s.replace(/^[\s\-•*\d.]+/, '').trim())
+    .filter(Boolean);
+}
+
+function bulletRow(type, label, value) {
+  if (!isValidValue(value)) return '';
+  const items = toListItems(value);
+  if (items.length <= 1) {
+    return `<div class="detail-row">
+      <dt>${label}</dt>
+      <dd>${escHtml(capitalize(value.trim()))}</dd>
+    </div>`;
+  }
+  return `<div class="detail-row">
+    <dt>${label}</dt>
+    <dd><ul class="detail-list ${type}">${items.map(i => `<li>${escHtml(capitalize(i))}</li>`).join('')}</ul></dd>
+  </div>`;
+}
+
 function detailRow(label, value) {
-  if (!value || value === 'N/A' || value === '-') return '';
+  if (!isValidValue(value)) return '';
   return `
     <div class="detail-row">
       <dt>${label}</dt>
-      <dd>${escHtml(value)}</dd>
+      <dd>${escHtml(capitalize(String(value)))}</dd>
     </div>`;
 }
 
