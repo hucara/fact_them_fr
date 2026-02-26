@@ -11,15 +11,19 @@
 </head>
 <body>
 
-  <!-- ── Header ────────────────────────────────────────────────────────────── -->
   <header class="site-header">
-    <img src="assets/logo.svg" alt="FackThem" class="logo" />
-    <h1>Verificador de afirmaciones parlamentarias</h1>
+    <div class="header-brand">
+      <img src="assets/logo.svg" alt="FackThem" class="logo" />
+      <h1>Verificador de afirmaciones parlamentarias</h1>
+    </div>
+    <nav class="tabs">
+      <button class="tab-button active" data-tab="view-sesiones">Sesiones</button>
+      <button class="tab-button" data-tab="view-estadisticas">Estadísticas</button>
+    </nav>
   </header>
 
-  <!-- ── Layout ────────────────────────────────────────────────────────────── -->
-  <div class="layout">
-
+  <!-- ── App Views ─────────────────────────────────────────────────────────── -->
+  <div class="view-container active" id="view-sesiones">
     <!-- Sidebar: session list -->
     <aside id="sidebar">
       <p class="sidebar-title">Sesiones</p>
@@ -30,7 +34,6 @@
 
     <!-- Main: filters + claims -->
     <main id="main">
-
       <!-- Filters -->
       <div id="filters" class="hidden">
         <span class="filter-label">Filtrar por:</span>
@@ -63,8 +66,17 @@
           </div>
         </div>
       </div>
-
     </main>
+  </div>
+
+  <div class="view-container dashboard-view" id="view-estadisticas" style="display: none;">
+    <div class="dashboard-content">
+      <h2 class="dashboard-title">Estadísticas Globales</h2>
+      <div id="dashboard-loading" class="loading">Cargando estadísticas…</div>
+      <div id="dashboard-grid" class="dashboard-grid hidden">
+        <!-- Cards injected by JS -->
+      </div>
+    </div>
   </div>
 
   <!-- App (ES module — imports supabase-client.js which imports from CDN) -->

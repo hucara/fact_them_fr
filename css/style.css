@@ -37,25 +37,58 @@ body {
   padding: .75rem 1.5rem;
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 1rem;
   position: sticky;
   top: 0;
   z-index: 10;
   box-shadow: var(--shadow);
 }
-.site-header .logo { height: 36px; display: block; }
-.site-header h1 {
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.header-brand .logo { height: 36px; display: block; }
+.header-brand h1 {
   font-size: .9rem;
   font-weight: 500;
   color: var(--c-text-muted);
 }
-
-/* ── Layout ─────────────────────────────────────────────────────────────────── */
-.layout {
+.tabs {
   display: flex;
+  gap: 0.5rem;
+}
+.tab-button {
+  background: none;
+  border: none;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  border-radius: var(--radius);
+  transition: all 0.2s ease;
+}
+.tab-button:hover {
+  background: #f1f5f9;
+  color: var(--c-text);
+}
+.tab-button.active {
+  background: #eff6ff;
+  color: var(--c-accent);
+}
+
+/* ── App Views ─────────────────────────────────────────────────────────────────── */
+.view-container {
+  display: none;
   flex: 1;
   overflow: hidden;
   height: calc(100vh - 57px);
+}
+.view-container.active {
+  display: flex;
 }
 
 /* ── Sidebar ─────────────────────────────────────────────────────────────────── */
@@ -310,9 +343,72 @@ body {
 .welcome svg { opacity: .25; }
 .welcome p { max-width: 300px; font-size: .9rem; line-height: 1.6; }
 
+/* ── Dashboard ───────────────────────────────────────────────────────────────── */
+.dashboard-view {
+  overflow-y: auto;
+  background: var(--c-bg);
+  padding: 2rem;
+  display: block; /* Overridden if not active, but .view-container.active rules */
+}
+.dashboard-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+.dashboard-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--c-text);
+  margin-bottom: 2rem;
+}
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+.dashboard-grid.hidden {
+  display: none;
+}
+.stat-card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+.stat-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--c-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--c-text);
+  line-height: 1.2;
+}
+.stat-subtitle {
+  font-size: 0.85rem;
+  color: var(--c-text-muted);
+}
+.stat-subtitle.falso-subtitle {
+  color: var(--c-falso);
+  font-weight: 500;
+}
+
 /* ── Responsive ──────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .layout {
+  .view-container {
     flex-direction: column;
     height: auto;
     overflow: auto;

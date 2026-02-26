@@ -8,7 +8,38 @@ let activeSession = null;
 document.addEventListener('DOMContentLoaded', boot);
 
 async function boot() {
+  setupTabs();
   await loadSessions();
+}
+
+// ─── Tabs ─────────────────────────────────────────────────────────────────────
+function setupTabs() {
+  const tabs = document.querySelectorAll('.tab-button');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      // Deactivate all
+      tabs.forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.view-container').forEach(v => {
+        v.classList.remove('active');
+        v.style.display = 'none';
+      });
+      // Activate clicked
+      tab.classList.add('active');
+      const viewId = tab.dataset.tab;
+      const viewEl = document.getElementById(viewId);
+      viewEl.classList.add('active');
+      if (viewEl.classList.contains('dashboard-view')) {
+        viewEl.style.display = 'block';
+      } else {
+        viewEl.style.display = 'flex';
+      }
+
+      // Load stats if dashboard view and not loaded yet
+      if (viewId === 'view-estadisticas' && !window.statsLoaded) {
+        loadGlobalDashboard();
+      }
+    });
+  });
 }
 
 // ─── Sessions ─────────────────────────────────────────────────────────────────
@@ -245,4 +276,122 @@ function escHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+async function loadGlobalDashboard() {
+  window.statsLoaded = true;
+  const grid = document.getElementById('dashboard-grid');
+  const loader = document.getElementById('dashboard-loading');
+
+  const { data: claims, error } = await supabase
+    .from('claim')
+    .select(`
+      id, ambito_tematico,
+      politician:politician_id (nombre_completo, partido),
+      verification (resultado)
+    `);
+
+  if (error) {
+    loader.innerHTML = `<p class="error">Error al cargar estadísticas: ${error.message}</p>`;
+    return;
+  }
+
+  loader.style.display = 'none';
+  grid.classList.remove('hidden');
+
+  if (!claims || claims.length === 0) {
+    grid.innerHTML = '<p class="empty">No hay datos suficientes para estadísticas.</p>';
+    return;
+  }
+
+  renderDashboard(claims);
+}
+
+function renderDashboard(claims) {
+  const grid = document.getElementById('dashboard-grid');
+
+  let totalVerificados = 0;
+  let totalFalsos = 0;
+  
+  const partidoCounts = {};
+  const partidoFalsoCounts = {};
+  const politicoCounts = {};
+  const politicoFalsoCounts = {};
+  const temaCounts = {};
+
+  claims.forEach(c => {
+    const tema = c.ambito_tematico;
+    const pol = c.politician;
+    const v = c.verification?.[0];
+    
+    if (tema) {
+      temaCounts[tema] = (temaCounts[tema] || 0) + 1;
+    }
+
+    let isFalso = false;
+    if (v && v.resultado) {
+      totalVerificados++;
+      const res = v.resultado.toUpperCase();
+      if (res === 'FALSO' || res === 'ENGAÑOSO') {
+        isFalso = true;
+        totalFalsos++;
+      }
+    }
+
+    if (pol) {
+      const pName = pol.partido || 'Desconocido';
+      const polName = pol.nombre_completo || 'Desconocido';
+
+      partidoCounts[pName] = (partidoCounts[pName] || 0) + 1;
+      politicoCounts[polName] = (politicoCounts[polName] || 0) + 1;
+
+      if (isFalso) {
+        partidoFalsoCounts[pName] = (partidoFalsoCounts[pName] || 0) + 1;
+        politicoFalsoCounts[polName] = (politicoFalsoCounts[polName] || 0) + 1;
+      }
+    }
+  });
+
+  const topPartido = getTop(partidoCounts);
+  const topPartidoFalso = getTop(partidoFalsoCounts);
+  const topPolitico = getTop(politicoCounts);
+  const topPoliticoFalso = getTop(politicoFalsoCounts);
+  const topTema = getTop(temaCounts);
+
+  const porcFalsos = totalVerificados > 0 
+    ? Math.round((totalFalsos / totalVerificados) * 100) 
+    : 0;
+
+  grid.innerHTML = `
+    ${statCard('Partido con más claims', topPartido.key, `${topPartido.val} claims totales`)}
+    ${statCard('Partido con más falsos', topPartidoFalso.key, `${topPartidoFalso.val} falsos/engañosos`, true)}
+    ${statCard('Político con más claims', topPolitico.key, `${topPolitico.val} claims totales`)}
+    ${statCard('Político con más falsos', topPoliticoFalso.key, `${topPoliticoFalso.val} falsos/engañosos`, true)}
+    ${statCard('Temática más frecuente', topTema.key, `${topTema.val} menciones`)}
+    ${statCard('Tasa de falsedad', `${porcFalsos}%`, `${totalFalsos} de ${totalVerificados} verificados`, true)}
+  `;
+}
+
+function getTop(obj) {
+  let maxKey = 'N/A';
+  let maxVal = 0;
+  for (const [k, v] of Object.entries(obj)) {
+    if (v > maxVal) {
+      maxVal = v;
+      maxKey = k;
+    }
+  }
+  return { key: maxKey, val: maxVal };
+}
+
+function statCard(title, value, subtitle, isFalsoSubtitle = false) {
+  const subClass = isFalsoSubtitle ? 'stat-subtitle falso-subtitle' : 'stat-subtitle';
+  return `
+    <div class="stat-card">
+      <div class="stat-title">${title}</div>
+      <div class="stat-value">${value}</div>
+      <div class="${subClass}">${subtitle}</div>
+    </div>
+  `;
 }
