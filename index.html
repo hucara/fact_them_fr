@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FackThem — Verificador de afirmaciones parlamentarias</title>
+  <meta name="description" content="Consulta las afirmaciones verificadas de los parlamentarios españoles por sesión." />
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- Supabase credentials (anon key, seguro para el frontend) -->
+  <script src="js/config.js"></script>
+</head>
+<body>
+
+  <!-- ── Header ────────────────────────────────────────────────────────────── -->
+  <header class="site-header">
+    <img src="assets/logo.svg" alt="FackThem" class="logo" />
+    <h1>Verificador de afirmaciones parlamentarias</h1>
+  </header>
+
+  <!-- ── Layout ────────────────────────────────────────────────────────────── -->
+  <div class="layout">
+
+    <!-- Sidebar: session list -->
+    <aside id="sidebar">
+      <p class="sidebar-title">Sesiones</p>
+      <div id="session-list">
+        <p class="loading">Cargando…</p>
+      </div>
+    </aside>
+
+    <!-- Main: filters + claims -->
+    <main id="main">
+
+      <!-- Filters -->
+      <div id="filters" class="hidden">
+        <span class="filter-label">Filtrar por:</span>
+
+        <select id="filter-resultado" aria-label="Filtrar por resultado">
+          <option value="">Todos los resultados</option>
+        </select>
+
+        <select id="filter-tematico" aria-label="Filtrar por ámbito temático">
+          <option value="">Todos los temas</option>
+        </select>
+
+        <select id="filter-politico" aria-label="Filtrar por político">
+          <option value="">Todos los políticos</option>
+        </select>
+      </div>
+
+      <!-- Claims -->
+      <div id="claims-area">
+        <p id="session-header"></p>
+        <div id="claims-container">
+          <!-- Welcome state -->
+          <div class="welcome">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="m21 21-4.35-4.35"/>
+              <polyline points="8 11 10.5 13.5 14.5 9.5"/>
+            </svg>
+            <p>Selecciona una sesión en el panel izquierdo para ver las afirmaciones verificadas.</p>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- App (ES module — imports supabase-client.js which imports from CDN) -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

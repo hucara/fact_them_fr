@@ -1,0 +1,331 @@
+/* ── Variables ──────────────────────────────────────────────────────────────── */
+:root {
+  --c-bg:         #f8fafc;
+  --c-surface:    #ffffff;
+  --c-border:     #e2e8f0;
+  --c-text:       #0f172a;
+  --c-text-muted: #64748b;
+  --c-accent:     #1a73e8;
+
+  /* resultado colors */
+  --c-verdadero:  #16a34a;
+  --c-falso:      #dc2626;
+  --c-enganoso:   #d97706;
+  --c-parcial:    #0891b2;
+  --c-nv:         #94a3b8;
+
+  --sidebar-w: 280px;
+  --radius:    8px;
+  --shadow:    0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+}
+
+/* ── Reset ──────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--c-bg);
+  color: var(--c-text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────────── */
+.site-header {
+  background: var(--c-surface);
+  border-bottom: 1px solid var(--c-border);
+  padding: .75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: var(--shadow);
+}
+.site-header .logo { height: 36px; display: block; }
+.site-header h1 {
+  font-size: .9rem;
+  font-weight: 500;
+  color: var(--c-text-muted);
+}
+
+/* ── Layout ─────────────────────────────────────────────────────────────────── */
+.layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  height: calc(100vh - 57px);
+}
+
+/* ── Sidebar ─────────────────────────────────────────────────────────────────── */
+#sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  background: var(--c-surface);
+  border-right: 1px solid var(--c-border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.sidebar-title {
+  padding: 1rem;
+  font-size: .75rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--c-text-muted);
+  border-bottom: 1px solid var(--c-border);
+  position: sticky;
+  top: 0;
+  background: var(--c-surface);
+}
+#session-list { flex: 1; }
+
+.session-card {
+  padding: .75rem 1rem;
+  border-bottom: 1px solid var(--c-border);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+  transition: background .15s;
+}
+.session-card:hover  { background: #f1f5f9; }
+.session-card.active { background: #eff6ff; border-left: 3px solid var(--c-accent); }
+
+.session-date  { font-weight: 600; font-size: .9rem; }
+.session-organ { font-size: .85rem; color: var(--c-text); }
+.session-meta  { font-size: .75rem; color: var(--c-text-muted); }
+
+/* ── Main ────────────────────────────────────────────────────────────────────── */
+#main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Filters bar ─────────────────────────────────────────────────────────────── */
+#filters {
+  background: var(--c-surface);
+  border-bottom: 1px solid var(--c-border);
+  padding: .75rem 1.5rem;
+  display: flex;
+  gap: .75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+#filters.hidden { display: none; }
+#filters select {
+  padding: .4rem .75rem;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-size: .85rem;
+  cursor: pointer;
+}
+#filters select:focus { outline: 2px solid var(--c-accent); outline-offset: 1px; }
+
+.filter-label {
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--c-text-muted);
+}
+
+/* ── Claims area ─────────────────────────────────────────────────────────────── */
+#claims-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem;
+}
+#session-header {
+  font-size: .85rem;
+  color: var(--c-text-muted);
+  margin-bottom: 1rem;
+}
+
+/* ── Claim card ──────────────────────────────────────────────────────────────── */
+.claim-card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow);
+  border-left: 4px solid var(--c-nv);
+}
+.claim-card[data-resultado="verdadero"] { border-left-color: var(--c-verdadero); }
+.claim-card[data-resultado="falso"]     { border-left-color: var(--c-falso); }
+.claim-card[data-resultado="enganoso"]  { border-left-color: var(--c-enganoso); }
+.claim-card[data-resultado="parcial"]   { border-left-color: var(--c-parcial); }
+.claim-card[data-resultado="nv"]        { border-left-color: var(--c-nv); }
+
+.claim-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: .5rem;
+  margin-bottom: .75rem;
+  flex-wrap: wrap;
+}
+.claim-meta-top {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: wrap;
+}
+.politician-name         { font-weight: 600; font-size: .9rem; }
+.politician-name.unknown { color: var(--c-text-muted); font-style: italic; }
+
+.partido-badge, .grupo-badge {
+  font-size: .72rem;
+  padding: .15rem .5rem;
+  border-radius: 99px;
+  background: #f1f5f9;
+  color: var(--c-text-muted);
+  border: 1px solid var(--c-border);
+}
+
+/* Resultado badge */
+.resultado-badge {
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  padding: .25rem .65rem;
+  border-radius: 99px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.resultado-verdadero { background: #dcfce7; color: var(--c-verdadero); }
+.resultado-falso     { background: #fee2e2; color: var(--c-falso); }
+.resultado-enganoso  { background: #fef3c7; color: var(--c-enganoso); }
+.resultado-parcial   { background: #cffafe; color: var(--c-parcial); }
+.resultado-nv        { background: #f1f5f9; color: var(--c-nv); }
+
+/* Claim text */
+.claim-text {
+  font-size: .9rem;
+  line-height: 1.6;
+  color: var(--c-text);
+  border-left: 3px solid var(--c-border);
+  padding-left: .75rem;
+  margin-bottom: .75rem;
+  cursor: help;
+}
+
+/* Confidence bar */
+.confidence-bar {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin-bottom: .75rem;
+}
+.confidence-fill {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--c-accent);
+  max-width: 160px;
+  flex-shrink: 0;
+}
+.confidence-label {
+  font-size: .75rem;
+  color: var(--c-text-muted);
+}
+
+/* Tags */
+.claim-tags {
+  display: flex;
+  gap: .4rem;
+  flex-wrap: wrap;
+  margin-bottom: .75rem;
+}
+.tag {
+  font-size: .72rem;
+  padding: .15rem .5rem;
+  border-radius: 4px;
+  background: #f8fafc;
+  border: 1px solid var(--c-border);
+  color: var(--c-text-muted);
+}
+.tag-tipo { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+
+/* Detail section */
+.claim-detail { display: none; margin-top: .5rem; }
+.claim-detail.open { display: block; }
+.detail-row { margin-bottom: .5rem; }
+.detail-row dt {
+  font-size: .72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--c-text-muted);
+  margin-bottom: .15rem;
+}
+.detail-row dd {
+  font-size: .85rem;
+  line-height: 1.5;
+  color: var(--c-text);
+}
+
+/* Toggle button */
+.claim-toggle {
+  background: none;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: .3rem .75rem;
+  font-size: .8rem;
+  color: var(--c-accent);
+  cursor: pointer;
+  margin-top: .25rem;
+}
+.claim-toggle:hover { background: #eff6ff; }
+
+/* ── States ──────────────────────────────────────────────────────────────────── */
+.loading, .empty, .error {
+  padding: 2rem;
+  text-align: center;
+  color: var(--c-text-muted);
+  font-size: .9rem;
+}
+.error { color: var(--c-falso); }
+
+/* Skeleton pulse */
+@keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .5 } }
+.loading { animation: pulse 1.5s ease-in-out infinite; }
+
+/* ── Welcome state ───────────────────────────────────────────────────────────── */
+.welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 1rem;
+  color: var(--c-text-muted);
+  text-align: center;
+  padding: 2rem;
+}
+.welcome svg { opacity: .25; }
+.welcome p { max-width: 300px; font-size: .9rem; line-height: 1.6; }
+
+/* ── Responsive ──────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .layout {
+    flex-direction: column;
+    height: auto;
+    overflow: auto;
+  }
+  #sidebar {
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--c-border);
+    max-height: 40vh;
+    overflow-y: auto;
+  }
+  #main { overflow: visible; }
+  #claims-area { overflow-y: visible; }
+  .claim-header { flex-direction: column; }
+}
