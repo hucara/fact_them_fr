@@ -83,7 +83,22 @@
     </div>
   </div>
 
+  <footer class="site-footer">
+    <p>
+      Las verificaciones se generan mediante un proceso automatizado con IA y pueden contener inexactitudes.
+      Contacto: <a class="footer-email" href="#" aria-label="Dirección de contacto"></a>
+    </p>
+  </footer>
+
   <!-- App (ES module — imports supabase-client.js which imports from CDN) -->
   <script type="module" src="js/app.js"></script>
+  <script>
+    // Build contact link at runtime to reduce harvesting by bots
+    (function () {
+      var u = 'contacto', d = 'facthem' + '.' + 'es';
+      var el = document.querySelector('.footer-email');
+      if (el) { el.href = 'mailto:' + u + '@' + d; el.textContent = u + '\u0040' + d; }
+    })();
+  </script>
 </body>
 </html>

@@ -246,11 +246,7 @@ function claimCard(claim) {
       ${v ? `
         <div class="claim-detail">
           <dl>
-            ${isValidValue(v.errores) ? `
-              <div class="detail-row detail-errores">
-                <dt>Error detectado</dt>
-                <dd>${escHtml(capitalize(v.errores))}</dd>
-              </div>` : ''}
+            ${renderErrores(v.errores)}
             ${renderOmisiones(v.omisiones)}
             ${renderFuentes(v.fuentes)}
           </dl>
@@ -278,6 +274,22 @@ function toListItems(text) {
     .split(/\n|;/)
     .map(s => s.replace(/^[\s\-•*\d.]+/, '').trim())
     .filter(Boolean);
+}
+
+function renderErrores(raw) {
+  if (!isValidValue(raw)) return '';
+  let items = [];
+  try {
+    const parsed = JSON.parse(raw);
+    items = Array.isArray(parsed) ? parsed.map(String).filter(Boolean) : [String(parsed)];
+  } catch {
+    items = [raw.trim()].filter(Boolean);
+  }
+  if (!items.length) return '';
+  return `<div class="detail-row detail-errores">
+    <dt>Error detectado</dt>
+    <dd>${items.map(i => `<em>${escHtml(capitalize(i))}</em>`).join('<br><br>')}</dd>
+  </div>`;
 }
 
 function renderOmisiones(raw) {
