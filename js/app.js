@@ -1,8 +1,7 @@
 import { supabase } from './supabase-client.js';
 
 // ─── State ────────────────────────────────────────────────────────────────────
-let allClaims = [];       // raw data for the active session
-let activeSession = null;
+let allClaims = [];
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', boot);
@@ -17,24 +16,17 @@ function setupTabs() {
   const tabs = document.querySelectorAll('.tab-button');
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
-      // Deactivate all
       tabs.forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.view-container').forEach(v => {
         v.classList.remove('active');
         v.style.display = 'none';
       });
-      // Activate clicked
       tab.classList.add('active');
       const viewId = tab.dataset.tab;
       const viewEl = document.getElementById(viewId);
       viewEl.classList.add('active');
-      if (viewEl.classList.contains('dashboard-view')) {
-        viewEl.style.display = 'block';
-      } else {
-        viewEl.style.display = 'flex';
-      }
+      viewEl.style.display = viewEl.classList.contains('dashboard-view') ? 'block' : 'flex';
 
-      // Load stats if dashboard view and not loaded yet
       if (viewId === 'view-estadisticas' && !window.statsLoaded) {
         loadGlobalDashboard();
       }
@@ -50,16 +42,18 @@ async function loadSessions() {
   const { data, error } = await supabase
     .from('session')
     .select('id, legislatura, tipo, numero, fecha, organo, status')
-    .eq('status', 'completed')
     .order('fecha', { ascending: false });
 
   if (error) {
+    console.error('[loadSessions] error:', error);
     sidebar.innerHTML = `<p class="error">Error al cargar sesiones: ${error.message}</p>`;
     return;
   }
 
-  if (!data.length) {
-    sidebar.innerHTML = '<p class="empty">No hay sesiones procesadas.</p>';
+  console.log('[loadSessions] rows:', data?.length, data);
+
+  if (!data || !data.length) {
+    sidebar.innerHTML = '<p class="empty">No hay sesiones disponibles.</p>';
     return;
   }
 
@@ -75,20 +69,27 @@ async function loadSessions() {
 }
 
 function sessionCard(s) {
-  const fecha = new Date(s.fecha).toLocaleDateString('es-ES', {
-    day: '2-digit', month: 'short', year: 'numeric'
-  });
+  const fecha = s.fecha
+    ? new Date(s.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+    : '—';
+  const statusBadge = s.status === 'completed'
+    ? '<span class="session-status completed">Verificado</span>'
+    : s.status
+      ? `<span class="session-status">${s.status}</span>`
+      : '';
   return `
     <div class="session-card" data-id="${s.id}">
-      <span class="session-date">${fecha}</span>
-      <span class="session-organ">${s.organo}</span>
-      <span class="session-meta">${s.tipo} · Nº ${s.numero} · ${s.legislatura}</span>
+      <div class="session-card-top">
+        <span class="session-date">${fecha}</span>
+        ${statusBadge}
+      </div>
+      <span class="session-organ">${s.organo ?? '—'}</span>
+      <span class="session-meta">${s.tipo ?? ''} · Nº ${s.numero ?? '?'} · ${s.legislatura ?? ''}</span>
     </div>`;
 }
 
 // ─── Claims for a session ─────────────────────────────────────────────────────
 async function loadSession(sessionId) {
-  activeSession = sessionId;
   const main = document.getElementById('claims-container');
   const header = document.getElementById('session-header');
   const filtersEl = document.getElementById('filters');
@@ -113,16 +114,19 @@ async function loadSession(sessionId) {
     .order('id');
 
   if (error) {
+    console.error('[loadSession] error:', error);
     main.innerHTML = `<p class="error">Error al cargar afirmaciones: ${error.message}</p>`;
     return;
   }
 
-  allClaims = data;
-  header.textContent = `${data.length} afirmación${data.length !== 1 ? 'es' : ''} encontrada${data.length !== 1 ? 's' : ''}`;
+  console.log('[loadSession] claims:', data?.length, data);
 
-  populateFilters(data);
+  allClaims = data ?? [];
+  header.textContent = `${allClaims.length} afirmación${allClaims.length !== 1 ? 'es' : ''} encontrada${allClaims.length !== 1 ? 's' : ''}`;
+
+  populateFilters(allClaims);
   filtersEl.classList.remove('hidden');
-  renderClaims(data);
+  renderClaims(allClaims);
 }
 
 // ─── Filters ──────────────────────────────────────────────────────────────────
@@ -164,8 +168,8 @@ function applyFilters() {
   const politico  = document.getElementById('filter-politico').value;
 
   const filtered = allClaims.filter(c => {
-    if (tematico  && c.ambito_tematico !== tematico) return false;
-    if (politico  && c.politician?.nombre_completo !== politico) return false;
+    if (tematico && c.ambito_tematico !== tematico) return false;
+    if (politico && c.politician?.nombre_completo !== politico) return false;
     if (resultado) {
       const hasResult = c.verification?.some(v => v.resultado === resultado);
       if (!hasResult) return false;
@@ -193,7 +197,7 @@ function renderClaims(claims) {
     btn.addEventListener('click', () => {
       const detail = btn.closest('.claim-card').querySelector('.claim-detail');
       const open = detail.classList.toggle('open');
-      btn.textContent = open ? 'Ver menos' : 'Ver más';
+      btn.textContent = open ? '▲ Ver menos' : '▼ Ver más';
     });
   });
 }
@@ -203,18 +207,26 @@ function claimCard(claim) {
   const pol = claim.politician;
 
   const resultadoClass = v ? resultadoToClass(v.resultado) : 'nv';
-  const resultadoLabel = v ? v.resultado : 'SIN VERIFICAR';
-  const score = v ? Math.round(v.confidence_score * 100) : null;
+  const resultadoLabel = v ? formatResultado(v.resultado) : 'Sin verificar';
+  const score = v && v.confidence_score != null ? Math.round(v.confidence_score * 100) : null;
+
+  const tags = [claim.ambito_tematico, claim.ambito_geografico]
+    .filter(Boolean)
+    .map(t => `<span class="tag">${escHtml(t)}</span>`)
+    .join('');
+  const tipoTag = claim.tipo_claim
+    ? `<span class="tag tag-tipo">${escHtml(claim.tipo_claim)}</span>`
+    : '';
 
   return `
     <article class="claim-card" data-resultado="${resultadoClass}">
       <header class="claim-header">
         <div class="claim-meta-top">
-          ${pol ? `
-            <span class="politician-name">${pol.nombre_completo}</span>
-            <span class="partido-badge">${pol.partido}</span>
-            <span class="grupo-badge">${pol.grupo_parlamentario}</span>
-          ` : '<span class="politician-name unknown">Político desconocido</span>'}
+          ${pol
+            ? `<span class="politician-name">${escHtml(pol.nombre_completo)}</span>
+               ${pol.partido ? `<span class="partido-badge">${escHtml(pol.partido)}</span>` : ''}
+               ${pol.grupo_parlamentario ? `<span class="grupo-badge">${escHtml(pol.grupo_parlamentario)}</span>` : ''}`
+            : '<span class="politician-name unknown">Político desconocido</span>'}
         </div>
         <span class="resultado-badge resultado-${resultadoClass}">${resultadoLabel}</span>
       </header>
@@ -224,28 +236,28 @@ function claimCard(claim) {
       </blockquote>
 
       ${score !== null ? `
-        <div class="confidence-bar" title="Confianza: ${score}%">
-          <div class="confidence-fill" style="width:${score}%"></div>
+        <div class="confidence-bar" title="Confianza del modelo: ${score}%">
+          <div class="confidence-track">
+            <div class="confidence-fill confidence-${resultadoClass}" style="width:${score}%"></div>
+          </div>
           <span class="confidence-label">${score}% confianza</span>
         </div>` : ''}
 
-      <div class="claim-tags">
-        <span class="tag">${escHtml(claim.ambito_tematico)}</span>
-        <span class="tag">${escHtml(claim.ambito_geografico)}</span>
-        <span class="tag tag-tipo">${escHtml(claim.tipo_claim)}</span>
-      </div>
+      ${(tags || tipoTag) ? `<div class="claim-tags">${tags}${tipoTag}</div>` : ''}
 
       ${v ? `
         <div class="claim-detail">
-          ${detailRow('Afirmación correcta', v.afirmacion_correcta)}
-          ${detailRow('Errores detectados', v.errores)}
-          ${detailRow('Omisiones', v.omisiones)}
-          ${detailRow('Potencial de engaño', v.potencial_engano)}
-          ${detailRow('Fuentes', v.fuentes)}
-          ${detailRow('Recomendación de redacción', v.recomendacion_redaccion)}
-          ${v.razonamiento_llm ? detailRow('Razonamiento', v.razonamiento_llm) : ''}
+          <dl>
+            ${detailRow('Afirmación correcta', v.afirmacion_correcta)}
+            ${detailRow('Errores detectados', v.errores)}
+            ${detailRow('Omisiones', v.omisiones)}
+            ${detailRow('Potencial de engaño', v.potencial_engano)}
+            ${detailRow('Fuentes', v.fuentes)}
+            ${detailRow('Recomendación de redacción', v.recomendacion_redaccion)}
+            ${v.razonamiento_llm ? detailRow('Razonamiento del modelo', v.razonamiento_llm) : ''}
+          </dl>
         </div>
-        <button class="claim-toggle">Ver más</button>
+        <button class="claim-toggle">▼ Ver más</button>
       ` : ''}
     </article>`;
 }
@@ -260,6 +272,7 @@ function detailRow(label, value) {
 }
 
 function resultadoToClass(resultado) {
+  if (!resultado) return 'nv';
   const map = {
     'VERDADERO': 'verdadero',
     'FALSO': 'falso',
@@ -267,7 +280,19 @@ function resultadoToClass(resultado) {
     'PARCIALMENTE_VERDADERO': 'parcial',
     'NO_VERIFICABLE': 'nv',
   };
-  return map[resultado?.toUpperCase()] ?? 'nv';
+  return map[resultado.toUpperCase()] ?? 'nv';
+}
+
+function formatResultado(resultado) {
+  if (!resultado) return 'Sin verificar';
+  const map = {
+    'VERDADERO': 'Verdadero',
+    'FALSO': 'Falso',
+    'ENGAÑOSO': 'Engañoso',
+    'PARCIALMENTE_VERDADERO': 'Parcialmente verdadero',
+    'NO_VERIFICABLE': 'No verificable',
+  };
+  return map[resultado.toUpperCase()] ?? resultado;
 }
 
 function escHtml(str) {
@@ -293,9 +318,12 @@ async function loadGlobalDashboard() {
     `);
 
   if (error) {
+    console.error('[loadGlobalDashboard] error:', error);
     loader.innerHTML = `<p class="error">Error al cargar estadísticas: ${error.message}</p>`;
     return;
   }
+
+  console.log('[loadGlobalDashboard] claims:', claims?.length);
 
   loader.style.display = 'none';
   grid.classList.remove('hidden');
@@ -313,7 +341,7 @@ function renderDashboard(claims) {
 
   let totalVerificados = 0;
   let totalFalsos = 0;
-  
+
   const partidoCounts = {};
   const partidoFalsoCounts = {};
   const politicoCounts = {};
@@ -324,10 +352,8 @@ function renderDashboard(claims) {
     const tema = c.ambito_tematico;
     const pol = c.politician;
     const v = c.verification?.[0];
-    
-    if (tema) {
-      temaCounts[tema] = (temaCounts[tema] || 0) + 1;
-    }
+
+    if (tema) temaCounts[tema] = (temaCounts[tema] || 0) + 1;
 
     let isFalso = false;
     if (v && v.resultado) {
@@ -342,10 +368,8 @@ function renderDashboard(claims) {
     if (pol) {
       const pName = pol.partido || 'Desconocido';
       const polName = pol.nombre_completo || 'Desconocido';
-
       partidoCounts[pName] = (partidoCounts[pName] || 0) + 1;
       politicoCounts[polName] = (politicoCounts[polName] || 0) + 1;
-
       if (isFalso) {
         partidoFalsoCounts[pName] = (partidoFalsoCounts[pName] || 0) + 1;
         politicoFalsoCounts[polName] = (politicoFalsoCounts[polName] || 0) + 1;
@@ -353,34 +377,28 @@ function renderDashboard(claims) {
     }
   });
 
-  const topPartido = getTop(partidoCounts);
-  const topPartidoFalso = getTop(partidoFalsoCounts);
-  const topPolitico = getTop(politicoCounts);
+  const topPartido       = getTop(partidoCounts);
+  const topPartidoFalso  = getTop(partidoFalsoCounts);
+  const topPolitico      = getTop(politicoCounts);
   const topPoliticoFalso = getTop(politicoFalsoCounts);
-  const topTema = getTop(temaCounts);
-
-  const porcFalsos = totalVerificados > 0 
-    ? Math.round((totalFalsos / totalVerificados) * 100) 
-    : 0;
+  const topTema          = getTop(temaCounts);
+  const porcFalsos       = totalVerificados > 0
+    ? Math.round((totalFalsos / totalVerificados) * 100) : 0;
 
   grid.innerHTML = `
-    ${statCard('Partido con más claims', topPartido.key, `${topPartido.val} claims totales`)}
-    ${statCard('Partido con más falsos', topPartidoFalso.key, `${topPartidoFalso.val} falsos/engañosos`, true)}
-    ${statCard('Político con más claims', topPolitico.key, `${topPolitico.val} claims totales`)}
+    ${statCard('Partido con más claims',  topPartido.key,       `${topPartido.val} claims totales`)}
+    ${statCard('Partido con más falsos',  topPartidoFalso.key,  `${topPartidoFalso.val} falsos/engañosos`, true)}
+    ${statCard('Político con más claims', topPolitico.key,      `${topPolitico.val} claims totales`)}
     ${statCard('Político con más falsos', topPoliticoFalso.key, `${topPoliticoFalso.val} falsos/engañosos`, true)}
-    ${statCard('Temática más frecuente', topTema.key, `${topTema.val} menciones`)}
-    ${statCard('Tasa de falsedad', `${porcFalsos}%`, `${totalFalsos} de ${totalVerificados} verificados`, true)}
+    ${statCard('Temática más frecuente',  topTema.key,          `${topTema.val} menciones`)}
+    ${statCard('Tasa de falsedad',        `${porcFalsos}%`,     `${totalFalsos} de ${totalVerificados} verificados`, true)}
   `;
 }
 
 function getTop(obj) {
-  let maxKey = 'N/A';
-  let maxVal = 0;
+  let maxKey = 'N/A', maxVal = 0;
   for (const [k, v] of Object.entries(obj)) {
-    if (v > maxVal) {
-      maxVal = v;
-      maxKey = k;
-    }
+    if (v > maxVal) { maxVal = v; maxKey = k; }
   }
   return { key: maxKey, val: maxVal };
 }
@@ -392,6 +410,5 @@ function statCard(title, value, subtitle, isFalsoSubtitle = false) {
       <div class="stat-title">${title}</div>
       <div class="stat-value">${value}</div>
       <div class="${subClass}">${subtitle}</div>
-    </div>
-  `;
+    </div>`;
 }
