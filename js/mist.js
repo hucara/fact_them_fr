@@ -8,7 +8,7 @@
   const PUFF_COUNT   = 24;
   const CANVAS_H     = 360;    // px — mist height from bottom
   const BASE_ALPHA   = 0.22;   // max opacity of a single puff
-  const DRIFT_SPEED  = 0.16;   // px per frame horizontal drift (slower = dreamier)
+  const DRIFT_SPEED  = 0.25;   // px per frame horizontal drift (slower = dreamier)
   const BREATHE_FREQ = 0.0006; // alpha oscillation frequency
 
   // Warm rose-grey palette tuned to the hero image
@@ -107,7 +107,7 @@
   // ── Hero parallax zoom ─────────────────────────────────────────────────────
   function updateZoom() {
     const progress = Math.min(window.scrollY / (hero.offsetHeight || window.innerHeight), 1);
-    hero.style.setProperty('--hero-scale', 1 + progress * 0.25);
+    hero.style.setProperty('--hero-scale', 1 + progress * 0.33);
   }
   window.addEventListener('scroll', updateZoom, { passive: true });
   updateZoom();

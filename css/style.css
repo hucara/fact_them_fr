@@ -805,8 +805,10 @@ body {
   .claim-header { flex-direction: column; }
   .brand-tag { display: none; }
   .hero { padding: 3rem 5vw 3rem; align-items: center; text-align: center; }
+  .hero::before { background-position: 35% 30%; }
   .hero-content { max-width: 100%; }
-  .hero-subtitle { max-width: 100%; }
+  .hero-subtitle { max-width: 100%; text-align: right; }
+  .hero-actions { justify-content: center; }
   .dashboard-view { height: auto; }
 
   .site-header {
