@@ -7,8 +7,8 @@
 (function () {
   const PUFF_COUNT   = 24;
   const CANVAS_H     = 360;    // px — mist height from bottom
-  const BASE_ALPHA   = 0.25;   // max opacity of a single puff
-  const DRIFT_SPEED  = 0.14;   // px per frame horizontal drift (slower = dreamier)
+  const BASE_ALPHA   = 0.22;   // max opacity of a single puff
+  const DRIFT_SPEED  = 0.16;   // px per frame horizontal drift (slower = dreamier)
   const BREATHE_FREQ = 0.0006; // alpha oscillation frequency
 
   // Warm rose-grey palette tuned to the hero image
