@@ -799,6 +799,23 @@ body {
   .hero-content { max-width: 100%; }
   .hero-subtitle { max-width: 100%; }
   .dashboard-view { height: auto; }
+
+  .site-header {
+    flex-direction: column;
+    height: auto;
+    padding: 0;
+    align-items: stretch;
+  }
+  .tabs { padding: 0 1rem; height: var(--header-h); }
+  #header-stats {
+    order: -1;
+    margin-left: 0;
+    text-align: center;
+    padding: .3rem 1rem;
+    font-size: .68rem;
+    border-bottom: 1px solid var(--c-border);
+  }
+  #header-stats:empty { display: none; }
 }
 
 @media (max-width: 480px) {
