@@ -690,6 +690,12 @@ body {
 }
 .stat-subtitle { font-size: .82rem; color: var(--c-text-muted); }
 .stat-subtitle.falso-subtitle { color: var(--c-falso); font-weight: 500; }
+.stat-desc { font-size: .72rem; color: var(--c-text-muted); line-height: 1.5; margin-top: .4rem; font-style: italic; opacity: .75; }
+
+.stat-list { display: flex; flex-direction: column; gap: .35rem; margin-top: .5rem; }
+.stat-list-row { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; font-size: .82rem; }
+.stat-list-tema { color: var(--c-text); }
+.stat-list-partido { color: var(--c-accent); font-weight: 700; font-size: .75rem; white-space: nowrap; }
 
 /* ── Footer ───────────────────────────────────────────────────────────────── */
 .site-footer {

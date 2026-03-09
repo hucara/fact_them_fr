@@ -504,10 +504,16 @@ async function loadGlobalDashboard() {
 function renderDashboard(claims) {
   const grid = document.getElementById('dashboard-grid');
 
-  let totalVerificados = 0, totalFalsos = 0;
+  let totalVerificados = 0, totalFalsos = 0, totalConfirmados = 0;
   const partidoCounts = {}, partidoFalsoCounts = {};
   const politicoCounts = {}, politicoFalsoCounts = {};
-  const temaCounts = {};
+  const partidoNvCounts = {}, politicoNvCounts = {};
+  const partidoMatizCounts = {}, politicoMatizCounts = {};
+  const partidoSobreCounts = {}, politicoSobreCounts = {};
+  const politicoDesactCounts = {}, politicoDescontCounts = {};
+  const temaCounts = {}, temaFalsoCounts = {};
+  const temaPartidoCounts = {};  // { tema → { partido → count } }
+  const politicoPartido = {};    // { nombre_completo → partido }
 
   claims.forEach(c => {
     const tema = c.ambito_tematico;
@@ -516,57 +522,124 @@ function renderDashboard(claims) {
 
     if (tema) temaCounts[tema] = (temaCounts[tema] || 0) + 1;
 
-    let isFalso = false;
+    let isFalso = false, isNv = false, isMatiz = false, isSobre = false, isDesact = false, isDescont = false;
     if (v?.resultado) {
       totalVerificados++;
       const res = v.resultado.toUpperCase();
-      if (res === 'FALSO' || res === 'ENGAÑOSO') { isFalso = true; totalFalsos++; }
+      if (res === 'FALSO' || res === 'ENGAÑOSO')        { isFalso = true; totalFalsos++; }
+      if (res === 'NO_VERIFICABLE')                      { isNv = true; }
+      if (res === 'CONFIRMADO_CON_MATIZ')                { isMatiz = true; }
+      if (res === 'CONFIRMADO')                          { totalConfirmados++; }
+      if (res === 'SOBREESTIMADO')                       { isSobre = true; }
+      if (res === 'CONFIRMADO_DESACTUALIZADO')           { isDesact = true; }
+      if (res === 'DESCONTEXTUALIZADO')                  { isDescont = true; }
+      if (isFalso && tema) temaFalsoCounts[tema] = (temaFalsoCounts[tema] || 0) + 1;
     }
 
     if (pol) {
       const pName   = pol.partido || 'Desconocido';
       const polName = pol.nombre_completo || 'Desconocido';
+      politicoPartido[polName] = pName;
+
       partidoCounts[pName]    = (partidoCounts[pName]    || 0) + 1;
       politicoCounts[polName] = (politicoCounts[polName] || 0) + 1;
-      if (isFalso) {
-        partidoFalsoCounts[pName]    = (partidoFalsoCounts[pName]    || 0) + 1;
-        politicoFalsoCounts[polName] = (politicoFalsoCounts[polName] || 0) + 1;
+
+      if (isFalso)   { partidoFalsoCounts[pName]    = (partidoFalsoCounts[pName]    || 0) + 1; politicoFalsoCounts[polName]  = (politicoFalsoCounts[polName]  || 0) + 1; }
+      if (isNv)      { partidoNvCounts[pName]        = (partidoNvCounts[pName]        || 0) + 1; politicoNvCounts[polName]     = (politicoNvCounts[polName]     || 0) + 1; }
+      if (isMatiz)   { partidoMatizCounts[pName]     = (partidoMatizCounts[pName]     || 0) + 1; politicoMatizCounts[polName]  = (politicoMatizCounts[polName]  || 0) + 1; }
+      if (isSobre)   { partidoSobreCounts[pName]     = (partidoSobreCounts[pName]     || 0) + 1; politicoSobreCounts[polName]  = (politicoSobreCounts[polName]  || 0) + 1; }
+      if (isDesact)  { politicoDesactCounts[polName]  = (politicoDesactCounts[polName]  || 0) + 1; }
+      if (isDescont) { politicoDescontCounts[polName] = (politicoDescontCounts[polName] || 0) + 1; }
+
+      if (tema) {
+        if (!temaPartidoCounts[tema]) temaPartidoCounts[tema] = {};
+        temaPartidoCounts[tema][pName] = (temaPartidoCounts[tema][pName] || 0) + 1;
       }
     }
   });
 
-  const topPartido       = getTop(partidoCounts);
-  const topPartidoFalso  = getTop(partidoFalsoCounts);
-  const topPolitico      = getTop(politicoCounts);
-  const topPoliticoFalso = getTop(politicoFalsoCounts);
-  const topTema          = getTop(temaCounts);
-  const porcFalsos       = totalVerificados > 0
-    ? Math.round((totalFalsos / totalVerificados) * 100) : 0;
+  const topPartido          = getTop(partidoCounts);
+  const topPartidoFalso     = getTop(partidoFalsoCounts);
+  const topPolitico         = getTop(politicoCounts);
+  const topPoliticoFalso    = getTop(politicoFalsoCounts);
+  const topTema             = getTop(temaCounts);
+  const topPartidoNv        = getTop(partidoNvCounts);
+  const topPoliticoNv       = getTop(politicoNvCounts);
+  const topPartidoMatiz     = getTop(partidoMatizCounts);
+  const topPoliticoMatiz    = getTop(politicoMatizCounts);
+  const topPartidoSobre     = getTop(partidoSobreCounts);
+  const topPoliticoSobre    = getTop(politicoSobreCounts);
+  const topPoliticoDesact   = getTop(politicoDesactCounts);
+  const topPoliticoDescont  = getTop(politicoDescontCounts);
+  const topTemaFalso        = getTop(temaFalsoCounts);
+
+  const porcFalsos      = totalVerificados > 0 ? Math.round((totalFalsos      / totalVerificados) * 100) : 0;
+  const porcConfirmados = totalVerificados > 0 ? Math.round((totalConfirmados / totalVerificados) * 100) : 0;
+
+  // Top 5 themes by volume with their dominant party
+  const topTemas = Object.entries(temaCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([tema]) => ({
+      tema:    TEMATICO_LABELS[tema] ?? snakeToLabel(tema),
+      partido: temaPartidoCounts[tema] ? getTop(temaPartidoCounts[tema]).key : '—',
+    }));
+
+  // Politician name with party lookup
+  const pol = (name) => name === '-' ? '-'
+    : `${name}${politicoPartido[name] ? ` · ${politicoPartido[name]}` : ''}`;
 
   grid.innerHTML = `
-    ${statCard('Partido con más claims',  topPartido.key,       `${topPartido.val} claims totales`)}
-    ${statCard('Partido con más falsos',  topPartidoFalso.key,  `${topPartidoFalso.val} falsos/engañosos`, true)}
-    ${statCard('Político con más claims', topPolitico.key,      `${topPolitico.val} claims totales`)}
-    ${statCard('Político con más falsos', topPoliticoFalso.key, `${topPoliticoFalso.val} falsos/engañosos`, true)}
-    ${statCard('Temática más frecuente',  topTema.key,          `${topTema.val} menciones`)}
-    ${statCard('Tasa de falsedad',        `${porcFalsos}%`,     `${totalFalsos} de ${totalVerificados} verificados`, true)}
+    ${statCard('Partido con más claims',          topPartido.key,                    `${topPartido.val} claims totales`,        false, 'El partido que más afirmaciones ha realizado en total.')}
+    ${statCard('Partido con más falsos',          topPartidoFalso.key,               `${topPartidoFalso.val} falsos/engañosos`, true,  'El partido con más afirmaciones verificadas como falsas o engañosas.')}
+    ${statCard('Político con más claims',         pol(topPolitico.key),              `${topPolitico.val} claims totales`,       false, 'El diputado que más afirmaciones ha realizado en total.')}
+    ${statCard('Político con más falsos',         pol(topPoliticoFalso.key),         `${topPoliticoFalso.val} falsos/engañosos`,true,  'El diputado con más afirmaciones verificadas como falsas o engañosas.')}
+    ${statCard('Temática más frecuente',          topTema.key === '-' ? '-' : (TEMATICO_LABELS[topTema.key] ?? snakeToLabel(topTema.key)), `${topTema.val} menciones`, false, 'El ámbito sobre el que más afirmaciones se han hecho.')}
+    ${statCard('Tasa de falsedad',                `${porcFalsos}%`,                  `${totalFalsos} de ${totalVerificados} verificados`,   true,  'Porcentaje de afirmaciones verificadas como falsas o engañosas.')}
+    ${statCard('Tasa de veracidad',               `${porcConfirmados}%`,             `${totalConfirmados} de ${totalVerificados} verificados`, false, 'Porcentaje de afirmaciones verificadas como completamente ciertas.')}
+    ${statCard('El Maestro del Escaqueo',         pol(topPoliticoNv.key),            `${topPoliticoNv.val} afirmaciones no verificables`,   false, 'El político que más afirmaciones hace que no pueden verificarse por falta de datos concretos.')}
+    ${statCard('Partido más escurridizo',         topPartidoNv.key,                  `${topPartidoNv.val} afirmaciones no verificables`,    false, 'El partido que más afirmaciones hace que no pueden verificarse.')}
+    ${statCard('El Gran Matizador',               pol(topPoliticoMatiz.key),         `${topPoliticoMatiz.val} confirmados con matiz`,        false, 'El político que más veces dice algo cierto… pero con algún pero importante.')}
+    ${statCard('Partido del "sí, pero..."',       topPartidoMatiz.key,               `${topPartidoMatiz.val} confirmados con matiz`,         false, 'El partido que más verdades a medias acumula.')}
+    ${statCard('El Exagerador Mayor',             pol(topPoliticoSobre.key),         `${topPoliticoSobre.val} cifras sobreestimadas`,        true,  'El político que más veces ha inflado cifras reales para que suenen más impactantes.')}
+    ${statCard('Partido de las Cifras Infladas',  topPartidoSobre.key,               `${topPartidoSobre.val} sobreestimaciones`,             true,  'El partido que más veces ha sobreestimado datos que en realidad son menores.')}
+    ${statCard('El Nostálgico',                   pol(topPoliticoDesact.key),        `${topPoliticoDesact.val} datos desfasados`,            false, 'El político que más veces ha citado datos que fueron ciertos… pero ya no lo son.')}
+    ${statCard('El Sacador de Contexto',          pol(topPoliticoDescont.key),       `${topPoliticoDescont.val} descontextualizaciones`,     true,  'El político que más veces ha usado datos reales arrancándolos de su contexto para cambiar su significado.')}
+    ${statCard('Temática más conflictiva',        topTemaFalso.key === '-' ? '-' : (TEMATICO_LABELS[topTemaFalso.key] ?? snakeToLabel(topTemaFalso.key)), `${topTemaFalso.val} afirmaciones falsas`, true, 'El ámbito temático donde más afirmaciones falsas se han detectado.')}
+    ${statCardList('Partido dominante por temática', topTemas, 'Qué partido protagoniza más el debate en cada ámbito temático.')}
   `;
 }
 
 function getTop(obj) {
-  let maxKey = 'N/A', maxVal = 0;
+  let maxKey = '-', maxVal = 0;
   for (const [k, v] of Object.entries(obj)) {
     if (v > maxVal) { maxVal = v; maxKey = k; }
   }
   return { key: maxKey, val: maxVal };
 }
 
-function statCard(title, value, subtitle, isFalsoSubtitle = false) {
+function statCard(title, value, subtitle, isFalsoSubtitle = false, description = '') {
   const subClass = isFalsoSubtitle ? 'stat-subtitle falso-subtitle' : 'stat-subtitle';
   return `
     <div class="stat-card">
       <div class="stat-title">${title}</div>
       <div class="stat-value">${value}</div>
       <div class="${subClass}">${subtitle}</div>
+      ${description ? `<div class="stat-desc">${description}</div>` : ''}
+    </div>`;
+}
+
+function statCardList(title, rows, description = '') {
+  const items = rows.map(r =>
+    `<div class="stat-list-row">
+      <span class="stat-list-tema">${escHtml(r.tema)}</span>
+      <span class="stat-list-partido">${escHtml(r.partido)}</span>
+    </div>`
+  ).join('');
+  return `
+    <div class="stat-card stat-card--list">
+      <div class="stat-title">${title}</div>
+      <div class="stat-list">${items}</div>
+      ${description ? `<div class="stat-desc">${description}</div>` : ''}
     </div>`;
 }
