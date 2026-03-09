@@ -49,11 +49,20 @@ body {
   position: relative;
   min-height: 100vh;
   min-height: 100dvh;
-  background: url('../assets/portada.png') center 30% / cover no-repeat;
   display: flex;
   align-items: flex-end;
   padding: 5rem 5vw 4.5rem;
   flex-shrink: 0;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('../assets/portada.png') center 30% / cover no-repeat;
+  transform: scale(var(--hero-scale, 1));
+  transform-origin: center 30%;
+  will-change: transform;
 }
 .hero::after {
   content: '';
@@ -69,7 +78,7 @@ body {
 }
 .hero-content {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   max-width: 600px;
 }
 .hero-tagline {

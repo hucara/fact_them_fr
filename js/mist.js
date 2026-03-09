@@ -34,7 +34,7 @@
     width:         '100%',
     height:        CANVAS_H + 'px',
     pointerEvents: 'none',
-    zIndex:        '2',          // above hero gradient (::after), below nothing critical
+    zIndex:        '1',          // above hero gradient (::after), below hero content
     mixBlendMode:  'screen',
   });
   hero.appendChild(canvas);
@@ -103,4 +103,12 @@
   }
 
   requestAnimationFrame(tick);
+
+  // ── Hero parallax zoom ─────────────────────────────────────────────────────
+  function updateZoom() {
+    const progress = Math.min(window.scrollY / (hero.offsetHeight || window.innerHeight), 1);
+    hero.style.setProperty('--hero-scale', 1 + progress * 0.25);
+  }
+  window.addEventListener('scroll', updateZoom, { passive: true });
+  updateZoom();
 })();
