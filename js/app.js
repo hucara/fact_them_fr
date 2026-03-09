@@ -301,7 +301,6 @@ function openModal(claim) {
   const tags = [
     claim.ambito_tematico   ? `<span class="tag tag-tematico">${escHtml(snakeToLabel(claim.ambito_tematico))}</span>`   : '',
     claim.ambito_geografico ? `<span class="tag tag-geo">${escHtml(snakeToLabel(claim.ambito_geografico))}</span>` : '',
-    claim.tipo_claim        ? `<span class="tag tag-tipo">${escHtml(snakeToLabel(claim.tipo_claim))}</span>`        : '',
   ].filter(Boolean).join('');
 
   const details = v
