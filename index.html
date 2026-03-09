@@ -3,97 +3,121 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FackThem — Verificador de afirmaciones parlamentarias</title>
-  <meta name="description" content="Consulta las afirmaciones verificadas de los parlamentarios españoles por sesión." />
+  <title>Facthem — Verificador de afirmaciones parlamentarias</title>
+  <meta name="description" content="Verificamos lo que dicen los parlamentarios españoles. Consulta las afirmaciones verificadas por sesión." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" />
   <link rel="stylesheet" href="css/style.css" />
-  <!-- Supabase credentials (anon key, seguro para el frontend) -->
   <script src="js/config.js"></script>
 </head>
 <body>
 
-  <header class="site-header">
-    <div class="header-brand">
-      <span class="brand-name">FackThem</span>
-      <span class="brand-tag">verificador parlamentario</span>
+  <!-- ── Hero ──────────────────────────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="hero-content">
+      <p class="hero-tagline">verificador parlamentario</p>
+      <h1 class="hero-title">Facthem</h1>
+      <p class="hero-subtitle">
+        Verificamos lo que dicen los parlamentarios españoles.<br>
+        Cada afirmación, contrastada con fuentes.
+        <br><b>Neutralidad de verdad.</b>
+      </p>
+      <div class="hero-actions">
+        <a class="hero-cta hero-cta--primary" href="#app-header" data-cta="sesiones">Explorar sesiones</a>
+        <a class="hero-cta hero-cta--secondary" href="#app-header" data-cta="estadisticas">Ver estadísticas</a>
+      </div>
     </div>
-    <div class="header-divider"></div>
+  </section>
+
+  <!-- ── Sticky app header ──────────────────────────────────────────────────── -->
+  <header class="site-header" id="app-header">
     <nav class="tabs">
       <button class="tab-button active" data-tab="view-sesiones">Sesiones</button>
       <button class="tab-button" data-tab="view-estadisticas">Estadísticas</button>
     </nav>
+    <span id="header-stats" aria-live="polite"></span>
   </header>
 
   <!-- ── App Views ─────────────────────────────────────────────────────────── -->
   <div class="view-container active" id="view-sesiones">
-    <!-- Sidebar: session list -->
-    <aside id="sidebar">
-      <p class="sidebar-title">Sesiones</p>
-      <div id="session-list">
-        <p class="loading">Cargando…</p>
-      </div>
-    </aside>
-
-    <!-- Main: filters + claims -->
     <main id="main">
-      <!-- Filters -->
-      <div id="filters" class="hidden">
-        <span class="filter-label">Filtrar por:</span>
+
+      <!-- Unified filters bar: session selector + content filters -->
+      <div id="filters">
+        <select id="filter-session" aria-label="Seleccionar sesión">
+          <option value="">Cargando sesiones…</option>
+        </select>
+
+        <span class="filter-sep"></span>
 
         <select id="filter-resultado" aria-label="Filtrar por resultado">
-          <option value="">Todos los resultados</option>
+          <option value="">Resultado</option>
         </select>
 
         <select id="filter-tematico" aria-label="Filtrar por ámbito temático">
-          <option value="">Todos los temas</option>
+          <option value="">Temática</option>
         </select>
 
         <select id="filter-politico" aria-label="Filtrar por político">
-          <option value="">Todos los políticos</option>
+          <option value="">Político</option>
         </select>
+
+        <span class="filter-sep"></span>
+
+        <div class="search-wrap">
+          <svg class="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input type="search" id="search-claim" placeholder="Buscar afirmaciones…" aria-label="Buscar en afirmaciones" autocomplete="off" spellcheck="false">
+        </div>
       </div>
 
       <!-- Claims -->
       <div id="claims-area">
-        <p id="session-header"></p>
         <div id="claims-container">
-          <!-- Welcome state -->
           <div class="welcome">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
               <circle cx="11" cy="11" r="8"/>
               <path d="m21 21-4.35-4.35"/>
               <polyline points="8 11 10.5 13.5 14.5 9.5"/>
             </svg>
-            <p>Selecciona una sesión en el panel izquierdo para ver las afirmaciones verificadas.</p>
+            <p>Selecciona una sesión para ver las afirmaciones verificadas.</p>
           </div>
         </div>
       </div>
+
     </main>
   </div>
 
-  <div class="view-container dashboard-view" id="view-estadisticas" style="display: none;">
+  <div class="view-container dashboard-view" id="view-estadisticas">
     <div class="dashboard-content">
       <h2 class="dashboard-title">Estadísticas Globales</h2>
       <div id="dashboard-loading" class="loading">Cargando estadísticas…</div>
-      <div id="dashboard-grid" class="dashboard-grid hidden">
-        <!-- Cards injected by JS -->
-      </div>
+      <div id="dashboard-grid" class="dashboard-grid hidden"></div>
     </div>
   </div>
 
   <footer class="site-footer">
     <p>
       Las verificaciones se generan mediante un proceso automatizado con IA y pueden contener inexactitudes.
+      <a href="aviso.html" class="footer-link">Aviso legal</a>
+      &nbsp;·&nbsp;
       Contacto: <a class="footer-email" href="#" aria-label="Dirección de contacto"></a>
     </p>
   </footer>
 
-  <!-- App (ES module — imports supabase-client.js which imports from CDN) -->
+  <!-- ── Claim detail modal ───────────────────────────────────────────────── -->
+  <div id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-content">
+    <div id="modal-card">
+      <button id="modal-close" aria-label="Cerrar">✕</button>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
   <script type="module" src="js/app.js"></script>
+  <script src="js/mist.js" defer></script>
   <script>
-    // Build contact link at runtime to reduce harvesting by bots
     (function () {
       var u = 'contacto', d = 'facthem' + '.' + 'es';
       var el = document.querySelector('.footer-email');

@@ -1,101 +1,130 @@
 import { supabase } from './supabase-client.js';
 
+// ─── Label maps ───────────────────────────────────────────────────────────────
+const TEMATICO_LABELS = {
+  defensa:               'Defensa',
+  'demografía':          'Demografía',
+  'economía':            'Economía',
+  educacion:             'Educación',
+  igualdad:              'Igualdad',
+  industria_y_trabajo:   'Industria y Trabajo',
+  'inmigración':         'Inmigración',
+  interior:              'Interior',
+  justicia_y_corrupcion: 'Justicia y Corrupción',
+  medio_ambiente:        'Medio Ambiente',
+  otros:                 'Otros',
+  politica_social:       'Política Social',
+  resultado_politica:    'Resultado Político',
+  sanidad:               'Sanidad',
+  vivienda:              'Vivienda',
+};
+
+const RESULTADO_LABELS = {
+  CONFIRMADO:                'Confirmado',
+  CONFIRMADO_CON_MATIZ:      'Con matiz',
+  CONFIRMADO_DESACTUALIZADO: 'Desactualizado',
+  DESCONTEXTUALIZADO:        'Descontextualizado',
+  FALSO:                     'Falso',
+  NO_VERIFICABLE:            'No verificable',
+  SOBREESTIMADO:             'Sobreestimado',
+  SUBESTIMADO:               'Subestimado',
+};
+
 // ─── State ────────────────────────────────────────────────────────────────────
-let allClaims = [];
+let allClaims  = [];
+let claimsById = {};
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', boot);
 
 async function boot() {
   setupTabs();
+  setupHeroCTAs();
+  setupFilters();
+  setupModal();
   await loadSessions();
 }
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 function setupTabs() {
-  const tabs = document.querySelectorAll('.tab-button');
-  tabs.forEach(tab => {
+  document.querySelectorAll('.tab-button').forEach(tab => {
     tab.addEventListener('click', () => {
-      tabs.forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.view-container').forEach(v => {
-        v.classList.remove('active');
-        v.style.display = 'none';
-      });
+      document.querySelectorAll('.tab-button').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
       tab.classList.add('active');
-      const viewId = tab.dataset.tab;
-      const viewEl = document.getElementById(viewId);
-      viewEl.classList.add('active');
-      viewEl.style.display = viewEl.classList.contains('dashboard-view') ? 'block' : 'flex';
-
-      if (viewId === 'view-estadisticas' && !window.statsLoaded) {
+      document.getElementById(tab.dataset.tab).classList.add('active');
+      if (tab.dataset.tab === 'view-estadisticas' && !window.statsLoaded) {
         loadGlobalDashboard();
       }
     });
   });
 }
 
-// ─── Sessions ─────────────────────────────────────────────────────────────────
-async function loadSessions() {
-  const sidebar = document.getElementById('session-list');
-  sidebar.innerHTML = '<p class="loading">Cargando sesiones…</p>';
-
-  const { data, error } = await supabase
-    .from('session')
-    .select('id, legislatura, tipo, numero, fecha, organo, status')
-    .order('fecha', { ascending: false });
-
-  if (error) {
-    console.error('[loadSessions] error:', error);
-    sidebar.innerHTML = `<p class="error">Error al cargar sesiones: ${error.message}</p>`;
-    return;
-  }
-
-  console.log('[loadSessions] rows:', data?.length, data);
-
-  if (!data || !data.length) {
-    sidebar.innerHTML = '<p class="empty">No hay sesiones disponibles.</p>';
-    return;
-  }
-
-  sidebar.innerHTML = data.map(s => sessionCard(s)).join('');
-
-  sidebar.querySelectorAll('.session-card').forEach(card => {
-    card.addEventListener('click', () => {
-      sidebar.querySelectorAll('.session-card').forEach(c => c.classList.remove('active'));
-      card.classList.add('active');
-      loadSession(card.dataset.id);
+// ─── Hero CTAs ────────────────────────────────────────────────────────────────
+function setupHeroCTAs() {
+  document.querySelectorAll('.hero-cta[data-cta]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.cta;
+      const tabBtn = document.querySelector(`.tab-button[data-tab="view-${target}"]`);
+      if (tabBtn) tabBtn.click();
     });
   });
 }
 
-function sessionCard(s) {
-  const fecha = s.fecha
-    ? new Date(s.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
-    : '—';
-  const statusBadge = s.status === 'completed'
-    ? '<span class="session-status completed">Verificado</span>'
-    : s.status
-      ? `<span class="session-status">${s.status}</span>`
-      : '';
-  return `
-    <div class="session-card" data-id="${s.id}">
-      <div class="session-card-top">
-        <span class="session-date">${fecha}</span>
-        ${statusBadge}
-      </div>
-      <span class="session-organ">${s.organo ?? '—'}</span>
-      <span class="session-meta">${s.tipo ?? ''} · Nº ${s.numero ?? '?'} · ${s.legislatura ?? ''}</span>
-    </div>`;
+// ─── Session selector + content filters ───────────────────────────────────────
+function setupFilters() {
+  document.getElementById('filter-session').addEventListener('change', e => {
+    if (e.target.value) loadSession(e.target.value);
+  });
+
+  document.querySelectorAll('#filters select:not(#filter-session)').forEach(sel => {
+    sel.addEventListener('change', applyFilters);
+  });
+
+  document.getElementById('search-claim').addEventListener('input', applyFilters);
+}
+
+// ─── Sessions ─────────────────────────────────────────────────────────────────
+async function loadSessions() {
+  const sel = document.getElementById('filter-session');
+  sel.disabled = true;
+
+  const [{ data, error }, { count: claimCount }] = await Promise.all([
+    supabase.from('session').select('id, legislatura, tipo, numero, fecha, organo, status').order('fecha', { ascending: false }),
+    supabase.from('claim').select('id', { count: 'exact', head: true }),
+  ]);
+
+  sel.disabled = false;
+
+  if (error || !data?.length) {
+    sel.innerHTML = '<option value="">Sin sesiones disponibles</option>';
+    return;
+  }
+
+  const statsEl = document.getElementById('header-stats');
+  if (statsEl) {
+    statsEl.innerHTML =
+      `<strong>${data.length}</strong> sesiones · <strong>${(claimCount ?? 0).toLocaleString('es-ES')}</strong> afirmaciones`;
+  }
+
+  sel.innerHTML = '<option value="">Seleccionar sesión…</option>' +
+    data.map(s => {
+      const fecha = s.fecha
+        ? new Date(s.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+        : '—';
+      const organ = s.organo ? ` · ${s.organo}` : '';
+      return `<option value="${s.id}">${fecha}${organ}</option>`;
+    }).join('');
+
+  // Pre-select and load the latest session automatically
+  sel.value = data[0].id;
+  loadSession(data[0].id);
 }
 
 // ─── Claims for a session ─────────────────────────────────────────────────────
 async function loadSession(sessionId) {
-  const main = document.getElementById('claims-container');
-  const header = document.getElementById('session-header');
-  const filtersEl = document.getElementById('filters');
-
-  main.innerHTML = '<p class="loading">Cargando afirmaciones…</p>';
-  filtersEl.classList.add('hidden');
+  const container = document.getElementById('claims-container');
+  container.innerHTML = '<p class="loading">Cargando afirmaciones…</p>';
 
   const { data, error } = await supabase
     .from('claim')
@@ -114,18 +143,18 @@ async function loadSession(sessionId) {
     .order('id');
 
   if (error) {
-    console.error('[loadSession] error:', error);
-    main.innerHTML = `<p class="error">Error al cargar afirmaciones: ${error.message}</p>`;
+    container.innerHTML = `<p class="error">Error al cargar afirmaciones: ${error.message}</p>`;
     return;
   }
 
-  console.log('[loadSession] claims:', data?.length, data);
+  allClaims  = data ?? [];
+  claimsById = Object.fromEntries(allClaims.map(c => [c.id, c]));
 
-  allClaims = data ?? [];
-  header.textContent = `${allClaims.length} afirmación${allClaims.length !== 1 ? 'es' : ''} encontrada${allClaims.length !== 1 ? 's' : ''}`;
-
+  ['filter-resultado', 'filter-tematico', 'filter-politico'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.selectedIndex = 0;
+  });
   populateFilters(allClaims);
-  filtersEl.classList.remove('hidden');
   renderClaims(allClaims);
 }
 
@@ -136,20 +165,24 @@ function populateFilters(claims) {
     claims.flatMap(c => c.verification?.map(v => v.resultado) ?? []).filter(Boolean)
   )].sort();
   const politicos = [...new Map(
-    claims.filter(c => c.politician)
+    claims.filter(c => c.politician?.nombre_completo)
       .map(c => [c.politician.nombre_completo, c.politician])
-  ).values()].sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo));
-
-  setSelectOptions('filter-tematico', tematicos, 'Todos los temas');
-  setSelectOptions('filter-resultado', resultados, 'Todos los resultados');
-  setSelectOptions('filter-politico',
-    politicos.map(p => ({ value: p.nombre_completo, label: p.nombre_completo })),
-    'Todos los políticos'
+  ).values()].sort((a, b) =>
+    (a.nombre_completo ?? '').localeCompare(b.nombre_completo ?? '')
   );
 
-  document.getElementById('filters').querySelectorAll('select').forEach(sel => {
-    sel.addEventListener('change', applyFilters);
-  });
+  setSelectOptions('filter-tematico',
+    tematicos.map(t => ({ value: t, label: TEMATICO_LABELS[t] ?? snakeToLabel(t) })),
+    'Temática'
+  );
+  setSelectOptions('filter-resultado',
+    resultados.map(r => ({ value: r, label: RESULTADO_LABELS[r] ?? snakeToLabel(r) })),
+    'Resultado'
+  );
+  setSelectOptions('filter-politico',
+    politicos.map(p => ({ value: p.nombre_completo, label: p.nombre_completo })),
+    'Político'
+  );
 }
 
 function setSelectOptions(id, items, placeholder) {
@@ -166,6 +199,7 @@ function applyFilters() {
   const tematico  = document.getElementById('filter-tematico').value;
   const resultado = document.getElementById('filter-resultado').value;
   const politico  = document.getElementById('filter-politico').value;
+  const search    = document.getElementById('search-claim').value.trim().toLowerCase();
 
   const filtered = allClaims.filter(c => {
     if (tematico && c.ambito_tematico !== tematico) return false;
@@ -174,11 +208,14 @@ function applyFilters() {
       const hasResult = c.verification?.some(v => v.resultado === resultado);
       if (!hasResult) return false;
     }
+    if (search) {
+      const haystack = [c.texto_normalizado, c.texto_original]
+        .filter(Boolean).join(' ').toLowerCase();
+      if (!haystack.includes(search)) return false;
+    }
     return true;
   });
 
-  document.getElementById('session-header').textContent =
-    `${filtered.length} afirmación${filtered.length !== 1 ? 'es' : ''} (filtrado${filtered.length !== 1 ? 's' : ''})`;
   renderClaims(filtered);
 }
 
@@ -194,11 +231,7 @@ function renderClaims(claims) {
   container.innerHTML = claims.map(c => claimCard(c)).join('');
 
   container.querySelectorAll('.claim-toggle').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const detail = btn.closest('.claim-card').querySelector('.claim-detail');
-      const open = detail.classList.toggle('open');
-      btn.textContent = open ? '▲ Ver menos' : '▼ Ver más';
-    });
+    btn.addEventListener('click', () => openModal(claimsById[btn.dataset.id]));
   });
 }
 
@@ -210,7 +243,6 @@ function claimCard(claim) {
   const resultadoLabel = v ? formatResultado(v.resultado) : 'Sin verificar';
   const score = v && v.confidence_score != null ? Math.round(v.confidence_score * 100) : null;
 
-  // Convert snake_case DB values to readable labels; hide anything that looks purely technical
   const tags = [
     claim.ambito_tematico   ? `<span class="tag tag-tematico">${escHtml(snakeToLabel(claim.ambito_tematico))}</span>`   : '',
     claim.ambito_geografico ? `<span class="tag tag-geo">${escHtml(snakeToLabel(claim.ambito_geografico))}</span>` : '',
@@ -222,8 +254,7 @@ function claimCard(claim) {
         <div class="claim-meta-top">
           ${pol
             ? `<span class="politician-name">${escHtml(pol.nombre_completo)}</span>
-               ${pol.partido ? `<span class="partido-badge">${escHtml(pol.partido)}</span>` : ''}
-               ${pol.grupo_parlamentario ? `<span class="grupo-badge">${escHtml(pol.grupo_parlamentario)}</span>` : ''}`
+               ${pol.partido ? `<span class="partido-badge">${escHtml(pol.partido)}</span>` : ''}`
             : '<span class="politician-name unknown">Político desconocido</span>'}
         </div>
         <span class="resultado-badge resultado-${resultadoClass}">${resultadoLabel}</span>
@@ -243,19 +274,85 @@ function claimCard(claim) {
 
       ${tags ? `<div class="claim-tags">${tags}</div>` : ''}
 
-      ${v ? `
-        <div class="claim-detail">
-          <dl>
-            ${renderErrores(v.errores)}
-            ${renderOmisiones(v.omisiones)}
-            ${renderFuentes(v.fuentes)}
-          </dl>
-        </div>
-        <button class="claim-toggle">▼ Ver más</button>
-      ` : ''}
+      ${v ? `<button class="claim-toggle" data-id="${claim.id}">Ver más →</button>` : ''}
     </article>`;
 }
 
+// ─── Modal ────────────────────────────────────────────────────────────────────
+function setupModal() {
+  const overlay = document.getElementById('modal-overlay');
+  const closeBtn = document.getElementById('modal-close');
+
+  closeBtn.addEventListener('click', closeModal);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+}
+
+function openModal(claim) {
+  if (!claim) return;
+
+  const v   = claim.verification?.[0] ?? null;
+  const pol = claim.politician;
+
+  const resultadoClass = v ? resultadoToClass(v.resultado) : 'nv';
+  const resultadoLabel = v ? formatResultado(v.resultado) : 'Sin verificar';
+  const score = v && v.confidence_score != null ? Math.round(v.confidence_score * 100) : null;
+
+  const tags = [
+    claim.ambito_tematico   ? `<span class="tag tag-tematico">${escHtml(snakeToLabel(claim.ambito_tematico))}</span>`   : '',
+    claim.ambito_geografico ? `<span class="tag tag-geo">${escHtml(snakeToLabel(claim.ambito_geografico))}</span>` : '',
+    claim.tipo_claim        ? `<span class="tag tag-tipo">${escHtml(snakeToLabel(claim.tipo_claim))}</span>`        : '',
+  ].filter(Boolean).join('');
+
+  const details = v
+    ? [renderErrores(v.errores), renderOmisiones(v.omisiones), renderFuentes(v.fuentes)]
+        .filter(Boolean).join('')
+    : '';
+
+  const card = document.getElementById('modal-card');
+  card.dataset.resultado = resultadoClass;
+
+  document.getElementById('modal-content').innerHTML = `
+    <header class="claim-header" style="margin-bottom:1.25rem">
+      <div class="claim-meta-top">
+        ${pol
+          ? `<span class="politician-name" style="font-size:1.05rem">${escHtml(pol.nombre_completo)}</span>
+             ${pol.partido           ? `<span class="partido-badge">${escHtml(pol.partido)}</span>`           : ''}
+             ${pol.grupo_parlamentario ? `<span class="grupo-badge">${escHtml(pol.grupo_parlamentario)}</span>` : ''}`
+          : '<span class="politician-name unknown">Político desconocido</span>'}
+      </div>
+      <span class="resultado-badge resultado-${resultadoClass}">${resultadoLabel}</span>
+    </header>
+
+    <blockquote class="claim-text modal-claim-text" title="${escHtml(claim.texto_original)}">
+      ${escHtml(capitalize(claim.texto_normalizado))}
+    </blockquote>
+
+    ${score !== null ? `
+      <div class="confidence-bar" style="margin-bottom:1rem" title="Confianza del modelo: ${score}%">
+        <div class="confidence-track" style="width:160px">
+          <div class="confidence-fill confidence-${resultadoClass}" style="width:${score}%"></div>
+        </div>
+        <span class="confidence-label">${score}% confianza</span>
+      </div>` : ''}
+
+    ${tags ? `<div class="claim-tags" style="margin-bottom:1.25rem">${tags}</div>` : ''}
+
+    ${details ? `<dl class="modal-detail-list">${details}</dl>` : ''}
+  `;
+
+  const overlay = document.getElementById('modal-overlay');
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('modal-close').focus();
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function isValidValue(v) {
   return v && v !== 'N/A' && v !== '-' && v !== 'n/a';
 }
@@ -305,11 +402,12 @@ function renderOmisiones(raw) {
   </div>`;
 }
 
+const FUENTE_TIPO_ORDER = { 'Primaria': 0, 'Académica': 1, 'Secundaria': 2, 'Terciaria': 3 };
+
 function renderFuentes(raw) {
   if (!isValidValue(raw)) return '';
   let items = [];
   try { items = JSON.parse(raw); } catch {
-    // Not JSON — fall back to plain text list
     const plain = toListItems(raw);
     if (!plain.length) return '';
     return `<div class="detail-row">
@@ -318,16 +416,27 @@ function renderFuentes(raw) {
     </div>`;
   }
   if (!Array.isArray(items) || !items.length) return '';
-  const bullets = items.map(s => {
+
+  const sorted = [...items].sort((a, b) =>
+    (FUENTE_TIPO_ORDER[a.tipo] ?? 9) - (FUENTE_TIPO_ORDER[b.tipo] ?? 9)
+  );
+
+  const bullets = sorted.map(s => {
+    const isPrimary = s.tipo === 'Primaria';
+    const tipoKey   = (s.tipo ?? '').toLowerCase().replace(/[^a-z]/g, '') || 'otra';
     const name = escHtml(s.nombre ?? 'Fuente');
     const link = s.url
       ? `<a class="source-link" href="${escHtml(s.url)}" target="_blank" rel="noopener">${name}</a>`
       : `<span>${name}</span>`;
+    const tipoBadge = s.tipo
+      ? `<span class="source-tipo source-tipo--${tipoKey}">${escHtml(s.tipo)}</span>`
+      : '';
     const dato = s.dato_especifico
       ? `<span class="source-dato">${escHtml(s.dato_especifico)}</span>`
       : '';
-    return `<li>${link}${dato}</li>`;
+    return `<li class="fuente-item${isPrimary ? ' fuente-item--primary' : ''}">${tipoBadge}${link}${dato}</li>`;
   }).join('');
+
   return `<div class="detail-row">
     <dt>Fuentes</dt>
     <dd><ul class="detail-list fuentes">${bullets}</ul></dd>
@@ -337,25 +446,21 @@ function renderFuentes(raw) {
 function resultadoToClass(resultado) {
   if (!resultado) return 'nv';
   const map = {
-    'VERDADERO': 'verdadero',
-    'FALSO': 'falso',
-    'ENGAÑOSO': 'enganoso',
-    'PARCIALMENTE_VERDADERO': 'parcial',
-    'NO_VERIFICABLE': 'nv',
+    'CONFIRMADO':               'verdadero',
+    'CONFIRMADO_CON_MATIZ':     'parcial',
+    'CONFIRMADO_DESACTUALIZADO':'enganoso',
+    'DESCONTEXTUALIZADO':       'enganoso',
+    'FALSO':                    'falso',
+    'NO_VERIFICABLE':           'nv',
+    'SOBREESTIMADO':            'enganoso',
+    'SUBESTIMADO':              'enganoso',
   };
   return map[resultado.toUpperCase()] ?? 'nv';
 }
 
 function formatResultado(resultado) {
   if (!resultado) return 'Sin verificar';
-  const map = {
-    'VERDADERO': 'Verdadero',
-    'FALSO': 'Falso',
-    'ENGAÑOSO': 'Engañoso',
-    'PARCIALMENTE_VERDADERO': 'Parcialmente verdadero',
-    'NO_VERIFICABLE': 'No verificable',
-  };
-  return map[resultado.toUpperCase()] ?? resultado;
+  return RESULTADO_LABELS[resultado.toUpperCase()] ?? snakeToLabel(resultado);
 }
 
 function escHtml(str) {
@@ -369,7 +474,7 @@ function escHtml(str) {
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 async function loadGlobalDashboard() {
   window.statsLoaded = true;
-  const grid = document.getElementById('dashboard-grid');
+  const grid   = document.getElementById('dashboard-grid');
   const loader = document.getElementById('dashboard-loading');
 
   const { data: claims, error } = await supabase
@@ -381,12 +486,9 @@ async function loadGlobalDashboard() {
     `);
 
   if (error) {
-    console.error('[loadGlobalDashboard] error:', error);
     loader.innerHTML = `<p class="error">Error al cargar estadísticas: ${error.message}</p>`;
     return;
   }
-
-  console.log('[loadGlobalDashboard] claims:', claims?.length);
 
   loader.style.display = 'none';
   grid.classList.remove('hidden');
@@ -402,39 +504,32 @@ async function loadGlobalDashboard() {
 function renderDashboard(claims) {
   const grid = document.getElementById('dashboard-grid');
 
-  let totalVerificados = 0;
-  let totalFalsos = 0;
-
-  const partidoCounts = {};
-  const partidoFalsoCounts = {};
-  const politicoCounts = {};
-  const politicoFalsoCounts = {};
+  let totalVerificados = 0, totalFalsos = 0;
+  const partidoCounts = {}, partidoFalsoCounts = {};
+  const politicoCounts = {}, politicoFalsoCounts = {};
   const temaCounts = {};
 
   claims.forEach(c => {
     const tema = c.ambito_tematico;
-    const pol = c.politician;
-    const v = c.verification?.[0];
+    const pol  = c.politician;
+    const v    = c.verification?.[0];
 
     if (tema) temaCounts[tema] = (temaCounts[tema] || 0) + 1;
 
     let isFalso = false;
-    if (v && v.resultado) {
+    if (v?.resultado) {
       totalVerificados++;
       const res = v.resultado.toUpperCase();
-      if (res === 'FALSO' || res === 'ENGAÑOSO') {
-        isFalso = true;
-        totalFalsos++;
-      }
+      if (res === 'FALSO' || res === 'ENGAÑOSO') { isFalso = true; totalFalsos++; }
     }
 
     if (pol) {
-      const pName = pol.partido || 'Desconocido';
+      const pName   = pol.partido || 'Desconocido';
       const polName = pol.nombre_completo || 'Desconocido';
-      partidoCounts[pName] = (partidoCounts[pName] || 0) + 1;
+      partidoCounts[pName]    = (partidoCounts[pName]    || 0) + 1;
       politicoCounts[polName] = (politicoCounts[polName] || 0) + 1;
       if (isFalso) {
-        partidoFalsoCounts[pName] = (partidoFalsoCounts[pName] || 0) + 1;
+        partidoFalsoCounts[pName]    = (partidoFalsoCounts[pName]    || 0) + 1;
         politicoFalsoCounts[polName] = (politicoFalsoCounts[polName] || 0) + 1;
       }
     }
