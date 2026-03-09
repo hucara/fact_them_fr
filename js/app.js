@@ -316,8 +316,7 @@ function openModal(claim) {
       <div class="claim-meta-top">
         ${pol
           ? `<span class="politician-name" style="font-size:1.05rem">${escHtml(pol.nombre_completo)}</span>
-             ${pol.partido           ? `<span class="partido-badge">${escHtml(pol.partido)}</span>`           : ''}
-             ${pol.grupo_parlamentario ? `<span class="grupo-badge">${escHtml(pol.grupo_parlamentario)}</span>` : ''}`
+             ${pol.partido ? `<span class="partido-badge">${escHtml(pol.partido)}</span>` : ''}`
           : '<span class="politician-name unknown">Político desconocido</span>'}
       </div>
       <span class="resultado-badge resultado-${resultadoClass}">${resultadoLabel}</span>
