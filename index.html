@@ -116,6 +116,14 @@
   </div>
 
   <script type="module" src="js/app.js"></script>
+  <script>
+    window.addEventListener('error', function(e) {
+      if (e.filename && e.filename.includes('supabase')) {
+        var sel = document.getElementById('filter-session');
+        if (sel) sel.innerHTML = '<option value="">Error de conexión — recarga la página</option>';
+      }
+    });
+  </script>
   <script src="js/mist.js" defer></script>
   <script>
     (function () {
