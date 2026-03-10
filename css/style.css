@@ -5,7 +5,7 @@
   --c-surface-2:  #1c1c1c;
   --c-border:     #2a2424;
   --c-text:       #e4e0e0;
-  --c-text-muted: #6a6060;
+  --c-text-muted: #9a8e8e;
   --c-accent:     #c8607a;
   --c-accent-dim: rgba(200, 96, 122, .12);
 
@@ -692,10 +692,11 @@ body {
 .stat-subtitle.falso-subtitle { color: var(--c-falso); font-weight: 500; }
 .stat-desc { font-size: .72rem; color: var(--c-text-muted); line-height: 1.5; margin-top: .4rem; font-style: italic; opacity: .75; }
 
-.stat-list { display: flex; flex-direction: column; gap: .35rem; margin-top: .5rem; }
-.stat-list-row { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; font-size: .82rem; }
+.stat-card--list { grid-column: 1 / -1; }
+.stat-list { display: flex; flex-direction: column; gap: .5rem; margin-top: .5rem; }
+.stat-list-row { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; font-size: 1rem; }
 .stat-list-tema { color: var(--c-text); }
-.stat-list-partido { color: var(--c-accent); font-weight: 700; font-size: .75rem; white-space: nowrap; }
+.stat-list-partido { color: var(--c-accent); font-weight: 700; font-size: .9rem; white-space: nowrap; }
 
 /* ── Footer ───────────────────────────────────────────────────────────────── */
 .site-footer {

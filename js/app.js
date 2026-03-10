@@ -583,6 +583,11 @@ function renderDashboard(claims) {
       partido: temaPartidoCounts[tema] ? getTop(temaPartidoCounts[tema]).key : '—',
     }));
 
+  // All parties sorted by claim count
+  const claimsPorPartido = Object.entries(partidoCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([partido, count]) => ({ tema: partido, partido: count.toString() }));
+
   // Politician name with party lookup
   const pol = (name) => name === '-' ? '-'
     : `${name}${politicoPartido[name] ? ` · ${politicoPartido[name]}` : ''}`;
@@ -605,6 +610,7 @@ function renderDashboard(claims) {
     ${statCard('El Sacador de Contexto',          pol(topPoliticoDescont.key),       `${topPoliticoDescont.val} descontextualizaciones`,     true,  'El político que más veces ha usado datos reales arrancándolos de su contexto para cambiar su significado.')}
     ${statCard('Temática más conflictiva',        topTemaFalso.key === '-' ? '-' : (TEMATICO_LABELS[topTemaFalso.key] ?? snakeToLabel(topTemaFalso.key)), `${topTemaFalso.val} afirmaciones falsas`, true, 'El ámbito temático donde más afirmaciones falsas se han detectado.')}
     ${statCardList('Partido dominante por temática', topTemas, 'Qué partido protagoniza más el debate en cada ámbito temático.')}
+    ${statCardList('Afirmaciones por partido', claimsPorPartido, 'Total de afirmaciones registradas por cada partido político.')}
   `;
 }
 
