@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://fackthem.es/sitemap.xml
