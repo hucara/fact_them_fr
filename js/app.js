@@ -2,29 +2,28 @@ import { supabase } from './supabase-client.js';
 
 // ─── Label maps ───────────────────────────────────────────────────────────────
 const TEMATICO_LABELS = {
-  defensa:               'Defensa',
-  'demografía':          'Demografía',
-  'economía':            'Economía',
-  educacion:             'Educación',
-  igualdad:              'Igualdad',
-  industria_y_trabajo:   'Industria y Trabajo',
-  'inmigración':         'Inmigración',
-  interior:              'Interior',
-  justicia_y_corrupcion: 'Justicia y Corrupción',
-  medio_ambiente:        'Medio Ambiente',
-  otros:                 'Otros',
-  politica_social:       'Política Social',
-  resultado_politica:    'Resultado Político',
-  sanidad:               'Sanidad',
-  vivienda:              'Vivienda',
+  defensa:                    'Defensa',
+  'economía':                 'Economía',
+  educacion:                  'Educación',
+  igualdad:                   'Igualdad',
+  industria_y_trabajo:        'Industria y Trabajo',
+  'inmigración':              'Inmigración',
+  interior:                   'Interior',
+  justicia_y_corrupcion:      'Justicia y Corrupción',
+  medio_ambiente:             'Medio Ambiente',
+  otros:                      'Otros',
+  politica_social:            'Política Social',
+  relaciones_internacionales: 'Relaciones Internacionales',
+  sanidad:                    'Sanidad',
+  vivienda:                   'Vivienda',
 };
 
 const RESULTADO_LABELS = {
   CONFIRMADO:                'Confirmado',
   CONFIRMADO_CON_MATIZ:      'Con matiz',
-  CONFIRMADO_DESACTUALIZADO: 'Desactualizado',
   DESCONTEXTUALIZADO:        'Descontextualizado',
   FALSO:                     'Falso',
+  IMPRECISO:                 'Impreciso',
   NO_VERIFICABLE:            'No verificable',
   SOBREESTIMADO:             'Sobreestimado',
   SUBESTIMADO:               'Subestimado',
@@ -446,8 +445,8 @@ function resultadoToClass(resultado) {
   const map = {
     'CONFIRMADO':               'verdadero',
     'CONFIRMADO_CON_MATIZ':     'parcial',
-    'CONFIRMADO_DESACTUALIZADO':'enganoso',
     'DESCONTEXTUALIZADO':       'enganoso',
+    'IMPRECISO':                'nv',
     'FALSO':                    'falso',
     'NO_VERIFICABLE':           'nv',
     'SOBREESTIMADO':            'enganoso',
@@ -478,9 +477,10 @@ async function loadGlobalDashboard() {
   const { data: claims, error } = await supabase
     .from('claim')
     .select(`
-      id, ambito_tematico,
+      id, ambito_tematico, session_id,
       politician:politician_id (nombre_completo, partido),
-      verification (resultado)
+      verification (resultado),
+      session:session_id (fecha)
     `);
 
   if (error) {
@@ -508,7 +508,12 @@ function renderDashboard(claims) {
   const partidoNvCounts = {}, politicoNvCounts = {};
   const partidoMatizCounts = {}, politicoMatizCounts = {};
   const partidoSobreCounts = {}, politicoSobreCounts = {};
-  const politicoDesactCounts = {}, politicoDescontCounts = {};
+  const partidoSubestCounts = {}, politicoSubestCounts = {};
+  const partidoImprecisoCounts = {}, politicoImprecisoCounts = {};
+  const politicoDescontCounts = {}, partidoDescontCounts = {};
+  const politicoTemas = {}; // { nombre_completo → Set<ambito_tematico> }
+  // { "polName|sessionId" → { count, polName, partido, fecha } }
+  const plenaConfirmadoCounts = {}, plenaFalsoCounts = {};
   const temaCounts = {}, temaFalsoCounts = {};
   const temaPartidoCounts = {};  // { tema → { partido → count } }
   const politicoPartido = {};    // { nombre_completo → partido }
@@ -520,16 +525,17 @@ function renderDashboard(claims) {
 
     if (tema) temaCounts[tema] = (temaCounts[tema] || 0) + 1;
 
-    let isFalso = false, isNv = false, isMatiz = false, isSobre = false, isDesact = false, isDescont = false;
+    let isFalso = false, isConfirmado = false, isNv = false, isMatiz = false, isSobre = false, isSubest = false, isImpreciso = false, isDescont = false;
     if (v?.resultado) {
       totalVerificados++;
       const res = v.resultado.toUpperCase();
       if (res === 'FALSO' || res === 'ENGAÑOSO')        { isFalso = true; totalFalsos++; }
       if (res === 'NO_VERIFICABLE')                      { isNv = true; }
       if (res === 'CONFIRMADO_CON_MATIZ')                { isMatiz = true; }
-      if (res === 'CONFIRMADO')                          { totalConfirmados++; }
+      if (res === 'CONFIRMADO')                          { isConfirmado = true; totalConfirmados++; }
       if (res === 'SOBREESTIMADO')                       { isSobre = true; }
-      if (res === 'CONFIRMADO_DESACTUALIZADO')           { isDesact = true; }
+      if (res === 'SUBESTIMADO')                         { isSubest = true; }
+      if (res === 'IMPRECISO')                           { isImpreciso = true; }
       if (res === 'DESCONTEXTUALIZADO')                  { isDescont = true; }
       if (isFalso && tema) temaFalsoCounts[tema] = (temaFalsoCounts[tema] || 0) + 1;
     }
@@ -546,8 +552,27 @@ function renderDashboard(claims) {
       if (isNv)      { partidoNvCounts[pName]        = (partidoNvCounts[pName]        || 0) + 1; politicoNvCounts[polName]     = (politicoNvCounts[polName]     || 0) + 1; }
       if (isMatiz)   { partidoMatizCounts[pName]     = (partidoMatizCounts[pName]     || 0) + 1; politicoMatizCounts[polName]  = (politicoMatizCounts[polName]  || 0) + 1; }
       if (isSobre)   { partidoSobreCounts[pName]     = (partidoSobreCounts[pName]     || 0) + 1; politicoSobreCounts[polName]  = (politicoSobreCounts[polName]  || 0) + 1; }
-      if (isDesact)  { politicoDesactCounts[polName]  = (politicoDesactCounts[polName]  || 0) + 1; }
-      if (isDescont) { politicoDescontCounts[polName] = (politicoDescontCounts[polName] || 0) + 1; }
+      if (isSubest)    { partidoSubestCounts[pName]    = (partidoSubestCounts[pName]    || 0) + 1; politicoSubestCounts[polName]   = (politicoSubestCounts[polName]   || 0) + 1; }
+      if (isImpreciso) { partidoImprecisoCounts[pName] = (partidoImprecisoCounts[pName] || 0) + 1; politicoImprecisoCounts[polName] = (politicoImprecisoCounts[polName] || 0) + 1; }
+      if (isDescont)   { politicoDescontCounts[polName] = (politicoDescontCounts[polName] || 0) + 1; partidoDescontCounts[pName] = (partidoDescontCounts[pName] || 0) + 1; }
+
+      if (tema) {
+        if (!politicoTemas[polName]) politicoTemas[polName] = new Set();
+        politicoTemas[polName].add(tema);
+      }
+
+      if (c.session_id) {
+        const key = `${polName}|${c.session_id}`;
+        const fecha = c.session?.fecha ?? null;
+        if (isConfirmado) {
+          if (!plenaConfirmadoCounts[key]) plenaConfirmadoCounts[key] = { count: 0, polName, partido: pName, fecha };
+          plenaConfirmadoCounts[key].count++;
+        }
+        if (isFalso) {
+          if (!plenaFalsoCounts[key]) plenaFalsoCounts[key] = { count: 0, polName, partido: pName, fecha };
+          plenaFalsoCounts[key].count++;
+        }
+      }
 
       if (tema) {
         if (!temaPartidoCounts[tema]) temaPartidoCounts[tema] = {};
@@ -567,17 +592,43 @@ function renderDashboard(claims) {
   const topPoliticoMatiz    = getTop(politicoMatizCounts);
   const topPartidoSobre     = getTop(partidoSobreCounts);
   const topPoliticoSobre    = getTop(politicoSobreCounts);
-  const topPoliticoDesact   = getTop(politicoDesactCounts);
-  const topPoliticoDescont  = getTop(politicoDescontCounts);
+  const topPartidoSubest    = getTop(partidoSubestCounts);
+  const topPoliticoSubest   = getTop(politicoSubestCounts);
+  const topPartidoImpreciso  = getTop(partidoImprecisoCounts);
+  const topPoliticoImpreciso = getTop(politicoImprecisoCounts);
+  const topPoliticoDescont   = getTop(politicoDescontCounts);
+  const topPartidoDescont    = getTop(partidoDescontCounts);
   const topTemaFalso        = getTop(temaFalsoCounts);
+
+  // El Cuñado Nacional — politician with widest thematic breadth
+  const topCunado = Object.entries(politicoTemas)
+    .reduce((best, [polName, temas]) => temas.size > best.val ? { key: polName, val: temas.size } : best, { key: '-', val: 0 });
+
+  // La Madre de todos los Bulos — theme with highest false-claim rate (min 5 claims)
+  const topTemaFalsoRate = Object.entries(temaCounts)
+    .filter(([, cnt]) => cnt >= 5)
+    .map(([tema, cnt]) => ({ tema, rate: (temaFalsoCounts[tema] || 0) / cnt }))
+    .reduce((best, cur) => cur.rate > best.rate ? cur : best, { tema: '-', rate: 0 });
+
+  const getTopPleno = (obj) => {
+    let best = null;
+    for (const entry of Object.values(obj)) {
+      if (!best || entry.count > best.count ||
+          (entry.count === best.count && entry.fecha > best.fecha)) {
+        best = entry;
+      }
+    }
+    return best ?? { polName: '-', partido: '-', fecha: null, count: 0 };
+  };
+  const comboBreakerPleno = getTopPleno(plenaConfirmadoCounts);
+  const bocachanclaPleno  = getTopPleno(plenaFalsoCounts);
 
   const porcFalsos      = totalVerificados > 0 ? Math.round((totalFalsos      / totalVerificados) * 100) : 0;
   const porcConfirmados = totalVerificados > 0 ? Math.round((totalConfirmados / totalVerificados) * 100) : 0;
 
-  // Top 5 themes by volume with their dominant party
+  // All themes by volume with their dominant party
   const topTemas = Object.entries(temaCounts)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
     .map(([tema]) => ({
       tema:    TEMATICO_LABELS[tema] ?? snakeToLabel(tema),
       partido: temaPartidoCounts[tema] ? getTop(temaPartidoCounts[tema]).key : '—',
@@ -606,9 +657,17 @@ function renderDashboard(claims) {
     ${statCard('Partido del "sí, pero..."',       topPartidoMatiz.key,               `${topPartidoMatiz.val} confirmados con matiz`,         false, 'El partido que más verdades a medias acumula.')}
     ${statCard('El Exagerador Mayor',             pol(topPoliticoSobre.key),         `${topPoliticoSobre.val} cifras sobreestimadas`,        true,  'El político que más veces ha inflado cifras reales para que suenen más impactantes.')}
     ${statCard('Partido de las Cifras Infladas',  topPartidoSobre.key,               `${topPartidoSobre.val} sobreestimaciones`,             true,  'El partido que más veces ha sobreestimado datos que en realidad son menores.')}
-    ${statCard('El Nostálgico',                   pol(topPoliticoDesact.key),        `${topPoliticoDesact.val} datos desfasados`,            false, 'El político que más veces ha citado datos que fueron ciertos… pero ya no lo son.')}
+    ${statCard('El Minimizador',                  pol(topPoliticoSubest.key),        `${topPoliticoSubest.val} cifras subestimadas`,          true,  'El político que más veces ha reducido cifras reales para que suenen menos graves.')}
+    ${statCard('Partido de las Cifras Maquilladas', topPartidoSubest.key,            `${topPartidoSubest.val} subestimaciones`,               true,  'El partido que más veces ha minimizado datos reales.')}
+    ${statCard('El Maestro del Bla Bla',           pol(topPoliticoImpreciso.key),     `${topPoliticoImpreciso.val} afirmaciones imprecisas`,  false, 'El político que más veces ha soltado una afirmación tan vaga que no hay manera de verificarla.')}
+    ${statCard('Partido de las Verdades de Perogrullo', topPartidoImpreciso.key,     `${topPartidoImpreciso.val} imprecisiones`,             false, 'El partido que más veces ha dicho algo tan ambiguo que ni ellos mismos saben si es cierto.')}
     ${statCard('El Sacador de Contexto',          pol(topPoliticoDescont.key),       `${topPoliticoDescont.val} descontextualizaciones`,     true,  'El político que más veces ha usado datos reales arrancándolos de su contexto para cambiar su significado.')}
+    ${statCard('Combo Breaker',                   comboBreakerPleno.polName === '-' ? '-' : `${comboBreakerPleno.polName} · ${comboBreakerPleno.partido}`, comboBreakerPleno.fecha ? `${comboBreakerPleno.count} confirmados en el pleno del ${new Date(comboBreakerPleno.fecha).toLocaleDateString('es-ES')}` : '-', false, 'El político que más afirmaciones confirmadas acumuló en un solo pleno.')}
+    ${statCard('Bocachancla',                     bocachanclaPleno.polName === '-' ? '-' : `${bocachanclaPleno.polName} · ${bocachanclaPleno.partido}`,    bocachanclaPleno.fecha  ? `${bocachanclaPleno.count} falsedades en el pleno del ${new Date(bocachanclaPleno.fecha).toLocaleDateString('es-ES')}`  : '-', true,  'El político que más afirmaciones falsas encadenó en un solo pleno.')}
     ${statCard('Temática más conflictiva',        topTemaFalso.key === '-' ? '-' : (TEMATICO_LABELS[topTemaFalso.key] ?? snakeToLabel(topTemaFalso.key)), `${topTemaFalso.val} afirmaciones falsas`, true, 'El ámbito temático donde más afirmaciones falsas se han detectado.')}
+    ${statCard('El Cuñado Nacional',            pol(topCunado.key),                                                                                     `${topCunado.val} temáticas distintas`,                                  false, 'El diputado que opina sobre absolutamente todo, como el cuñado en Navidad.')}
+    ${statCard('La Madre de todos los Bulos',   topTemaFalsoRate.tema === '-' ? '-' : (TEMATICO_LABELS[topTemaFalsoRate.tema] ?? snakeToLabel(topTemaFalsoRate.tema)), `${Math.round(topTemaFalsoRate.rate * 100)}% de falsedades`, true,  'El ámbito temático donde los políticos mienten con más descaro en proporción.')}
+    ${statCard('El Partido del Bulo Selectivo', topPartidoDescont.key,                                                                                  `${topPartidoDescont.val} descontextualizaciones`,                       true,  'El partido que más veces usa datos reales arrancados de su contexto para cambiar su significado.')}
     ${statCardList('Partido dominante por temática', topTemas, 'Qué partido protagoniza más el debate en cada ámbito temático.')}
     ${statCardList('Afirmaciones por partido', claimsPorPartido, 'Total de afirmaciones registradas por cada partido político.')}
   `;
