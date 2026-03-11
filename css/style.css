@@ -714,6 +714,27 @@ body {
 }
 .footer-email:hover, .footer-link:hover { color: var(--c-accent); }
 
+/* ── Donation buttons ─────────────────────────────────────────────────────── */
+.footer-donate { margin-top: 0.5rem; }
+.donate-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border-radius: var(--radius);
+  border: 1px solid var(--c-accent);
+  color: var(--c-accent);
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+.donate-btn:hover {
+  background: var(--c-accent);
+  color: var(--c-bg);
+}
+.footer-donate .donate-btn + .donate-btn { margin-left: 0.5rem; }
+
 /* ── Modal ────────────────────────────────────────────────────────────────── */
 #modal-overlay {
   display: none;
