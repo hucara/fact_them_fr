@@ -88,9 +88,10 @@ async function loadSessions() {
   const sel = document.getElementById('filter-session');
   sel.disabled = true;
 
-  const [{ data, error }, { count: claimCount }] = await Promise.all([
+  const [{ data, error }, { count: claimCount }, { data: claimSessions }] = await Promise.all([
     supabase.from('session').select('id, legislatura, tipo, numero, fecha, organo, status').order('fecha', { ascending: false }),
     supabase.from('claim').select('id', { count: 'exact', head: true }),
+    supabase.from('claim').select('session_id, verification!inner(id)'),
   ]);
 
   sel.disabled = false;
@@ -100,14 +101,22 @@ async function loadSessions() {
     return;
   }
 
+  const sessionIdsWithClaims = new Set((claimSessions ?? []).map(c => c.session_id));
+  const sessions = data.filter(s => sessionIdsWithClaims.has(s.id));
+
   const statsEl = document.getElementById('header-stats');
   if (statsEl) {
     statsEl.innerHTML =
-      `<strong>${data.length}</strong> sesiones · <strong>${(claimCount ?? 0).toLocaleString('es-ES')}</strong> afirmaciones`;
+      `<strong>${sessions.length}</strong> sesiones · <strong>${(claimCount ?? 0).toLocaleString('es-ES')}</strong> afirmaciones`;
+  }
+
+  if (!sessions.length) {
+    sel.innerHTML = '<option value="">Sin sesiones disponibles</option>';
+    return;
   }
 
   sel.innerHTML = '<option value="">Seleccionar sesión…</option>' +
-    data.map(s => {
+    sessions.map(s => {
       const fecha = s.fecha
         ? new Date(s.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
         : '—';
@@ -116,8 +125,8 @@ async function loadSessions() {
     }).join('');
 
   // Pre-select and load the latest session automatically
-  sel.value = data[0].id;
-  loadSession(data[0].id);
+  sel.value = sessions[0].id;
+  loadSession(sessions[0].id);
 }
 
 // ─── Claims for a session ─────────────────────────────────────────────────────
