@@ -337,7 +337,7 @@ body {
 .claim-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: .75rem;
   margin-bottom: .875rem;
   flex-wrap: wrap;
@@ -588,6 +588,14 @@ body {
 }
 .fuente-item--primary::before { color: var(--c-accent) !important; }
 
+/* ── Card footer (toggle + download) ─────────────────────────────────────── */
+.claim-card-footer {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin-top: .75rem;
+}
+
 /* ── Toggle button ────────────────────────────────────────────────────────── */
 .claim-toggle {
   background: none;
@@ -599,11 +607,31 @@ body {
   font-family: inherit;
   color: var(--c-text-muted);
   cursor: pointer;
-  margin-top: .75rem;
   transition: border-color .12s, color .12s;
-  align-self: flex-start;
 }
 .claim-toggle:hover { border-color: var(--c-accent); color: var(--c-accent); }
+
+.claim-download {
+  background: none;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-xs);
+  padding: .3rem .45rem;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color .12s, color .12s;
+  margin-left: auto;
+}
+.claim-download:hover { border-color: var(--c-accent); color: var(--c-accent); }
+.claim-download:disabled { opacity: .4; cursor: wait; }
+
+.claim-card.capturing {
+  padding: 1.75rem;
+  box-shadow: 0 0 0 2px var(--c-border), var(--shadow);
+  background: var(--c-surface) !important;
+}
 
 /* ── States ───────────────────────────────────────────────────────────────── */
 .loading, .empty, .error {
@@ -763,17 +791,48 @@ body {
   animation: modal-in .15s ease;
 }
 #modal-content {
-  padding-top: 1.25rem;
+  padding-top: 2.5rem;
 }
 #modal-card[data-resultado="verdadero"] { border-top-color: var(--c-verdadero); }
 #modal-card[data-resultado="falso"]     { border-top-color: var(--c-falso); }
 #modal-card[data-resultado="enganoso"]  { border-top-color: var(--c-enganoso); }
 #modal-card[data-resultado="parcial"]   { border-top-color: var(--c-parcial); }
 
-#modal-close {
+#modal-brand {
+  display: none;
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  font-size: 1.1rem;
+  font-weight: 900;
+  letter-spacing: -.04em;
+  line-height: 1;
+  color: #e8849a;
+  pointer-events: none;
+}
+#modal-card.capturing #modal-brand { display: block; }
+
+.claim-brand {
+  display: none;
+  font-size: .95rem;
+  font-weight: 900;
+  letter-spacing: -.04em;
+  line-height: 1;
+  color: #e8849a;
+}
+.claim-card.capturing .claim-brand { display: block; }
+.claim-card.capturing .claim-toggle { display: none; }
+
+#modal-actions {
   position: absolute;
   top: 1rem;
   right: 1rem;
+  display: flex;
+  gap: .35rem;
+}
+
+#modal-close,
+#modal-download {
   background: rgba(255,255,255,.06);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-xs);
@@ -788,7 +847,9 @@ body {
   transition: background .12s, color .12s;
   flex-shrink: 0;
 }
-#modal-close:hover { background: rgba(255,255,255,.12); color: var(--c-text); }
+#modal-close:hover,
+#modal-download:hover { background: rgba(255,255,255,.12); color: var(--c-text); }
+#modal-download:disabled { opacity: .4; cursor: wait; }
 
 .modal-claim-text {
   font-size: .95rem;

@@ -237,6 +237,39 @@ function applyFilters() {
 }
 
 // ─── Render claims ────────────────────────────────────────────────────────────
+function attachCardListeners(root, byId) {
+  root.querySelectorAll('.claim-toggle').forEach(btn => {
+    btn.addEventListener('click', () => openModal(byId[btn.dataset.id]));
+  });
+
+  root.querySelectorAll('.claim-download').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const card = btn.closest('.claim-card');
+      btn.disabled = true;
+      try {
+        card.classList.add('capturing');
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+        const raw = await html2canvas(card, { scale: 2, useCORS: true, backgroundColor: '#141414' });
+        const pad = 20; // 10px × scale 2
+        const canvas = document.createElement('canvas');
+        canvas.width  = raw.width  + pad * 2;
+        canvas.height = raw.height + pad * 2;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#141414';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(raw, pad, pad);
+        const link = document.createElement('a');
+        link.download = `claim-${btn.dataset.id}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      } finally {
+        card.classList.remove('capturing');
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
 function renderClaims(claims) {
   const container = document.getElementById('claims-container');
 
@@ -246,10 +279,7 @@ function renderClaims(claims) {
   }
 
   container.innerHTML = claims.map(c => claimCard(c)).join('');
-
-  container.querySelectorAll('.claim-toggle').forEach(btn => {
-    btn.addEventListener('click', () => openModal(claimsById[btn.dataset.id]));
-  });
+  attachCardListeners(container, claimsById);
 }
 
 function claimCard(claim) {
@@ -291,18 +321,58 @@ function claimCard(claim) {
 
       ${tags ? `<div class="claim-tags">${tags}</div>` : ''}
 
-      ${v ? `<button class="claim-toggle" data-id="${claim.id}">Ver más →</button>` : ''}
+      <div class="claim-card-footer">
+        <span class="claim-brand">facthem.es</span>
+        ${v ? `<button class="claim-toggle" data-id="${claim.id}">Ver más →</button>` : ''}
+        <button class="claim-download" data-html2canvas-ignore data-id="${claim.id}" title="Descargar imagen">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+          </svg>
+        </button>
+      </div>
     </article>`;
 }
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
 function setupModal() {
-  const overlay = document.getElementById('modal-overlay');
-  const closeBtn = document.getElementById('modal-close');
+  const overlay    = document.getElementById('modal-overlay');
+  const closeBtn   = document.getElementById('modal-close');
+  const downloadBtn = document.getElementById('modal-download');
+  const modalCard  = document.getElementById('modal-card');
 
   closeBtn.addEventListener('click', closeModal);
   overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+  downloadBtn.addEventListener('click', async () => {
+    downloadBtn.disabled = true;
+    const prevMaxHeight = modalCard.style.maxHeight;
+    const prevOverflow  = modalCard.style.overflowY;
+    try {
+      modalCard.classList.add('capturing');
+      modalCard.style.maxHeight = 'none';
+      modalCard.style.overflowY = 'visible';
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const raw = await html2canvas(modalCard, { scale: 2, useCORS: true, backgroundColor: '#141414' });
+      const pad = 20;
+      const canvas = document.createElement('canvas');
+      canvas.width  = raw.width  + pad * 2;
+      canvas.height = raw.height + pad * 2;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#141414';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(raw, pad, pad);
+      const link = document.createElement('a');
+      link.download = `claim-${modalCard.dataset.claimId ?? 'modal'}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } finally {
+      modalCard.style.maxHeight = prevMaxHeight;
+      modalCard.style.overflowY = prevOverflow;
+      modalCard.classList.remove('capturing');
+      downloadBtn.disabled = false;
+    }
+  });
 }
 
 function openModal(claim) {
@@ -327,6 +397,7 @@ function openModal(claim) {
 
   const card = document.getElementById('modal-card');
   card.dataset.resultado = resultadoClass;
+  card.dataset.claimId   = claim.id;
 
   document.getElementById('modal-content').innerHTML = `
     <header class="claim-header" style="margin-bottom:1.25rem">
@@ -959,7 +1030,5 @@ function renderSearchResults(claims, politicianName) {
   area.innerHTML = countBadge + groupsHtml;
 
   const byId = Object.fromEntries(claims.map(c => [c.id, c]));
-  area.querySelectorAll('.claim-toggle').forEach(btn => {
-    btn.addEventListener('click', () => openModal(byId[btn.dataset.id]));
-  });
+  attachCardListeners(area, byId);
 }

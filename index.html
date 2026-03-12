@@ -203,7 +203,15 @@
   <!-- ── Claim detail modal ───────────────────────────────────────────────── -->
   <div id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-content">
     <div id="modal-card">
-      <button id="modal-close" aria-label="Cerrar">✕</button>
+      <span id="modal-brand">facthem.es</span>
+      <div id="modal-actions" data-html2canvas-ignore>
+        <button id="modal-download" aria-label="Descargar imagen">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+          </svg>
+        </button>
+        <button id="modal-close" aria-label="Cerrar">✕</button>
+      </div>
       <div id="modal-content"></div>
     </div>
   </div>
@@ -217,6 +225,7 @@
       }
     });
   </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="js/mist.js" defer></script>
   <script>
     (function () {
