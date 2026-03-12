@@ -938,9 +938,12 @@ body {
   background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: 20px;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
 }
 .search-count-badge strong { color: var(--c-accent); font-weight: 700; }
+.badge-sep { opacity: .4; }
 
 .search-session-group  { margin-bottom: 2.5rem; }
 .search-session-header {

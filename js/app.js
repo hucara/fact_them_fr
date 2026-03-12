@@ -38,6 +38,7 @@ let allPoliticians    = [];
 let searchLoaded      = false;
 let activeSearchIndex = -1;
 let searchClaimsCache = {};
+let claimCount = 0;
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', boot);
@@ -97,7 +98,7 @@ async function loadSessions() {
   const sel = document.getElementById('filter-session');
   sel.disabled = true;
 
-  const [{ data, error }, { count: claimCount }, { data: claimSessions }] = await Promise.all([
+  const [{ data, error }, { count: headerCount }, { data: claimSessions }] = await Promise.all([
     supabase.from('session').select('id, legislatura, tipo, numero, fecha, organo, status').order('fecha', { ascending: false }),
     supabase.from('claim').select('id', { count: 'exact', head: true }),
     supabase.from('claim').select('session_id, verification!inner(id)'),
@@ -113,10 +114,12 @@ async function loadSessions() {
   const sessionIdsWithClaims = new Set((claimSessions ?? []).map(c => c.session_id));
   const sessions = data.filter(s => sessionIdsWithClaims.has(s.id));
 
+  claimCount = headerCount ?? 0;
+
   const statsEl = document.getElementById('header-stats');
   if (statsEl) {
     statsEl.innerHTML =
-      `<strong>${sessions.length}</strong> sesiones · <strong>${(claimCount ?? 0).toLocaleString('es-ES')}</strong> afirmaciones`;
+      `<strong>${sessions.length}</strong> sesiones · <strong>${claimCount.toLocaleString('es-ES')}</strong> afirmaciones`;
   }
 
   if (!sessions.length) {
@@ -641,8 +644,9 @@ function renderDashboard(claims) {
   const comboBreakerPleno = getTopPleno(plenaConfirmadoCounts);
   const bocachanclaPleno  = getTopPleno(plenaFalsoCounts);
 
-  const porcFalsos      = totalVerificados > 0 ? Math.round((totalFalsos      / totalVerificados) * 100) : 0;
-  const porcConfirmados = totalVerificados > 0 ? Math.round((totalConfirmados / totalVerificados) * 100) : 0;
+  const total = claimCount || totalVerificados;
+  const porcFalsos      = total > 0 ? Math.round((totalFalsos      / total) * 100) : 0;
+  const porcConfirmados = total > 0 ? Math.round((totalConfirmados / total) * 100) : 0;
 
   // All themes by volume with their dominant party
   const topTemas = Object.entries(temaCounts)
@@ -667,8 +671,8 @@ function renderDashboard(claims) {
     ${statCard('Político con más claims',         pol(topPolitico.key),              `${topPolitico.val} claims totales`,       false, 'El diputado que más afirmaciones ha realizado en total.')}
     ${statCard('Político con más falsos',         pol(topPoliticoFalso.key),         `${topPoliticoFalso.val} falsos/engañosos`,true,  'El diputado con más afirmaciones verificadas como falsas o engañosas.')}
     ${statCard('Temática más frecuente',          topTema.key === '-' ? '-' : (TEMATICO_LABELS[topTema.key] ?? snakeToLabel(topTema.key)), `${topTema.val} menciones`, false, 'El ámbito sobre el que más afirmaciones se han hecho.')}
-    ${statCard('Tasa de falsedad',                `${porcFalsos}%`,                  `${totalFalsos} de ${totalVerificados} verificados`,   true,  'Porcentaje de afirmaciones verificadas como falsas o engañosas.')}
-    ${statCard('Tasa de veracidad',               `${porcConfirmados}%`,             `${totalConfirmados} de ${totalVerificados} verificados`, false, 'Porcentaje de afirmaciones verificadas como completamente ciertas.')}
+    ${statCard('Tasa de falsedad',                `${porcFalsos}%`,                  `${totalFalsos} de ${total} afirmaciones`,   true,  'Porcentaje de afirmaciones verificadas como falsas o engañosas.')}
+    ${statCard('Tasa de veracidad',               `${porcConfirmados}%`,             `${totalConfirmados} de ${total} afirmaciones`, false, 'Porcentaje de afirmaciones verificadas como completamente ciertas.')}
     ${statCard('El Maestro del Escaqueo',         pol(topPoliticoNv.key),            `${topPoliticoNv.val} afirmaciones no verificables`,   false, 'El político que más afirmaciones hace que no pueden verificarse por falta de datos concretos.')}
     ${statCard('Partido más escurridizo',         topPartidoNv.key,                  `${topPartidoNv.val} afirmaciones no verificables`,    false, 'El partido que más afirmaciones hace que no pueden verificarse.')}
     ${statCard('El Gran Matizador',               pol(topPoliticoMatiz.key),         `${topPoliticoMatiz.val} confirmados con matiz`,        false, 'El político que más veces dice algo cierto… pero con algún pero importante.')}
@@ -910,7 +914,7 @@ async function selectPolitician(politicianId, politicianName) {
     `)
     .eq('politician_id', politicianId)
     .not('verification', 'is', null)
-    .order('session_id');
+    .order('session_id', { ascending: false });
 
   if (error) {
     area.innerHTML = `<p class="error">Error al cargar afirmaciones: ${escHtml(error.message)}</p>`;
@@ -938,8 +942,14 @@ function renderSearchResults(claims, politicianName) {
   }
 
   const total = claims.length;
+  const falsos = claims.filter(c => c.verification?.[0]?.resultado === 'FALSO').length;
+  const pct = total > 0 ? Math.round((falsos / total) * 100) : 0;
   const countBadge = `<div class="search-count-badge">
-    <strong>${total}</strong> afirmaci${total === 1 ? 'ón' : 'ones'} encontrada${total === 1 ? '' : 's'}
+    <span><strong>${total}</strong> afirmaci${total === 1 ? 'ón' : 'ones'}</span>
+    <span class="badge-sep">·</span>
+    <span><strong>${falsos}</strong> falsa${falsos === 1 ? '' : 's'}</span>
+    <span class="badge-sep">·</span>
+    <span><strong>${pct}%</strong> falsas</span>
   </div>`;
 
   const groupsHtml = [...grouped.values()].map(({ session, claims: sessionClaims }) => {
