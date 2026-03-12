@@ -75,6 +75,7 @@
       </p>
       <div class="hero-actions">
         <a class="hero-cta hero-cta--primary" href="#app-header" data-cta="sesiones">Explorar sesiones</a>
+        <a class="hero-cta hero-cta--secondary" href="#app-header" data-cta="busqueda">Representantes</a>
         <a class="hero-cta hero-cta--secondary" href="#app-header" data-cta="estadisticas">Ver estadísticas</a>
       </div>
     </div>
@@ -84,6 +85,7 @@
   <header class="site-header" id="app-header">
     <nav class="tabs">
       <button class="tab-button active" data-tab="view-sesiones">Sesiones</button>
+      <button class="tab-button" data-tab="view-busqueda">Representantes</button>
       <button class="tab-button" data-tab="view-estadisticas">Estadísticas</button>
     </nav>
     <span id="header-stats" aria-live="polite"></span>
@@ -138,6 +140,43 @@
       </div>
 
     </main>
+  </div>
+
+  <div class="view-container search-view" id="view-busqueda">
+    <div class="search-view-content">
+      <div class="search-input-area">
+        <div class="politician-combobox" id="politician-combobox">
+          <div class="search-wrap search-wrap--lg">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input
+              type="text"
+              id="politician-search-input"
+              class="politician-search-input"
+              placeholder="Escribe el nombre de un político…"
+              autocomplete="off"
+              spellcheck="false"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded="false"
+              aria-controls="politician-suggestions"
+              aria-haspopup="listbox"
+            />
+            <button class="search-clear-btn" id="search-clear-btn" aria-label="Limpiar búsqueda" hidden>✕</button>
+          </div>
+          <ul id="politician-suggestions" class="politician-suggestions" role="listbox" aria-label="Políticos sugeridos" hidden></ul>
+        </div>
+      </div>
+      <div id="search-results-area" class="search-results-area">
+        <div class="search-welcome">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <p>Busca un político para ver todas sus afirmaciones verificadas.</p>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="view-container dashboard-view" id="view-estadisticas">

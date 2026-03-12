@@ -809,6 +809,160 @@ body {
   to   { opacity: 1; transform: translateY(0)   scale(1); }
 }
 
+/* ── Search view ──────────────────────────────────────────────────────────── */
+.search-view.active {
+  display: block;
+  overflow-y: auto;
+  background: var(--c-bg);
+  height: calc(100vh - var(--header-h));
+  height: calc(100dvh - var(--header-h));
+}
+.search-view-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1.75rem;
+  width: 100%;
+}
+
+.search-input-area { margin-bottom: 2rem; }
+
+.search-wrap--lg {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.search-wrap--lg .search-icon {
+  position: absolute;
+  left: 1rem;
+  color: var(--c-text-muted);
+  pointer-events: none;
+}
+
+.politician-search-input {
+  width: 100%;
+  padding: .75rem 3rem .75rem 2.75rem;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-size: 1rem;
+  font-family: inherit;
+  transition: border-color .15s, box-shadow .15s;
+  outline: none;
+}
+.politician-search-input::placeholder { color: var(--c-text-muted); }
+.politician-search-input:hover        { border-color: var(--c-accent); }
+.politician-search-input:focus        { border-color: var(--c-accent); box-shadow: 0 0 0 3px var(--c-accent-dim); }
+.politician-search-input:disabled     { opacity: .5; cursor: not-allowed; }
+
+.search-clear-btn {
+  position: absolute;
+  right: .75rem;
+  background: none;
+  border: none;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  font-size: .85rem;
+  padding: .25rem;
+  line-height: 1;
+  border-radius: var(--radius-xs);
+  transition: color .12s;
+}
+.search-clear-btn:hover { color: var(--c-text); }
+
+.politician-combobox { position: relative; }
+
+.politician-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  list-style: none;
+  padding: .375rem 0;
+  margin: 0;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.suggestion-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: .5rem;
+  padding: .55rem 1rem;
+  font-size: .9rem;
+  color: var(--c-text);
+  cursor: pointer;
+  transition: background .1s;
+}
+.suggestion-item:hover,
+.suggestion-item--active { background: var(--c-surface-2); }
+.suggestion-item--active  { outline: 1px solid var(--c-accent); outline-offset: -1px; }
+
+.suggestion-partido {
+  font-size: .7rem;
+  font-weight: 500;
+  color: var(--c-text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.suggestion-mark {
+  background: none;
+  color: var(--c-accent);
+  font-weight: 700;
+}
+
+.search-results-area { width: 100%; }
+
+.search-welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 4rem 2rem;
+  color: var(--c-text-muted);
+  text-align: center;
+}
+.search-welcome svg { opacity: .1; }
+.search-welcome p   { max-width: 280px; font-size: .9rem; line-height: 1.7; }
+
+.search-count-badge {
+  font-size: .82rem;
+  color: var(--c-text-muted);
+  margin-bottom: 1.5rem;
+  padding: .4rem .875rem;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 20px;
+  display: inline-block;
+}
+.search-count-badge strong { color: var(--c-accent); font-weight: 700; }
+
+.search-session-group  { margin-bottom: 2.5rem; }
+.search-session-header {
+  display: flex;
+  align-items: baseline;
+  gap: .5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  padding-bottom: .5rem;
+  border-bottom: 1px solid var(--c-border);
+}
+.search-session-date  { font-size: .85rem; font-weight: 700; color: var(--c-text); }
+.search-session-organ { font-size: .78rem; color: var(--c-text-muted); }
+
+.search-claims-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+@media (max-width: 1100px) { .search-claims-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 768px)  { .search-claims-grid { grid-template-columns: 1fr; } }
+
 /* ── Responsive ───────────────────────────────────────────────────────────── */
 @media (max-width: 1100px) {
   #claims-container { grid-template-columns: repeat(2, 1fr); }
