@@ -48,7 +48,8 @@ async function boot() {
   setupHeroCTAs();
   setupFilters();
   setupModal();
-  await loadSessions();
+  setupShare();
+  await Promise.all([loadSessions(), handleClaimDeepLink()]);
 }
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
@@ -273,7 +274,7 @@ function claimCard(claim) {
       <header class="claim-header">
         <div class="claim-meta-top">
           ${pol
-      ? `<span class="politician-name">${escHtml(pol.nombre_completo)}</span>
+      ? `<span class="politician-name">${escHtml(formatNombre(pol.nombre_completo))}</span>
                ${pol.partido ? `<span class="partido-badge">${escHtml(pol.partido)}</span>` : ''}`
       : '<span class="politician-name unknown">Político desconocido</span>'}
         </div>
@@ -294,7 +295,18 @@ function claimCard(claim) {
 
       ${tags ? `<div class="claim-tags">${tags}</div>` : ''}
 
-      ${v ? `<button class="claim-toggle" data-id="${claim.id}">Ver más →</button>` : ''}
+      <div class="claim-actions">
+        ${v ? `<button class="claim-toggle" data-id="${claim.id}">Ver más →</button>` : ''}
+        <div class="share-wrapper">
+          <button class="share-btn" aria-label="Compartir afirmación">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+          </button>
+          <div class="share-menu" hidden>${buildShareMenu(claim)}</div>
+        </div>
+      </div>
     </article>`;
 }
 
@@ -335,7 +347,7 @@ function openModal(claim) {
     <header class="claim-header" style="margin-bottom:1.25rem">
       <div class="claim-meta-top">
         ${pol
-      ? `<span class="politician-name" style="font-size:1.05rem">${escHtml(pol.nombre_completo)}</span>
+      ? `<span class="politician-name" style="font-size:1.05rem">${escHtml(formatNombre(pol.nombre_completo))}</span>
              ${pol.partido ? `<span class="partido-badge">${escHtml(pol.partido)}</span>` : ''}`
       : '<span class="politician-name unknown">Político desconocido</span>'}
       </div>
@@ -357,6 +369,19 @@ function openModal(claim) {
     ${tags ? `<div class="claim-tags" style="margin-bottom:1.25rem">${tags}</div>` : ''}
 
     ${details ? `<dl class="modal-detail-list">${details}</dl>` : ''}
+
+    <div class="modal-share">
+      <div class="share-wrapper">
+        <button class="share-btn share-btn--labeled" aria-label="Compartir afirmación">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+          Compartir
+        </button>
+        <div class="share-menu" hidden>${buildShareMenu(claim)}</div>
+      </div>
+    </div>
   `;
 
   const overlay = document.getElementById('modal-overlay');
@@ -368,6 +393,141 @@ function openModal(claim) {
 function closeModal() {
   document.getElementById('modal-overlay').classList.remove('open');
   document.body.style.overflow = '';
+}
+
+// ─── Share ────────────────────────────────────────────────────────────────────
+function buildShareUrl(claimId) {
+  return `https://facthem.es/?claim=${claimId}`;
+}
+
+function formatNombre(str) {
+  const parts = String(str ?? '').split(',');
+  return parts.length === 2 ? `${parts[1].trim()} ${parts[0].trim()}` : String(str ?? '');
+}
+
+function buildShareText(claim) {
+  const pol = claim.politician;
+  const v = claim.verification?.[0] ?? null;
+  const resultado = v ? formatResultado(v.resultado) : 'Sin verificar';
+  const nombre = pol ? formatNombre(pol.nombre_completo) : 'Un político';
+  const partido = pol?.partido ? ` (${pol.partido})` : '';
+  const texto = String(claim.texto_normalizado ?? '').trim();
+  const truncated = texto.length > 120 ? texto.slice(0, 120) + '…' : texto;
+  return `${nombre}${partido} afirmó: "${truncated}"\n${resultado} | Facthem.es`;
+}
+
+function buildShareMenu(claim) {
+  const shareUrl = buildShareUrl(claim.id);
+  const shareText = buildShareText(claim);
+  const encodedUrl = encodeURIComponent(shareUrl);
+  const encodedText = encodeURIComponent(shareText);
+  const encodedWa = encodeURIComponent(shareText + '\n' + shareUrl);
+
+  return `
+    <a class="share-option" href="https://wa.me/?text=${encodedWa}" target="_blank" rel="noopener">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.373 0 0 5.373 0 12c0 2.127.557 4.123 1.532 5.856L0 24l6.335-1.652A11.954 11.954 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z"/></svg>
+      WhatsApp
+    </a>
+    <a class="share-option" href="https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}&via=facthem_ES" target="_blank" rel="noopener">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      X / Twitter
+    </a>
+    <a class="share-option" href="https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}" target="_blank" rel="noopener">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+      Facebook
+    </a>
+    <a class="share-option" href="https://t.me/share/url?url=${encodedUrl}&text=${encodedText}" target="_blank" rel="noopener">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+      Telegram
+    </a>
+    <button class="share-option share-copy-btn" data-url="${escHtml(shareUrl)}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      <span>Copiar enlace</span>
+    </button>`;
+}
+
+function setupShare() {
+  document.addEventListener('click', e => {
+    const shareBtn = e.target.closest('.share-btn');
+    const copyBtn = e.target.closest('.share-copy-btn');
+
+    if (shareBtn) {
+      e.stopPropagation();
+      const menu = shareBtn.closest('.share-wrapper').querySelector('.share-menu');
+      const isHidden = menu.hidden;
+      document.querySelectorAll('.share-menu').forEach(m => { m.hidden = true; });
+      menu.hidden = !isHidden;
+      return;
+    }
+
+    if (copyBtn) {
+      e.stopPropagation();
+      handleShareCopy(copyBtn, copyBtn.dataset.url);
+      return;
+    }
+
+    document.querySelectorAll('.share-menu').forEach(m => { m.hidden = true; });
+  });
+}
+
+async function handleShareCopy(btn, url) {
+  try {
+    await navigator.clipboard.writeText(url);
+    const span = btn.querySelector('span');
+    if (span) {
+      span.textContent = '¡Copiado!';
+      setTimeout(() => { span.textContent = 'Copiar enlace'; }, 2000);
+    }
+  } catch { /* clipboard not available */ }
+}
+
+function updateOGTags(claim) {
+  const pol = claim.politician;
+  const v = claim.verification?.[0] ?? null;
+  const nombre = pol ? formatNombre(pol.nombre_completo) : 'Un político';
+  const resultado = v ? formatResultado(v.resultado) : 'Sin verificar';
+  const texto = String(claim.texto_normalizado ?? '').trim();
+  const desc = texto.length > 160 ? texto.slice(0, 160) + '…' : texto;
+  const title = `${nombre} — ${resultado} | Facthem`;
+
+  document.title = title;
+  setMeta('name', 'description', desc);
+  setMeta('property', 'og:title', title);
+  setMeta('property', 'og:description', desc);
+  setMeta('property', 'og:url', `https://facthem.es/?claim=${claim.id}`);
+  setMeta('name', 'twitter:title', title);
+  setMeta('name', 'twitter:description', desc);
+}
+
+function setMeta(attr, value, content) {
+  const el = document.querySelector(`meta[${attr}="${value}"]`);
+  if (el) el.setAttribute('content', content);
+}
+
+async function handleClaimDeepLink() {
+  const claimId = new URLSearchParams(window.location.search).get('claim');
+  if (!claimId) return;
+
+  const { data, error } = await supabase
+    .from('claim')
+    .select(`
+      id, texto_normalizado, texto_original, entidad, metrica,
+      valor_afirmado, periodo_temporal, ambito_geografico, ambito_tematico,
+      fuente_citada, verificabilidad, centralidad, relevancia, tipo_claim,
+      politician:politician_id (nombre_completo, partido, grupo_parlamentario),
+      verification (
+        resultado, confidence_score, afirmacion_correcta,
+        omisiones, errores, fuentes, potencial_engano,
+        recomendacion_redaccion, razonamiento_llm
+      )
+    `)
+    .eq('id', claimId)
+    .single();
+
+  if (!error && data) {
+    updateOGTags(data);
+    openModal(data);
+  }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -525,13 +685,13 @@ function renderDashboard(s) {
   const d = (field) => s[field] || {};
   const polLabel = (f) => {
     const o = d(f);
-    return o.name ? `${o.name}${o.partido ? ` · ${o.partido}` : ''}` : '-';
+    return o.name ? `${formatNombre(o.name)}${o.partido ? ` · ${o.partido}` : ''}` : '-';
   };
 
   const cb = s.combo_breaker || {};
   const bc = s.bocachancla || {};
-  const cbLabel = cb.politico ? `${cb.politico} · ${cb.partido}` : '-';
-  const bcLabel = bc.politico ? `${bc.politico} · ${bc.partido}` : '-';
+  const cbLabel = cb.politico ? `${formatNombre(cb.politico)} · ${cb.partido}` : '-';
+  const bcLabel = bc.politico ? `${formatNombre(bc.politico)} · ${bc.partido}` : '-';
   const cbSub = cb.fecha ? `${cb.count} confirmados en el pleno del ${new Date(cb.fecha).toLocaleDateString('es-ES')}` : '-';
   const bcSub = bc.fecha ? `${bc.count} falsedades en el pleno del ${new Date(bc.fecha).toLocaleDateString('es-ES')}` : '-';
 
@@ -736,12 +896,13 @@ function renderSuggestions(matches, query) {
   if (!matches.length) { closeSuggestions(); return; }
 
   list.innerHTML = matches.map((p, i) => {
-    const highlighted = highlightMatch(escHtml(p.nombre_completo), query);
+    const formattedName = formatNombre(p.nombre_completo);
+    const highlighted = highlightMatch(escHtml(formattedName), query);
     const partido = p.partido
       ? `<span class="suggestion-partido">${escHtml(p.partido)}</span>`
       : '';
     return `<li class="suggestion-item" role="option" id="suggestion-${i}" aria-selected="false"
-      data-id="${p.id}" data-name="${escHtml(p.nombre_completo)}">${highlighted}${partido}</li>`;
+      data-id="${p.id}" data-name="${escHtml(formattedName)}">${highlighted}${partido}</li>`;
   }).join('');
 
   list.querySelectorAll('.suggestion-item').forEach(item => {

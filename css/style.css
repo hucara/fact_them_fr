@@ -807,7 +807,6 @@ body {
   font-family: inherit;
   color: var(--c-text-muted);
   cursor: pointer;
-  margin-top: .75rem;
   transition: border-color .12s, color .12s;
   align-self: flex-start;
 }
@@ -816,6 +815,77 @@ body {
   border-color: var(--c-accent);
   color: var(--c-accent);
 }
+
+/* ── Claim actions row ─────────────────────────────────────────────────────── */
+.claim-actions {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin-top: .75rem;
+}
+
+/* ── Share button ──────────────────────────────────────────────────────────── */
+.share-wrapper { position: relative; margin-left: auto; }
+
+.share-btn {
+  background: none;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-xs);
+  padding: .3rem .5rem;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  font-size: .75rem;
+  font-weight: 600;
+  font-family: inherit;
+  transition: border-color .12s, color .12s;
+}
+.share-btn:hover { border-color: var(--c-accent); color: var(--c-accent); }
+
+/* ── Share dropdown menu ────────────────────────────────────────────────────── */
+.share-menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  right: 0;
+  left: auto;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  min-width: 160px;
+  z-index: 200;
+  overflow: hidden;
+}
+.share-menu[hidden] { display: none; }
+
+.share-option {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  width: 100%;
+  padding: .55rem .875rem;
+  font-size: .8rem;
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--c-text);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background .1s;
+}
+.share-option:hover { background: rgba(255,255,255,.06); }
+
+/* ── Modal share section ────────────────────────────────────────────────────── */
+.modal-share {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--c-border);
+}
+.modal-share .share-menu { left: 0; right: auto; }
 
 /* ── States ───────────────────────────────────────────────────────────────── */
 .loading,
@@ -1019,15 +1089,15 @@ body {
 .site-footer {
   background: var(--c-bg);
   border-top: 1px solid var(--c-border);
-  padding: .875rem 1.75rem;
+  padding: 1.5rem 1.75rem;
   text-align: center;
   flex-shrink: 0;
 }
 
 .site-footer p {
-  font-size: .7rem;
+  font-size: .8rem;
   color: var(--c-text-muted);
-  line-height: 1.6;
+  line-height: 2;
 }
 
 .footer-email,
@@ -1096,7 +1166,7 @@ body {
 }
 
 #modal-content {
-  padding-top: 1.25rem;
+  padding-top: 3rem;
 }
 
 #modal-card[data-resultado="verdadero"] {
