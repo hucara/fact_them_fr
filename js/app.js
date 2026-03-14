@@ -435,18 +435,29 @@ function buildShareText(claim) {
   const partido = pol?.partido ? ` (${pol.partido})` : '';
   const texto = String(claim.texto_normalizado ?? '').trim();
   const truncated = texto.length > 200 ? texto.slice(0, 200) + '…' : texto;
-  return `${nombre}${partido} afirmó: "${truncated}"\n${emoji} ${resultadoLabel} | Facthem.es`;
+  return `🔍 ${nombre}${partido} afirmó: "${truncated}"\n${emoji} ${resultadoLabel} | Facthem.es`;
 }
 
 function buildShareTextPlain(claim) {
   const pol = claim.politician;
   const v = claim.verification?.[0] ?? null;
+  const resultadoKey = v?.resultado?.toUpperCase() ?? null;
   const resultadoLabel = v ? formatResultado(v.resultado) : 'Sin verificar';
+  const emoji = resultadoKey ? (RESULTADO_EMOJIS[resultadoKey] ?? '🔍') : '🔍';
   const nombre = pol ? formatNombre(pol.nombre_completo) : 'Un político';
   const partido = pol?.partido ? ` (${pol.partido})` : '';
   const texto = String(claim.texto_normalizado ?? '').trim();
   const truncated = texto.length > 200 ? texto.slice(0, 200) + '…' : texto;
-  return `${nombre}${partido} afirmó: "${truncated}"\n${resultadoLabel} | Facthem.es`;
+  return `🔍 ${nombre}${partido} afirmó: "${truncated}"\n${emoji} ${resultadoLabel} | Facthem.es`;
+}
+
+function encodeForWa(text) {
+  // Encode ASCII special chars normally, keep Unicode/emojis as raw chars
+  // The browser encodes raw Unicode when navigating, which WhatsApp handles correctly
+  return [...text].map(char => {
+    if (char.codePointAt(0) > 0x7F) return char;
+    return encodeURIComponent(char);
+  }).join('');
 }
 
 function buildShareMenu(claim) {
@@ -454,7 +465,7 @@ function buildShareMenu(claim) {
   const shareText = buildShareTextPlain(claim);
   const encodedUrl = encodeURIComponent(shareUrl);
   const encodedText = encodeURIComponent(shareText);
-  const encodedWa = encodeURIComponent(shareText + '\n' + shareUrl);
+  const encodedWa = encodeForWa(shareText + '\n' + shareUrl);
 
   return `
     <a class="share-option" href="https://wa.me/?text=${encodedWa}" target="_blank" rel="noopener">

@@ -1069,6 +1069,18 @@ body {
   display: contents;
 }
 
+@media (max-width: 640px) {
+  .stat-list--table {
+    gap: .4rem .75rem;
+  }
+  .stat-list-partido {
+    white-space: normal;
+    word-break: break-word;
+    text-align: right;
+    font-size: .8rem;
+  }
+}
+
 .stat-list-row--header .stat-list-col-label {
   color: var(--c-text-muted);
   font-weight: 600;
