@@ -29,6 +29,26 @@ const RESULTADO_LABELS = {
   SUBESTIMADO: 'Subestimado',
 };
 
+const RESULTADO_EMOJIS = {
+  CONFIRMADO: '✅',
+  CONFIRMADO_CON_MATIZ: '⚠️',
+  FALSO: '❌',
+  DESCONTEXTUALIZADO: '🟠',
+  IMPRECISO: '🔸',
+  NO_VERIFICABLE: '❓',
+  SOBREESTIMADO: '🟠',
+  SUBESTIMADO: '🟠',
+};
+
+// Colores exactos del CSS para la imagen generada (keyed by resultadoToClass output)
+const IMG_COLORS = {
+  verdadero: { color: '#3da966', bgAlpha: 'rgba(61,169,102,.07)',   border: 'rgba(61,169,102,.4)'   },
+  falso:     { color: '#c43e5e', bgAlpha: 'rgba(196,62,94,.08)',    border: 'rgba(196,62,94,.4)'    },
+  enganoso:  { color: '#b07825', bgAlpha: 'rgba(176,120,37,.07)',   border: 'rgba(176,120,37,.4)'   },
+  parcial:   { color: '#3890bc', bgAlpha: 'rgba(56,144,188,.07)',   border: 'rgba(56,144,188,.4)'   },
+  nv:        { color: '#8a7880', bgAlpha: 'rgba(255,255,255,.02)',  border: 'rgba(92,74,82,.35)'    },
+};
+
 // ─── State ────────────────────────────────────────────────────────────────────
 let allClaims = [];
 let claimsById = {};
@@ -298,7 +318,7 @@ function claimCard(claim) {
       <div class="claim-actions">
         ${v ? `<button class="claim-toggle" data-id="${claim.id}">Ver más →</button>` : ''}
         <div class="share-wrapper">
-          <button class="share-btn" aria-label="Compartir afirmación">
+          <button class="share-btn" data-claim-id="${claim.id}" aria-label="Compartir afirmación">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
               <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
@@ -372,7 +392,7 @@ function openModal(claim) {
 
     <div class="modal-share">
       <div class="share-wrapper">
-        <button class="share-btn share-btn--labeled" aria-label="Compartir afirmación">
+        <button class="share-btn share-btn--labeled" data-claim-id="${claim.id}" aria-label="Compartir afirmación">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
             <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
@@ -408,17 +428,30 @@ function formatNombre(str) {
 function buildShareText(claim) {
   const pol = claim.politician;
   const v = claim.verification?.[0] ?? null;
-  const resultado = v ? formatResultado(v.resultado) : 'Sin verificar';
+  const resultadoKey = v?.resultado?.toUpperCase() ?? null;
+  const resultadoLabel = v ? formatResultado(v.resultado) : 'Sin verificar';
+  const emoji = resultadoKey ? (RESULTADO_EMOJIS[resultadoKey] ?? '🔍') : '🔍';
   const nombre = pol ? formatNombre(pol.nombre_completo) : 'Un político';
   const partido = pol?.partido ? ` (${pol.partido})` : '';
   const texto = String(claim.texto_normalizado ?? '').trim();
-  const truncated = texto.length > 120 ? texto.slice(0, 120) + '…' : texto;
-  return `${nombre}${partido} afirmó: "${truncated}"\n${resultado} | Facthem.es`;
+  const truncated = texto.length > 200 ? texto.slice(0, 200) + '…' : texto;
+  return `${nombre}${partido} afirmó: "${truncated}"\n${emoji} ${resultadoLabel} | Facthem.es`;
+}
+
+function buildShareTextPlain(claim) {
+  const pol = claim.politician;
+  const v = claim.verification?.[0] ?? null;
+  const resultadoLabel = v ? formatResultado(v.resultado) : 'Sin verificar';
+  const nombre = pol ? formatNombre(pol.nombre_completo) : 'Un político';
+  const partido = pol?.partido ? ` (${pol.partido})` : '';
+  const texto = String(claim.texto_normalizado ?? '').trim();
+  const truncated = texto.length > 200 ? texto.slice(0, 200) + '…' : texto;
+  return `${nombre}${partido} afirmó: "${truncated}"\n${resultadoLabel} | Facthem.es`;
 }
 
 function buildShareMenu(claim) {
   const shareUrl = buildShareUrl(claim.id);
-  const shareText = buildShareText(claim);
+  const shareText = buildShareTextPlain(claim);
   const encodedUrl = encodeURIComponent(shareUrl);
   const encodedText = encodeURIComponent(shareText);
   const encodedWa = encodeURIComponent(shareText + '\n' + shareUrl);
@@ -443,6 +476,10 @@ function buildShareMenu(claim) {
     <button class="share-option share-copy-btn" data-url="${escHtml(shareUrl)}">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
       <span>Copiar enlace</span>
+    </button>
+    <button class="share-option share-img-btn" data-claim-id="${escHtml(claim.id)}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      <span>Compartir imagen</span>
     </button>`;
 }
 
@@ -450,6 +487,7 @@ function setupShare() {
   document.addEventListener('click', e => {
     const shareBtn = e.target.closest('.share-btn');
     const copyBtn = e.target.closest('.share-copy-btn');
+    const imgBtn = e.target.closest('.share-img-btn');
 
     if (shareBtn) {
       e.stopPropagation();
@@ -463,6 +501,13 @@ function setupShare() {
     if (copyBtn) {
       e.stopPropagation();
       handleShareCopy(copyBtn, copyBtn.dataset.url);
+      return;
+    }
+
+    if (imgBtn) {
+      e.stopPropagation();
+      const claim = claimsById[imgBtn.dataset.claimId];
+      if (claim) handleShareImage(imgBtn, claim);
       return;
     }
 
@@ -504,6 +549,216 @@ function setMeta(attr, value, content) {
   if (el) el.setAttribute('content', content);
 }
 
+// ─── Share image (Canvas) ──────────────────────────────────────────────────────
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function wrapText(ctx, text, maxWidth, maxLines) {
+  const words = text.split(' ');
+  const lines = [];
+  let cur = '';
+  for (const word of words) {
+    const test = cur ? `${cur} ${word}` : word;
+    if (ctx.measureText(test).width > maxWidth && cur) {
+      lines.push(cur);
+      if (lines.length >= maxLines) {
+        lines[lines.length - 1] = lines[lines.length - 1].replace(/[,.]?$/, '…');
+        return lines;
+      }
+      cur = word;
+    } else {
+      cur = test;
+    }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+async function generateShareImage(claim) {
+  const canvas = document.createElement('canvas');
+  const W = 1200, H = 630;
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  const pol = claim.politician;
+  const v = claim.verification?.[0] ?? null;
+  const clsKey = v ? resultadoToClass(v.resultado) : 'nv';
+  const c = IMG_COLORS[clsKey] ?? IMG_COLORS.nv;
+  const resultadoLabel = v ? formatResultado(v.resultado) : 'Sin verificar';
+  const nombre = pol ? formatNombre(pol.nombre_completo) : 'Un político';
+  const partido = pol?.partido ?? '';
+  const texto = capitalize(String(claim.texto_normalizado ?? '').trim());
+  const score = v?.confidence_score != null ? Math.round(v.confidence_score * 100) : null;
+  const font = "'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif";
+
+  // Outer background
+  ctx.fillStyle = '#0d0d0d';
+  ctx.fillRect(0, 0, W, H);
+
+  // Card rect
+  const cx = 40, cy = 40, cw = W - 80, ch = H - 80, cr = 12;
+  // Card gradient background
+  const grad = ctx.createLinearGradient(cx, cy, cx, cy + ch * 0.35);
+  grad.addColorStop(0, c.bgAlpha);
+  grad.addColorStop(1, '#141414');
+  ctx.fillStyle = grad;
+  roundRect(ctx, cx, cy, cw, ch, cr);
+  ctx.fill();
+  // Card border
+  ctx.strokeStyle = '#2a2424';
+  ctx.lineWidth = 1.5;
+  roundRect(ctx, cx, cy, cw, ch, cr);
+  ctx.stroke();
+  // Card border-top (verdict color, 6px)
+  ctx.fillStyle = c.color;
+  ctx.beginPath();
+  ctx.moveTo(cx + cr, cy);
+  ctx.lineTo(cx + cw - cr, cy);
+  ctx.quadraticCurveTo(cx + cw, cy, cx + cw, cy + cr);
+  ctx.lineTo(cx + cw, cy + 6);
+  ctx.lineTo(cx, cy + 6);
+  ctx.lineTo(cx, cy + cr);
+  ctx.quadraticCurveTo(cx, cy, cx + cr, cy);
+  ctx.closePath();
+  ctx.fill();
+
+  // ── Content padding
+  const px = cx + 52, maxW = cw - 104;
+  let y = cy + 74;
+
+  // ── Header row: politician name + partido badge | resultado badge
+  ctx.font = `700 34px ${font}`;
+  ctx.fillStyle = '#e4e0e0';
+  ctx.fillText(nombre, px, y);
+  const nombreW = ctx.measureText(nombre).width;
+
+  if (partido) {
+    const bFont = `500 22px ${font}`;
+    ctx.font = bFont;
+    const bPad = 14, bH = 34, bR = 4;
+    const bW = ctx.measureText(partido).width + bPad * 2;
+    const bx = px + nombreW + 16, by = y - 26;
+    ctx.fillStyle = 'rgba(255,255,255,.05)';
+    roundRect(ctx, bx, by, bW, bH, bR); ctx.fill();
+    ctx.strokeStyle = '#2a2424'; ctx.lineWidth = 1;
+    roundRect(ctx, bx, by, bW, bH, bR); ctx.stroke();
+    ctx.fillStyle = '#9a8e8e';
+    ctx.fillText(partido, bx + bPad, by + 23);
+  }
+
+  // Resultado badge (right-aligned)
+  const badgeLabel = resultadoLabel.toUpperCase();
+  const badgeFont = `800 20px ${font}`;
+  ctx.font = badgeFont;
+  ctx.letterSpacing = '0.08em';
+  const dotR = 6, dotGap = 10, badgePad = 18, badgeH = 38, badgeR = 3;
+  const labelW = ctx.measureText(badgeLabel).width;
+  const badgeW = dotR * 2 + dotGap + labelW + badgePad * 2;
+  const bx2 = cx + cw - 52 - badgeW, by2 = y - 28;
+  ctx.fillStyle = c.bgAlpha;
+  roundRect(ctx, bx2, by2, badgeW, badgeH, badgeR); ctx.fill();
+  ctx.strokeStyle = c.border; ctx.lineWidth = 1;
+  roundRect(ctx, bx2, by2, badgeW, badgeH, badgeR); ctx.stroke();
+  ctx.fillStyle = c.color;
+  // dot
+  ctx.beginPath();
+  ctx.arc(bx2 + badgePad + dotR, by2 + badgeH / 2, dotR, 0, Math.PI * 2);
+  ctx.fill();
+  // label
+  ctx.fillText(badgeLabel, bx2 + badgePad + dotR * 2 + dotGap, by2 + 26);
+  ctx.letterSpacing = '0px';
+
+  y += 52;
+
+  // ── Decorative quote mark
+  ctx.font = `900 180px Georgia, 'Times New Roman', serif`;
+  ctx.fillStyle = 'rgba(200,96,122,0.30)';
+  ctx.fillText('\u201C', px - 8, y + 100);
+
+  // ── Claim text (italic)
+  ctx.font = `italic 400 28px ${font}`;
+  ctx.fillStyle = '#e4e0e0';
+  const textIndent = px + 52;
+  const textMaxW = maxW - 52;
+  const textLines = wrapText(ctx, texto, textMaxW, 4);
+  textLines.forEach((line, i) => { ctx.fillText(line, textIndent, y + i * 46); });
+  y += textLines.length * 46 + 24;
+
+  // ── Confidence bar
+  if (score !== null) {
+    const trackW = 220, trackH = 6, trackR = 99;
+    ctx.fillStyle = '#2a2424';
+    roundRect(ctx, px, y, trackW, trackH, trackR); ctx.fill();
+    ctx.fillStyle = c.color;
+    roundRect(ctx, px, y, Math.round(trackW * score / 100), trackH, trackR); ctx.fill();
+    ctx.font = `500 20px ${font}`;
+    ctx.fillStyle = '#9a8e8e';
+    ctx.fillText(`${score}% confianza`, px + trackW + 14, y + trackH + 5);
+    y += 30;
+  }
+
+  // ── Footer
+  const footerY = cy + ch - 40;
+  // "Facthem" in gradient (matching .hero-title)
+  const fFont = `900 40px ${font}`;
+  ctx.font = fFont;
+  const fW = ctx.measureText('Facthem').width;
+  const fGrad = ctx.createLinearGradient(px, footerY - 30, px + fW, footerY);
+  fGrad.addColorStop(0, '#f0b8c4');
+  fGrad.addColorStop(1, '#c8607a');
+  ctx.fillStyle = fGrad;
+  ctx.fillText('Facthem', px, footerY);
+  // "verificador parlamentario" small
+  ctx.font = `400 18px ${font}`;
+  ctx.fillStyle = '#9a8e8e';
+  ctx.fillText('verificador parlamentario', px + fW + 14, footerY - 2);
+  // "facthem.es" right
+  ctx.font = `500 20px ${font}`;
+  ctx.fillStyle = '#9a8e8e';
+  const fesW = ctx.measureText('facthem.es').width;
+  ctx.fillText('facthem.es', cx + cw - 52 - fesW, footerY);
+
+  return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+}
+
+async function handleShareImage(btn, claim) {
+  const span = btn.querySelector('span');
+  const originalText = span?.textContent ?? '';
+  if (span) span.textContent = 'Generando…';
+  try {
+    const blob = await generateShareImage(claim);
+    const file = new File([blob], 'facthem-claim.png', { type: 'image/png' });
+    const shareUrl = buildShareUrl(claim.id);
+    const shareText = buildShareText(claim);
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file], text: shareText, url: shareUrl });
+    } else {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'facthem-claim.png';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  } catch (err) {
+    if (err?.name !== 'AbortError') console.error('Share image failed:', err);
+  } finally {
+    if (span) span.textContent = originalText || 'Compartir imagen';
+  }
+}
+
 async function handleClaimDeepLink() {
   const claimId = new URLSearchParams(window.location.search).get('claim');
   if (!claimId) return;
@@ -525,6 +780,7 @@ async function handleClaimDeepLink() {
     .single();
 
   if (!error && data) {
+    claimsById[data.id] = data;
     updateOGTags(data);
     openModal(data);
   }
