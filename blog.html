@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blog — Facthem</title>
+  <meta name="description"
+    content="Actualizaciones y mejoras de Facthem, el verificador de afirmaciones parlamentarias." />
+  <link rel="canonical" href="https://fackthem.es/blog.html" />
+  <link rel="icon" type="image/png" href="/assets/favicon.png" />
+  <meta name="theme-color" content="#0f0f0f" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" />
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- Google Tag Manager -->
+  <script>(function (w, d, s, l, i) { w[l] = w[l] || []; w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' }); var f = d.getElementsByTagName(s)[0], j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : ''; j.async = true; j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f); })(window, document, 'script', 'dataLayer', 'GTM-M6ZJVS39');</script>
+  <style>
+    .blog-page {
+      flex: 1;
+      max-width: 760px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 4rem 1.75rem 5rem;
+    }
+
+    .blog-page h1 {
+      font-size: 1.6rem;
+      font-weight: 900;
+      letter-spacing: -.03em;
+      background: linear-gradient(135deg, #f0b8c4 0%, #c8607a 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: .25rem;
+    }
+
+    .blog-page .blog-subtitle {
+      font-size: .85rem;
+      color: var(--c-text-muted);
+      margin-bottom: 3rem;
+    }
+
+    .blog-post {
+      margin-bottom: 3rem;
+    }
+
+    .blog-post time {
+      display: block;
+      font-size: .72rem;
+      color: var(--c-text-muted);
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin-bottom: .5rem;
+    }
+
+    .blog-post h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--c-text);
+      margin-bottom: .6rem;
+    }
+
+    .blog-post p {
+      font-size: .95rem;
+      line-height: 1.8;
+      color: var(--c-text);
+      margin-bottom: .75rem;
+    }
+
+    .blog-post ul {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 .75rem;
+    }
+
+    .blog-post ul li {
+      font-size: .95rem;
+      line-height: 1.8;
+      color: var(--c-text);
+      padding-left: 1.25rem;
+      position: relative;
+    }
+
+    .blog-post ul li::before {
+      content: '·';
+      position: absolute;
+      left: 0;
+      color: var(--c-accent);
+      font-weight: 700;
+    }
+
+    .blog-post a {
+      color: var(--c-accent);
+      text-decoration: none;
+      border-bottom: 1px solid rgba(200, 96, 122, .35);
+    }
+
+    .blog-post a:hover {
+      border-color: var(--c-accent);
+    }
+
+    .blog-divider {
+      height: 1px;
+      background: var(--c-border);
+      margin: 2.5rem 0;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Google Tag Manager (noscript) -->
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-M6ZJVS39" height="0" width="0"
+      style="display:none;visibility:hidden"></iframe></noscript>
+
+  <header class="site-header">
+    <nav class="tabs">
+      <a href="index.html" class="tab-button" style="text-decoration:none">&larr; Volver</a>
+    </nav>
+  </header>
+
+  <div class="blog-page">
+    <h1>Blog</h1>
+    <p class="blog-subtitle">Actualizaciones y mejoras de Facthem</p>
+
+    <!-- ── Posts (más reciente primero) ──────────────────────────────────── -->
+    <div class="blog-divider"></div>
+    <article class="blog-post">
+      <time datetime="2026-03-13">13 marzo 2026</time>
+      <h2>Más sesiones y mejores estadísticas</h2>
+      <p>
+        Esta actualización trae dos mejoras principales: ampliación del corpus de sesiones verificadas y corrección del
+        panel de estadísticas.
+      </p>
+      <ul>
+        <li>Incorporadas nuevas sesiones parlamentarias de 2025, alcanzando un total de 19 sesiones y 2.177 afirmaciones
+          analizadas. El objetivo es cubrir la totalidad de sesiones de 2025 próximamente.</li>
+        <li>Corregidos los problemas en el panel de estadísticas: los datos ahora se precalculan en una tabla dedicada
+          con normalización por volumen, evitando los límites de la API y asegurando tiempos de carga estables.</li>
+        <li>La tabla de partidos por temática estrena una segunda columna: <strong>más enfocado</strong>, que
+          complementa al partido dominante con una métrica de especialización relativa (detalle metodológico más abajo).
+        </li>
+      </ul>
+      <p>
+        Para cada tema calculamos dos métricas complementarias que nos ayudan a entender el enfoque de cada partido:
+      </p>
+      <p>
+        <strong>1. Partido dominante:</strong> Es la formación que acumula más afirmaciones verificadas dentro de ese
+        tema específico. Para que un partido sea considerado "dominante", exigimos que represente al menos el 15&nbsp;%
+        del total de las declaraciones de ese ámbito. Esto evita coronar a un perdedor por una diferencia irrelevante de
+        uno o dos casos.
+      </p>
+      <p>
+        <strong>2. Partido más enfocado:</strong> Esta métrica destaca a quién prioriza más ese tema dentro de su propio
+        discurso. Para calcularlo, usamos un índice de especialización (<em>lift</em>): dividimos el peso que tiene ese
+        partido en el tema entre el peso global que tiene en total. Por ejemplo, un <em>lift</em> de 1,5 significa que
+        el partido habla de ese tema un 50&nbsp;% más de lo que sería esperable por su tamaño general.
+      </p>
+      <p>
+        Para que un partido pueda figurar como "más enfocado", debe representar como mínimo el 20&nbsp;% de las
+        afirmaciones totales de la temática, asegurando así que el dato tenga suficiente apoyo estadístico. Ambas
+        métricas se extraen exclusivamente de afirmaciones verificadas con fuentes (sesiones en estado
+        <em>verified</em>) y omiten las correspondientes a la Diputación Permanente.
+      </p>
+    </article>
+
+    <div class="blog-divider"></div>
+
+    <article class="blog-post">
+      <time datetime="2026-03-12">12 marzo 2026</time>
+      <h2>Nuevo buscador de representantes</h2>
+      <p>
+        La pestaña <strong>Representantes</strong> incorpora ahora un buscador por nombre que ofrece una visión completa
+        de la actividad verificada de cada diputado o diputada. Sus capacidades son:
+      </p>
+      <ul>
+        <li>Búsqueda por nombre de diputado o diputada.</li>
+        <li>Resultados agrupados por sesión parlamentaria.</li>
+        <li>Acceso a todas sus afirmaciones verificadas en un único lugar.</li>
+      </ul>
+    </article>
+
+    <div class="blog-divider"></div>
+
+    <article class="blog-post">
+      <time datetime="2026-03-11">11 marzo 2026</time>
+      <h2>Panel de estadísticas: rankings comparativos</h2>
+      <p>
+        El panel de <strong>Estadísticas</strong> se ha ampliado con una serie de rankings comparativos que permiten
+        analizar el comportamiento parlamentario desde distintos ángulos:
+      </p>
+      <ul>
+        <li>Rankings por político, ordenados por distintas métricas de verificación.</li>
+        <li>Rankings por partido, para una perspectiva comparativa entre formaciones.</li>
+        <li>Rankings por temática, identificando qué áreas concentran más afirmaciones cuestionables.</li>
+      </ul>
+    </article>
+
+    <div class="blog-divider"></div>
+
+    <article class="blog-post">
+      <time datetime="2026-03-11">11 marzo 2026</time>
+      <h2>Ahora puedes apoyar el proyecto</h2>
+      <p>
+        Facthem es un proyecto independiente. Cada sesión parlamentaria que verificamos tiene un coste real en
+        infraestructura y modelos de inteligencia artificial. Para quienes quieran contribuir a su continuidad, hemos
+        habilitado dos vías de apoyo:
+      </p>
+      <ul>
+        <li><a href="https://paypal.me/hcasero" target="_blank" rel="noopener">PayPal</a></li>
+        <li><a href="https://ko-fi.com/hugocasero" target="_blank" rel="noopener">Ko-fi</a></li>
+      </ul>
+      <p>Cualquier contribución ayuda a mantener el proyecto activo. ¡Muchas gracias! 🥸</p>
+    </article>
+
+    <!-- Para añadir un nuevo post, copia la estructura de arriba antes de este comentario -->
+
+  </div>
+
+  <footer class="site-footer">
+    <p>
+      <a href="aviso.html" class="footer-link">Aviso legal</a>
+      &nbsp;·&nbsp;
+      <a href="blog.html" class="footer-link">Blog</a>
+      &nbsp;·&nbsp;
+      Contacto: <a class="footer-email" href="#" aria-label="Dirección de contacto"></a>
+      &nbsp;·&nbsp;
+      ♥ Apóyanos y facthem:
+      <a href="https://paypal.me/hcasero" class="donate-btn" target="_blank" rel="noopener">PayPal</a>
+      <a href="https://ko-fi.com/hugocasero" class="donate-btn" target="_blank" rel="noopener">Ko-fi</a>
+    </p>
+  </footer>
+
+  <script>
+    (function () {
+      var u = 'contacto', d = 'facthem' + '.' + 'es';
+      document.querySelectorAll('.footer-email[aria-label]').forEach(function (el) {
+        el.href = 'mailto:' + u + '@' + d;
+        el.textContent = u + '\u0040' + d;
+      });
+    })();
+  </script>
+</body>
+
+</html>

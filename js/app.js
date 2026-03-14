@@ -2,40 +2,40 @@ import { supabase } from './supabase-client.js';
 
 // ─── Label maps ───────────────────────────────────────────────────────────────
 const TEMATICO_LABELS = {
-  defensa:                    'Defensa',
-  'economía':                 'Economía',
-  educacion:                  'Educación',
-  igualdad:                   'Igualdad',
-  industria_y_trabajo:        'Industria y Trabajo',
-  'inmigración':              'Inmigración',
-  interior:                   'Interior',
-  justicia_y_corrupcion:      'Justicia y Corrupción',
-  medio_ambiente:             'Medio Ambiente',
-  otros:                      'Otros',
-  politica_social:            'Política Social',
+  defensa: 'Defensa',
+  'economía': 'Economía',
+  educacion: 'Educación',
+  igualdad: 'Igualdad',
+  industria_y_trabajo: 'Industria y Trabajo',
+  'inmigración': 'Inmigración',
+  interior: 'Interior',
+  justicia_y_corrupcion: 'Justicia y Corrupción',
+  medio_ambiente: 'Medio Ambiente',
+  otros: 'Otros',
+  politica_social: 'Política Social',
   relaciones_internacionales: 'Relaciones Internacionales',
-  sanidad:                    'Sanidad',
-  vivienda:                   'Vivienda',
+  sanidad: 'Sanidad',
+  vivienda: 'Vivienda',
 };
 
 const RESULTADO_LABELS = {
-  CONFIRMADO:                'Confirmado',
-  CONFIRMADO_CON_MATIZ:      'Con matiz',
-  DESCONTEXTUALIZADO:        'Descontextualizado',
-  FALSO:                     'Falso',
-  IMPRECISO:                 'Impreciso',
-  NO_VERIFICABLE:            'No verificable',
-  SOBREESTIMADO:             'Sobreestimado',
-  SUBESTIMADO:               'Subestimado',
+  CONFIRMADO: 'Confirmado',
+  CONFIRMADO_CON_MATIZ: 'Con matiz',
+  DESCONTEXTUALIZADO: 'Descontextualizado',
+  FALSO: 'Falso',
+  IMPRECISO: 'Impreciso',
+  NO_VERIFICABLE: 'No verificable',
+  SOBREESTIMADO: 'Sobreestimado',
+  SUBESTIMADO: 'Subestimado',
 };
 
 // ─── State ────────────────────────────────────────────────────────────────────
-let allClaims  = [];
+let allClaims = [];
 let claimsById = {};
 
 // ─── Búsqueda state ───────────────────────────────────────────────────────────
-let allPoliticians    = [];
-let searchLoaded      = false;
+let allPoliticians = [];
+let searchLoaded = false;
 let activeSearchIndex = -1;
 let searchClaimsCache = {};
 let claimCount = 0;
@@ -167,7 +167,7 @@ async function loadSession(sessionId) {
     return;
   }
 
-  allClaims  = data ?? [];
+  allClaims = data ?? [];
   claimsById = Object.fromEntries(allClaims.map(c => [c.id, c]));
 
   ['filter-resultado', 'filter-tematico', 'filter-politico'].forEach(id => {
@@ -216,10 +216,10 @@ function setSelectOptions(id, items, placeholder) {
 }
 
 function applyFilters() {
-  const tematico  = document.getElementById('filter-tematico').value;
+  const tematico = document.getElementById('filter-tematico').value;
   const resultado = document.getElementById('filter-resultado').value;
-  const politico  = document.getElementById('filter-politico').value;
-  const search    = document.getElementById('search-claim').value.trim().toLowerCase();
+  const politico = document.getElementById('filter-politico').value;
+  const search = document.getElementById('search-claim').value.trim().toLowerCase();
 
   const filtered = allClaims.filter(c => {
     if (tematico && c.ambito_tematico !== tematico) return false;
@@ -264,7 +264,7 @@ function claimCard(claim) {
   const score = v && v.confidence_score != null ? Math.round(v.confidence_score * 100) : null;
 
   const tags = [
-    claim.ambito_tematico   ? `<span class="tag tag-tematico">${escHtml(snakeToLabel(claim.ambito_tematico))}</span>`   : '',
+    claim.ambito_tematico ? `<span class="tag tag-tematico">${escHtml(snakeToLabel(claim.ambito_tematico))}</span>` : '',
     claim.ambito_geografico ? `<span class="tag tag-geo">${escHtml(snakeToLabel(claim.ambito_geografico))}</span>` : '',
   ].filter(Boolean).join('');
 
@@ -273,9 +273,9 @@ function claimCard(claim) {
       <header class="claim-header">
         <div class="claim-meta-top">
           ${pol
-            ? `<span class="politician-name">${escHtml(pol.nombre_completo)}</span>
+      ? `<span class="politician-name">${escHtml(pol.nombre_completo)}</span>
                ${pol.partido ? `<span class="partido-badge">${escHtml(pol.partido)}</span>` : ''}`
-            : '<span class="politician-name unknown">Político desconocido</span>'}
+      : '<span class="politician-name unknown">Político desconocido</span>'}
         </div>
         <span class="resultado-badge resultado-${resultadoClass}">${resultadoLabel}</span>
       </header>
@@ -311,7 +311,7 @@ function setupModal() {
 function openModal(claim) {
   if (!claim) return;
 
-  const v   = claim.verification?.[0] ?? null;
+  const v = claim.verification?.[0] ?? null;
   const pol = claim.politician;
 
   const resultadoClass = v ? resultadoToClass(v.resultado) : 'nv';
@@ -319,13 +319,13 @@ function openModal(claim) {
   const score = v && v.confidence_score != null ? Math.round(v.confidence_score * 100) : null;
 
   const tags = [
-    claim.ambito_tematico   ? `<span class="tag tag-tematico">${escHtml(snakeToLabel(claim.ambito_tematico))}</span>`   : '',
+    claim.ambito_tematico ? `<span class="tag tag-tematico">${escHtml(snakeToLabel(claim.ambito_tematico))}</span>` : '',
     claim.ambito_geografico ? `<span class="tag tag-geo">${escHtml(snakeToLabel(claim.ambito_geografico))}</span>` : '',
   ].filter(Boolean).join('');
 
   const details = v
     ? [renderErrores(v.errores), renderOmisiones(v.omisiones), renderFuentes(v.fuentes)]
-        .filter(Boolean).join('')
+      .filter(Boolean).join('')
     : '';
 
   const card = document.getElementById('modal-card');
@@ -335,9 +335,9 @@ function openModal(claim) {
     <header class="claim-header" style="margin-bottom:1.25rem">
       <div class="claim-meta-top">
         ${pol
-          ? `<span class="politician-name" style="font-size:1.05rem">${escHtml(pol.nombre_completo)}</span>
+      ? `<span class="politician-name" style="font-size:1.05rem">${escHtml(pol.nombre_completo)}</span>
              ${pol.partido ? `<span class="partido-badge">${escHtml(pol.partido)}</span>` : ''}`
-          : '<span class="politician-name unknown">Político desconocido</span>'}
+      : '<span class="politician-name unknown">Político desconocido</span>'}
       </div>
       <span class="resultado-badge resultado-${resultadoClass}">${resultadoLabel}</span>
     </header>
@@ -441,7 +441,7 @@ function renderFuentes(raw) {
 
   const bullets = sorted.map(s => {
     const isPrimary = s.tipo === 'Primaria';
-    const tipoKey   = (s.tipo ?? '').toLowerCase().replace(/[^a-z]/g, '') || 'otra';
+    const tipoKey = (s.tipo ?? '').toLowerCase().replace(/[^a-z]/g, '') || 'otra';
     const name = escHtml(s.nombre ?? 'Fuente');
     const link = s.url
       ? `<a class="source-link" href="${escHtml(s.url)}" target="_blank" rel="noopener">${name}</a>`
@@ -464,14 +464,14 @@ function renderFuentes(raw) {
 function resultadoToClass(resultado) {
   if (!resultado) return 'nv';
   const map = {
-    'CONFIRMADO':               'verdadero',
-    'CONFIRMADO_CON_MATIZ':     'parcial',
-    'DESCONTEXTUALIZADO':       'enganoso',
-    'IMPRECISO':                'nv',
-    'FALSO':                    'falso',
-    'NO_VERIFICABLE':           'nv',
-    'SOBREESTIMADO':            'enganoso',
-    'SUBESTIMADO':              'enganoso',
+    'CONFIRMADO': 'verdadero',
+    'CONFIRMADO_CON_MATIZ': 'parcial',
+    'DESCONTEXTUALIZADO': 'enganoso',
+    'IMPRECISO': 'nv',
+    'FALSO': 'falso',
+    'NO_VERIFICABLE': 'nv',
+    'SOBREESTIMADO': 'enganoso',
+    'SUBESTIMADO': 'enganoso',
   };
   return map[resultado.toUpperCase()] ?? 'nv';
 }
@@ -492,215 +492,96 @@ function escHtml(str) {
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 async function loadGlobalDashboard() {
   window.statsLoaded = true;
-  const grid   = document.getElementById('dashboard-grid');
+  const grid = document.getElementById('dashboard-grid');
   const loader = document.getElementById('dashboard-loading');
 
-  const { data: claims, error } = await supabase
-    .from('claim')
-    .select(`
-      id, ambito_tematico, session_id,
-      politician:politician_id (nombre_completo, partido),
-      verification (resultado),
-      session:session_id (fecha)
-    `);
+  const { data, error } = await supabase
+    .from('dashboard_stats')
+    .select('stats')
+    .eq('id', 1)
+    .single();
 
-  if (error) {
-    loader.innerHTML = `<p class="error">Error al cargar estadísticas: ${error.message}</p>`;
+  if (error || !data?.stats) {
+    loader.innerHTML = `<p class="error">Error al cargar estadísticas: ${error?.message ?? 'sin datos'}</p>`;
     return;
   }
 
   loader.style.display = 'none';
   grid.classList.remove('hidden');
 
-  if (!claims || claims.length === 0) {
-    grid.innerHTML = '<p class="empty">No hay datos suficientes para estadísticas.</p>';
-    return;
-  }
-
-  renderDashboard(claims);
+  const stats = typeof data.stats === 'string' ? JSON.parse(data.stats) : data.stats;
+  renderDashboard(stats);
 }
 
-function renderDashboard(claims) {
+function renderDashboard(s) {
   const grid = document.getElementById('dashboard-grid');
 
-  let totalVerificados = 0, totalFalsos = 0, totalConfirmados = 0;
-  const partidoCounts = {}, partidoFalsoCounts = {};
-  const politicoCounts = {}, politicoFalsoCounts = {};
-  const partidoNvCounts = {}, politicoNvCounts = {};
-  const partidoMatizCounts = {}, politicoMatizCounts = {};
-  const partidoSobreCounts = {}, politicoSobreCounts = {};
-  const partidoSubestCounts = {}, politicoSubestCounts = {};
-  const partidoImprecisoCounts = {}, politicoImprecisoCounts = {};
-  const politicoDescontCounts = {}, partidoDescontCounts = {};
-  const politicoTemas = {}; // { nombre_completo → Set<ambito_tematico> }
-  // { "polName|sessionId" → { count, polName, partido, fecha } }
-  const plenaConfirmadoCounts = {}, plenaFalsoCounts = {};
-  const temaCounts = {}, temaFalsoCounts = {};
-  const temaPartidoCounts = {};  // { tema → { partido → count } }
-  const politicoPartido = {};    // { nombre_completo → partido }
+  const total = s.total_claims || 0;
+  const totalFalsos = s.total_falsos || 0;
+  const totalConfirm = s.total_confirmados || 0;
+  const porcFalsos = total > 0 ? Math.round((totalFalsos / total) * 100) : 0;
+  const porcConfirmados = total > 0 ? Math.round((totalConfirm / total) * 100) : 0;
 
-  claims.forEach(c => {
-    const tema = c.ambito_tematico;
-    const pol  = c.politician;
-    const v    = c.verification?.[0];
-
-    if (tema) temaCounts[tema] = (temaCounts[tema] || 0) + 1;
-
-    let isFalso = false, isConfirmado = false, isNv = false, isMatiz = false, isSobre = false, isSubest = false, isImpreciso = false, isDescont = false;
-    if (v?.resultado) {
-      totalVerificados++;
-      const res = v.resultado.toUpperCase();
-      if (res === 'FALSO' || res === 'ENGAÑOSO')        { isFalso = true; totalFalsos++; }
-      if (res === 'NO_VERIFICABLE')                      { isNv = true; }
-      if (res === 'CONFIRMADO_CON_MATIZ')                { isMatiz = true; }
-      if (res === 'CONFIRMADO')                          { isConfirmado = true; totalConfirmados++; }
-      if (res === 'SOBREESTIMADO')                       { isSobre = true; }
-      if (res === 'SUBESTIMADO')                         { isSubest = true; }
-      if (res === 'IMPRECISO')                           { isImpreciso = true; }
-      if (res === 'DESCONTEXTUALIZADO')                  { isDescont = true; }
-      if (isFalso && tema) temaFalsoCounts[tema] = (temaFalsoCounts[tema] || 0) + 1;
-    }
-
-    if (pol) {
-      const pName   = pol.partido || 'Desconocido';
-      const polName = pol.nombre_completo || 'Desconocido';
-      politicoPartido[polName] = pName;
-
-      partidoCounts[pName]    = (partidoCounts[pName]    || 0) + 1;
-      politicoCounts[polName] = (politicoCounts[polName] || 0) + 1;
-
-      if (isFalso)   { partidoFalsoCounts[pName]    = (partidoFalsoCounts[pName]    || 0) + 1; politicoFalsoCounts[polName]  = (politicoFalsoCounts[polName]  || 0) + 1; }
-      if (isNv)      { partidoNvCounts[pName]        = (partidoNvCounts[pName]        || 0) + 1; politicoNvCounts[polName]     = (politicoNvCounts[polName]     || 0) + 1; }
-      if (isMatiz)   { partidoMatizCounts[pName]     = (partidoMatizCounts[pName]     || 0) + 1; politicoMatizCounts[polName]  = (politicoMatizCounts[polName]  || 0) + 1; }
-      if (isSobre)   { partidoSobreCounts[pName]     = (partidoSobreCounts[pName]     || 0) + 1; politicoSobreCounts[polName]  = (politicoSobreCounts[polName]  || 0) + 1; }
-      if (isSubest)    { partidoSubestCounts[pName]    = (partidoSubestCounts[pName]    || 0) + 1; politicoSubestCounts[polName]   = (politicoSubestCounts[polName]   || 0) + 1; }
-      if (isImpreciso) { partidoImprecisoCounts[pName] = (partidoImprecisoCounts[pName] || 0) + 1; politicoImprecisoCounts[polName] = (politicoImprecisoCounts[polName] || 0) + 1; }
-      if (isDescont)   { politicoDescontCounts[polName] = (politicoDescontCounts[polName] || 0) + 1; partidoDescontCounts[pName] = (partidoDescontCounts[pName] || 0) + 1; }
-
-      if (tema) {
-        if (!politicoTemas[polName]) politicoTemas[polName] = new Set();
-        politicoTemas[polName].add(tema);
-      }
-
-      if (c.session_id) {
-        const key = `${polName}|${c.session_id}`;
-        const fecha = c.session?.fecha ?? null;
-        if (isConfirmado) {
-          if (!plenaConfirmadoCounts[key]) plenaConfirmadoCounts[key] = { count: 0, polName, partido: pName, fecha };
-          plenaConfirmadoCounts[key].count++;
-        }
-        if (isFalso) {
-          if (!plenaFalsoCounts[key]) plenaFalsoCounts[key] = { count: 0, polName, partido: pName, fecha };
-          plenaFalsoCounts[key].count++;
-        }
-      }
-
-      if (tema) {
-        if (!temaPartidoCounts[tema]) temaPartidoCounts[tema] = {};
-        temaPartidoCounts[tema][pName] = (temaPartidoCounts[tema][pName] || 0) + 1;
-      }
-    }
-  });
-
-  const topPartido          = getTop(partidoCounts);
-  const topPartidoFalso     = getTop(partidoFalsoCounts);
-  const topPolitico         = getTop(politicoCounts);
-  const topPoliticoFalso    = getTop(politicoFalsoCounts);
-  const topTema             = getTop(temaCounts);
-  const topPartidoNv        = getTop(partidoNvCounts);
-  const topPoliticoNv       = getTop(politicoNvCounts);
-  const topPartidoMatiz     = getTop(partidoMatizCounts);
-  const topPoliticoMatiz    = getTop(politicoMatizCounts);
-  const topPartidoSobre     = getTop(partidoSobreCounts);
-  const topPoliticoSobre    = getTop(politicoSobreCounts);
-  const topPartidoSubest    = getTop(partidoSubestCounts);
-  const topPoliticoSubest   = getTop(politicoSubestCounts);
-  const topPartidoImpreciso  = getTop(partidoImprecisoCounts);
-  const topPoliticoImpreciso = getTop(politicoImprecisoCounts);
-  const topPoliticoDescont   = getTop(politicoDescontCounts);
-  const topPartidoDescont    = getTop(partidoDescontCounts);
-  const topTemaFalso        = getTop(temaFalsoCounts);
-
-  // El Cuñado Nacional — politician with widest thematic breadth
-  const topCunado = Object.entries(politicoTemas)
-    .reduce((best, [polName, temas]) => temas.size > best.val ? { key: polName, val: temas.size } : best, { key: '-', val: 0 });
-
-  // La Madre de todos los Bulos — theme with highest false-claim rate (min 5 claims)
-  const topTemaFalsoRate = Object.entries(temaCounts)
-    .filter(([, cnt]) => cnt >= 5)
-    .map(([tema, cnt]) => ({ tema, rate: (temaFalsoCounts[tema] || 0) / cnt }))
-    .reduce((best, cur) => cur.rate > best.rate ? cur : best, { tema: '-', rate: 0 });
-
-  const getTopPleno = (obj) => {
-    let best = null;
-    for (const entry of Object.values(obj)) {
-      if (!best || entry.count > best.count ||
-          (entry.count === best.count && entry.fecha > best.fecha)) {
-        best = entry;
-      }
-    }
-    return best ?? { polName: '-', partido: '-', fecha: null, count: 0 };
+  const d = (field) => s[field] || {};
+  const polLabel = (f) => {
+    const o = d(f);
+    return o.name ? `${o.name}${o.partido ? ` · ${o.partido}` : ''}` : '-';
   };
-  const comboBreakerPleno = getTopPleno(plenaConfirmadoCounts);
-  const bocachanclaPleno  = getTopPleno(plenaFalsoCounts);
 
-  const total = claimCount || totalVerificados;
-  const porcFalsos      = total > 0 ? Math.round((totalFalsos      / total) * 100) : 0;
-  const porcConfirmados = total > 0 ? Math.round((totalConfirmados / total) * 100) : 0;
+  const cb = s.combo_breaker || {};
+  const bc = s.bocachancla || {};
+  const cbLabel = cb.politico ? `${cb.politico} · ${cb.partido}` : '-';
+  const bcLabel = bc.politico ? `${bc.politico} · ${bc.partido}` : '-';
+  const cbSub = cb.fecha ? `${cb.count} confirmados en el pleno del ${new Date(cb.fecha).toLocaleDateString('es-ES')}` : '-';
+  const bcSub = bc.fecha ? `${bc.count} falsedades en el pleno del ${new Date(bc.fecha).toLocaleDateString('es-ES')}` : '-';
 
-  // All themes by volume with their dominant party
-  const topTemas = Object.entries(temaCounts)
-    .sort((a, b) => b[1] - a[1])
-    .map(([tema]) => ({
-      tema:    TEMATICO_LABELS[tema] ?? snakeToLabel(tema),
-      partido: temaPartidoCounts[tema] ? getTop(temaPartidoCounts[tema]).key : '—',
-    }));
+  const temaLabel = (f) => {
+    const name = d(f).name;
+    return name ? (TEMATICO_LABELS[name] ?? snakeToLabel(name)) : '-';
+  };
 
-  // All parties sorted by claim count
-  const claimsPorPartido = Object.entries(partidoCounts)
-    .sort((a, b) => b[1] - a[1])
-    .map(([partido, count]) => ({ tema: partido, partido: count.toString() }));
+  const tfrRate = s.top_tema_falso_rate || {};
+  const tfrLabel = tfrRate.name ? (TEMATICO_LABELS[tfrRate.name] ?? snakeToLabel(tfrRate.name)) : '-';
 
-  // Politician name with party lookup
-  const pol = (name) => name === '-' ? '-'
-    : `${name}${politicoPartido[name] ? ` · ${politicoPartido[name]}` : ''}`;
+  const topTemas = (s.temas_por_volumen || []).map(t => ({
+    tema: TEMATICO_LABELS[t.tema] ?? snakeToLabel(t.tema),
+    dominante: t.partido_dominante || '—',
+    especializado: t.partido_especializado || '—',
+  }));
+
+  const claimsPorPartido = (s.claims_por_partido || []).map(p => ({
+    tema: p.partido,
+    partido: p.count.toString(),
+  }));
 
   grid.innerHTML = `
-    ${statCard('Partido con más claims',          topPartido.key,                    `${topPartido.val} claims totales`,        false, 'El partido que más afirmaciones ha realizado en total.')}
-    ${statCard('Partido con más falsos',          topPartidoFalso.key,               `${topPartidoFalso.val} falsos/engañosos`, true,  'El partido con más afirmaciones verificadas como falsas o engañosas.')}
-    ${statCard('Político con más claims',         pol(topPolitico.key),              `${topPolitico.val} claims totales`,       false, 'El diputado que más afirmaciones ha realizado en total.')}
-    ${statCard('Político con más falsos',         pol(topPoliticoFalso.key),         `${topPoliticoFalso.val} falsos/engañosos`,true,  'El diputado con más afirmaciones verificadas como falsas o engañosas.')}
-    ${statCard('Temática más frecuente',          topTema.key === '-' ? '-' : (TEMATICO_LABELS[topTema.key] ?? snakeToLabel(topTema.key)), `${topTema.val} menciones`, false, 'El ámbito sobre el que más afirmaciones se han hecho.')}
-    ${statCard('Tasa de falsedad',                `${porcFalsos}%`,                  `${totalFalsos} de ${total} afirmaciones`,   true,  'Porcentaje de afirmaciones verificadas como falsas o engañosas.')}
-    ${statCard('Tasa de veracidad',               `${porcConfirmados}%`,             `${totalConfirmados} de ${total} afirmaciones`, false, 'Porcentaje de afirmaciones verificadas como completamente ciertas.')}
-    ${statCard('El Maestro del Escaqueo',         pol(topPoliticoNv.key),            `${topPoliticoNv.val} afirmaciones no verificables`,   false, 'El político que más afirmaciones hace que no pueden verificarse por falta de datos concretos.')}
-    ${statCard('Partido más escurridizo',         topPartidoNv.key,                  `${topPartidoNv.val} afirmaciones no verificables`,    false, 'El partido que más afirmaciones hace que no pueden verificarse.')}
-    ${statCard('El Gran Matizador',               pol(topPoliticoMatiz.key),         `${topPoliticoMatiz.val} confirmados con matiz`,        false, 'El político que más veces dice algo cierto… pero con algún pero importante.')}
-    ${statCard('Partido del "sí, pero..."',       topPartidoMatiz.key,               `${topPartidoMatiz.val} confirmados con matiz`,         false, 'El partido que más verdades a medias acumula.')}
-    ${statCard('El Exagerador Mayor',             pol(topPoliticoSobre.key),         `${topPoliticoSobre.val} cifras sobreestimadas`,        true,  'El político que más veces ha inflado cifras reales para que suenen más impactantes.')}
-    ${statCard('Partido de las Cifras Infladas',  topPartidoSobre.key,               `${topPartidoSobre.val} sobreestimaciones`,             true,  'El partido que más veces ha sobreestimado datos que en realidad son menores.')}
-    ${statCard('El Minimizador',                  pol(topPoliticoSubest.key),        `${topPoliticoSubest.val} cifras subestimadas`,          true,  'El político que más veces ha reducido cifras reales para que suenen menos graves.')}
-    ${statCard('Partido de las Cifras Maquilladas', topPartidoSubest.key,            `${topPartidoSubest.val} subestimaciones`,               true,  'El partido que más veces ha minimizado datos reales.')}
-    ${statCard('El Maestro del Bla Bla',           pol(topPoliticoImpreciso.key),     `${topPoliticoImpreciso.val} afirmaciones imprecisas`,  false, 'El político que más veces ha soltado una afirmación tan vaga que no hay manera de verificarla.')}
-    ${statCard('Partido de las Verdades de Perogrullo', topPartidoImpreciso.key,     `${topPartidoImpreciso.val} imprecisiones`,             false, 'El partido que más veces ha dicho algo tan ambiguo que ni ellos mismos saben si es cierto.')}
-    ${statCard('El Sacador de Contexto',          pol(topPoliticoDescont.key),       `${topPoliticoDescont.val} descontextualizaciones`,     true,  'El político que más veces ha usado datos reales arrancándolos de su contexto para cambiar su significado.')}
-    ${statCard('Combo Breaker',                   comboBreakerPleno.polName === '-' ? '-' : `${comboBreakerPleno.polName} · ${comboBreakerPleno.partido}`, comboBreakerPleno.fecha ? `${comboBreakerPleno.count} confirmados en el pleno del ${new Date(comboBreakerPleno.fecha).toLocaleDateString('es-ES')}` : '-', false, 'El político que más afirmaciones confirmadas acumuló en un solo pleno.')}
-    ${statCard('Bocachancla',                     bocachanclaPleno.polName === '-' ? '-' : `${bocachanclaPleno.polName} · ${bocachanclaPleno.partido}`,    bocachanclaPleno.fecha  ? `${bocachanclaPleno.count} falsedades en el pleno del ${new Date(bocachanclaPleno.fecha).toLocaleDateString('es-ES')}`  : '-', true,  'El político que más afirmaciones falsas encadenó en un solo pleno.')}
-    ${statCard('Temática más conflictiva',        topTemaFalso.key === '-' ? '-' : (TEMATICO_LABELS[topTemaFalso.key] ?? snakeToLabel(topTemaFalso.key)), `${topTemaFalso.val} afirmaciones falsas`, true, 'El ámbito temático donde más afirmaciones falsas se han detectado.')}
-    ${statCard('El Cuñado Nacional',            pol(topCunado.key),                                                                                     `${topCunado.val} temáticas distintas`,                                  false, 'El diputado que opina sobre absolutamente todo, como el cuñado en Navidad.')}
-    ${statCard('La Madre de todos los Bulos',   topTemaFalsoRate.tema === '-' ? '-' : (TEMATICO_LABELS[topTemaFalsoRate.tema] ?? snakeToLabel(topTemaFalsoRate.tema)), `${Math.round(topTemaFalsoRate.rate * 100)}% de falsedades`, true,  'El ámbito temático donde los políticos mienten con más descaro en proporción.')}
-    ${statCard('El Partido del Bulo Selectivo', topPartidoDescont.key,                                                                                  `${topPartidoDescont.val} descontextualizaciones`,                       true,  'El partido que más veces usa datos reales arrancados de su contexto para cambiar su significado.')}
-    ${statCardList('Partido dominante por temática', topTemas, 'Qué partido protagoniza más el debate en cada ámbito temático.')}
+    ${statCard('Partido con más claims', d('top_partido_claims').name || '-', `${d('top_partido_claims').count || 0} claims totales`, false, 'El partido que más afirmaciones ha realizado en total.')}
+    ${statCard('Partido con más falsos', d('top_partido_falso').name || '-', `${d('top_partido_falso').count || 0} falsos/engañosos`, true, 'El partido con más afirmaciones verificadas como falsas o engañosas.')}
+    ${statCard('Político con más claims', polLabel('top_politico_claims'), `${d('top_politico_claims').count || 0} claims totales`, false, 'El diputado que más afirmaciones ha realizado en total.')}
+    ${statCard('Político con más falsos', polLabel('top_politico_falso'), `${d('top_politico_falso').count || 0} falsos/engañosos`, true, 'El diputado con más afirmaciones verificadas como falsas o engañosas.')}
+    ${statCard('Temática más frecuente', temaLabel('top_tema'), `${d('top_tema').count || 0} menciones`, false, 'El ámbito sobre el que más afirmaciones se han hecho.')}
+    ${statCard('Tasa de falsedad', `${porcFalsos}%`, `${totalFalsos} de ${total} afirmaciones`, true, 'Porcentaje de afirmaciones verificadas como falsas o engañosas.')}
+    ${statCard('Tasa de veracidad', `${porcConfirmados}%`, `${totalConfirm} de ${total} afirmaciones`, false, 'Porcentaje de afirmaciones verificadas como completamente ciertas.')}
+    ${statCard('El Maestro del Escaqueo', polLabel('top_politico_nv'), `${d('top_politico_nv').count || 0} afirmaciones no verificables`, false, 'El político que más afirmaciones hace que no pueden verificarse por falta de datos concretos.')}
+    ${statCard('Partido más escurridizo', d('top_partido_nv').name || '-', `${d('top_partido_nv').count || 0} afirmaciones no verificables`, false, 'El partido que más afirmaciones hace que no pueden verificarse.')}
+    ${statCard('El Gran Matizador', polLabel('top_politico_matiz'), `${d('top_politico_matiz').count || 0} confirmados con matiz`, false, 'El político que más veces dice algo cierto… pero con algún pero importante.')}
+    ${statCard('Partido del "sí, pero..."', d('top_partido_matiz').name || '-', `${d('top_partido_matiz').count || 0} confirmados con matiz`, false, 'El partido que más verdades a medias acumula.')}
+    ${statCard('El Exagerador Mayor', polLabel('top_politico_sobre'), `${d('top_politico_sobre').count || 0} cifras sobreestimadas`, true, 'El político que más veces ha inflado cifras reales para que suenen más impactantes.')}
+    ${statCard('Partido de las Cifras Infladas', d('top_partido_sobre').name || '-', `${d('top_partido_sobre').count || 0} sobreestimaciones`, true, 'El partido que más veces ha sobreestimado datos que en realidad son menores.')}
+    ${statCard('El Minimizador', polLabel('top_politico_subest'), `${d('top_politico_subest').count || 0} cifras subestimadas`, true, 'El político que más veces ha reducido cifras reales para que suenen menos graves.')}
+    ${statCard('Partido de las Cifras Maquilladas', d('top_partido_subest').name || '-', `${d('top_partido_subest').count || 0} subestimaciones`, true, 'El partido que más veces ha minimizado datos reales.')}
+    ${statCard('El Maestro del Bla Bla', polLabel('top_politico_impreciso'), `${d('top_politico_impreciso').count || 0} afirmaciones imprecisas`, false, 'El político que más veces ha soltado una afirmación tan vaga que no hay manera de verificarla.')}
+    ${statCard('Partido de las Verdades de Perogrullo', d('top_partido_impreciso').name || '-', `${d('top_partido_impreciso').count || 0} imprecisiones`, false, 'El partido que más veces ha dicho algo tan ambiguo que ni ellos mismos saben si es cierto.')}
+    ${statCard('El Sacador de Contexto', polLabel('top_politico_descont'), `${d('top_politico_descont').count || 0} descontextualizaciones`, true, 'El político que más veces ha usado datos reales arrancándolos de su contexto para cambiar su significado.')}
+    ${statCard('Combo Breaker', cbLabel, cbSub, false, 'El político que más afirmaciones confirmadas acumuló en un solo pleno.')}
+    ${statCard('Bocachancla', bcLabel, bcSub, true, 'El político que más afirmaciones falsas encadenó en un solo pleno.')}
+    ${statCard('Temática más conflictiva', temaLabel('top_tema_falso'), `${d('top_tema_falso').count || 0} afirmaciones falsas`, true, 'El ámbito temático donde más afirmaciones falsas se han detectado.')}
+    ${statCard('El Cuñado Nacional', polLabel('top_politico_cunado'), `${d('top_politico_cunado').count || 0} temáticas distintas`, false, 'El diputado que opina sobre absolutamente todo, como el cuñado en Navidad.')}
+    ${statCard('La Madre de todos los Bulos', tfrLabel, `${Math.round((tfrRate.rate || 0) * 100)}% de falsedades`, true, 'El ámbito temático donde los políticos mienten con más descaro en proporción.')}
+    ${statCard('El Partido del Bulo Selectivo', d('top_partido_descont').name || '-', `${d('top_partido_descont').count || 0} descontextualizaciones`, true, 'El partido que más veces usa datos reales arrancados de su contexto para cambiar su significado.')}
+    ${statCardListTemas('Partidos por temática', topTemas)}
     ${statCardList('Afirmaciones por partido', claimsPorPartido, 'Total de afirmaciones registradas por cada partido político.')}
   `;
-}
-
-function getTop(obj) {
-  let maxKey = '-', maxVal = 0;
-  for (const [k, v] of Object.entries(obj)) {
-    if (v > maxVal) { maxVal = v; maxKey = k; }
-  }
-  return { key: maxKey, val: maxVal };
 }
 
 function statCard(title, value, subtitle, isFalsoSubtitle = false, description = '') {
@@ -729,6 +610,29 @@ function statCardList(title, rows, description = '') {
     </div>`;
 }
 
+function statCardListTemas(title, rows) {
+  const header = `<div class="stat-list-row stat-list-row--header">
+    <span class="stat-list-tema"></span>
+    <span class="stat-list-partido stat-list-col-label">Dominante</span>
+    <span class="stat-list-partido stat-list-col-label">Más enfocado</span>
+  </div>`;
+  const items = rows.map(r =>
+    `<div class="stat-list-row">
+      <span class="stat-list-tema">${escHtml(r.tema)}</span>
+      <span class="stat-list-partido">${escHtml(r.dominante)}</span>
+      <span class="stat-list-partido">${escHtml(r.especializado)}</span>
+    </div>`
+  ).join('');
+  return `
+    <div class="stat-card stat-card--list stat-card--temas">
+      <div class="stat-title">${title}</div>
+      <div class="stat-list stat-list--table">${header}${items}</div>
+      <div class="stat-desc">
+        Muestra la relación principal entre los partidos y los diferentes temas de debate. Dominante: más afirmaciones en ese tema. Más enfocado: el que más lo prioriza respecto a su actividad total.
+      </div>
+    </div>`;
+}
+
 // ─── Búsqueda tab ─────────────────────────────────────────────────────────────
 async function loadPoliticians() {
   searchLoaded = true;
@@ -754,13 +658,13 @@ async function loadPoliticians() {
 }
 
 function setupPoliticianAutocomplete() {
-  const input    = document.getElementById('politician-search-input');
+  const input = document.getElementById('politician-search-input');
   const clearBtn = document.getElementById('search-clear-btn');
   const combobox = document.getElementById('politician-combobox');
 
-  input.addEventListener('input',   onSearchInput);
+  input.addEventListener('input', onSearchInput);
   input.addEventListener('keydown', onSearchKeydown);
-  input.addEventListener('focus',   onSearchFocus);
+  input.addEventListener('focus', onSearchFocus);
   clearBtn.addEventListener('click', clearSearch);
 
   document.addEventListener('click', e => {
@@ -769,14 +673,14 @@ function setupPoliticianAutocomplete() {
 }
 
 function onSearchInput(e) {
-  const query    = e.target.value.trim();
+  const query = e.target.value.trim();
   const clearBtn = document.getElementById('search-clear-btn');
   clearBtn.hidden = query.length === 0;
   activeSearchIndex = -1;
 
   if (query.length < 2) { closeSuggestions(); return; }
 
-  const norm   = query.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const norm = query.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   const tokens = norm.split(/\s+/).filter(Boolean);
   const matches = allPoliticians
     .filter(p => {
@@ -794,7 +698,7 @@ function onSearchFocus() {
 }
 
 function onSearchKeydown(e) {
-  const list  = document.getElementById('politician-suggestions');
+  const list = document.getElementById('politician-suggestions');
   const items = [...list.querySelectorAll('.suggestion-item')];
 
   if (e.key === 'ArrowDown') {
@@ -826,7 +730,7 @@ function updateActiveItem(items) {
 }
 
 function renderSuggestions(matches, query) {
-  const list  = document.getElementById('politician-suggestions');
+  const list = document.getElementById('politician-suggestions');
   const input = document.getElementById('politician-search-input');
 
   if (!matches.length) { closeSuggestions(); return; }
@@ -852,9 +756,9 @@ function renderSuggestions(matches, query) {
 }
 
 function highlightMatch(escapedText, rawQuery) {
-  const norm     = rawQuery.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const norm = rawQuery.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   const normText = escapedText.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-  const idx      = normText.indexOf(norm);
+  const idx = normText.indexOf(norm);
   if (idx === -1) return escapedText;
   return (
     escapedText.slice(0, idx) +
@@ -864,7 +768,7 @@ function highlightMatch(escapedText, rawQuery) {
 }
 
 function closeSuggestions() {
-  const list  = document.getElementById('politician-suggestions');
+  const list = document.getElementById('politician-suggestions');
   const input = document.getElementById('politician-search-input');
   list.hidden = true;
   list.innerHTML = '';
@@ -874,10 +778,10 @@ function closeSuggestions() {
 }
 
 function clearSearch() {
-  const input    = document.getElementById('politician-search-input');
+  const input = document.getElementById('politician-search-input');
   const clearBtn = document.getElementById('search-clear-btn');
-  const area     = document.getElementById('search-results-area');
-  input.value     = '';
+  const area = document.getElementById('search-results-area');
+  input.value = '';
   clearBtn.hidden = true;
   closeSuggestions();
   area.innerHTML = `<div class="search-welcome">
@@ -891,7 +795,7 @@ function clearSearch() {
 
 async function selectPolitician(politicianId, politicianName) {
   const input = document.getElementById('politician-search-input');
-  const area  = document.getElementById('search-results-area');
+  const area = document.getElementById('search-results-area');
 
   input.value = politicianName;
   closeSuggestions();
