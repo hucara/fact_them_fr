@@ -442,22 +442,13 @@ function buildShareTextPlain(claim) {
   return buildShareText(claim);
 }
 
-function encodeForWa(text) {
-  // Encode ASCII special chars normally, keep Unicode/emojis as raw chars
-  // The browser encodes raw Unicode when navigating, which WhatsApp handles correctly
-  return [...text].map(char => {
-    if (char.codePointAt(0) > 0x7F) return char;
-    return encodeURIComponent(char);
-  }).join('');
-}
-
 function buildShareMenu(claim) {
   const shareUrl = buildShareUrl(claim.id);
   const shareText = buildShareTextPlain(claim);
   const fullText = shareText + '\n\n' + shareUrl;
   const encodedUrl = encodeURIComponent(shareUrl);
   const encodedFullText = encodeURIComponent(fullText);
-  const encodedWa = encodeForWa(fullText);
+  const encodedWa = encodeURIComponent(fullText);
 
   return `
     <a class="share-option" href="https://wa.me/?text=${encodedWa}" target="_blank" rel="noopener">
