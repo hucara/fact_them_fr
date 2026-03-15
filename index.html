@@ -26,8 +26,11 @@
   <meta name="twitter:image" content="https://fackthem.es/assets/portada.png" />
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="/assets/favicon.png" />
-  <link rel="apple-touch-icon" href="/assets/favicon.png" />
+  <link rel="icon" href="/assets/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png" />
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+  <link rel="manifest" href="/assets/site.webmanifest" />
 
   <!-- Theme color -->
   <meta name="theme-color" content="#0f0f0f" />
@@ -95,25 +98,23 @@
   <div class="view-container active" id="view-sesiones">
     <main id="main">
 
+      <!-- Mobile filters toggle -->
+      <button id="btn-filters-toggle" type="button" aria-expanded="false" aria-controls="filters">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="12" y1="18" x2="20" y2="18"/></svg>
+        Filtros
+        <span id="filters-badge" hidden></span>
+        <svg class="filters-toggle-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+
       <!-- Unified filters bar: session selector + content filters -->
       <div id="filters">
-        <select id="filter-session" aria-label="Seleccionar sesión">
-          <option value="">Cargando sesiones…</option>
-        </select>
+        <div class="session-calendar-wrap" id="session-calendar-wrap"></div>
 
         <span class="filter-sep"></span>
 
-        <select id="filter-resultado" aria-label="Filtrar por resultado">
-          <option value="">Resultado</option>
-        </select>
-
-        <select id="filter-tematico" aria-label="Filtrar por ámbito temático">
-          <option value="">Temática</option>
-        </select>
-
-        <select id="filter-politico" aria-label="Filtrar por político">
-          <option value="">Político</option>
-        </select>
+        <div class="multisel" id="ms-resultado" data-placeholder="Resultado" aria-label="Filtrar por resultado"></div>
+        <div class="multisel" id="ms-tematico"  data-placeholder="Temática"  aria-label="Filtrar por ámbito temático"></div>
+        <div class="multisel" id="ms-politico"  data-placeholder="Político"  aria-label="Filtrar por político"></div>
 
         <span class="filter-sep"></span>
 
@@ -123,10 +124,16 @@
           </svg>
           <input type="search" id="search-claim" placeholder="Buscar afirmaciones…" aria-label="Buscar en afirmaciones" autocomplete="off" spellcheck="false">
         </div>
+
+        <button id="btn-clear-filters" hidden type="button" aria-label="Limpiar todos los filtros">Limpiar filtros</button>
       </div>
+
+      <!-- Active filter pills -->
+      <div id="filter-pills" hidden aria-live="polite"></div>
 
       <!-- Claims -->
       <div id="claims-area">
+        <div id="claims-count" aria-live="polite" hidden></div>
         <div id="claims-container">
           <div class="welcome">
             <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -218,8 +225,8 @@
   <script>
     window.addEventListener('error', function(e) {
       if (e.filename && e.filename.includes('supabase')) {
-        var sel = document.getElementById('filter-session');
-        if (sel) sel.innerHTML = '<option value="">Error de conexión — recarga la página</option>';
+        var lbl = document.getElementById('session-cal-label');
+        if (lbl) lbl.textContent = 'Error de conexión — recarga la página';
       }
     });
   </script>

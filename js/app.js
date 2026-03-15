@@ -49,9 +49,17 @@ const IMG_COLORS = {
   nv:        { color: '#8a7880', bgAlpha: 'rgba(255,255,255,.02)',  border: 'rgba(92,74,82,.35)'    },
 };
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
 // ─── State ────────────────────────────────────────────────────────────────────
 let allClaims = [];
 let claimsById = {};
+
+// ─── Filter state ─────────────────────────────────────────────────────────────
+const filterState = { resultado: [], tematico: [], politico: [] };
+let sessionCalendar = null;
+let msResultado = null, msTematico = null, msPolitico = null;
 
 // ─── Búsqueda state ───────────────────────────────────────────────────────────
 let allPoliticians = [];
@@ -59,6 +67,7 @@ let searchLoaded = false;
 let activeSearchIndex = -1;
 let searchClaimsCache = {};
 let claimCount = 0;
+let headerStatsBase = '';
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', boot);
@@ -67,9 +76,20 @@ async function boot() {
   setupTabs();
   setupHeroCTAs();
   setupFilters();
+  setupFiltersToggle();
   setupModal();
   setupShare();
   await Promise.all([loadSessions(), handleClaimDeepLink()]);
+}
+
+function setupFiltersToggle() {
+  const btn = document.getElementById('btn-filters-toggle');
+  const panel = document.getElementById('filters');
+  if (!btn || !panel) return;
+  btn.addEventListener('click', () => {
+    const open = panel.classList.toggle('is-open');
+    btn.setAttribute('aria-expanded', String(open));
+  });
 }
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
@@ -101,34 +121,385 @@ function setupHeroCTAs() {
   });
 }
 
+// ─── MultiSelect component ────────────────────────────────────────────────────
+class MultiSelect {
+  constructor(container, options, onChange) {
+    this.container = container;
+    this.allOptions = options;
+    this.selected = new Set();
+    this.onChange = onChange;
+    this.query = '';
+    this.isOpen = false;
+    this._outsideHandler = null;
+    this._keyHandler = null;
+    this.mount();
+  }
+
+  mount() {
+    this.container.innerHTML = `
+      <div class="ms-trigger" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+        <div class="ms-chips"><input class="ms-input" type="text" autocomplete="off" spellcheck="false" /></div>
+        <button class="ms-clear-all" type="button" hidden aria-label="Limpiar selección">✕</button>
+        <svg class="ms-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="ms-dropdown" hidden role="listbox">
+        <ul class="ms-list"></ul>
+      </div>`;
+    this.triggerEl  = this.container.querySelector('.ms-trigger');
+    this.chipsEl    = this.container.querySelector('.ms-chips');
+    this.inputEl    = this.container.querySelector('.ms-input');
+    this.clearAllBtn = this.container.querySelector('.ms-clear-all');
+    this.dropdownEl = this.container.querySelector('.ms-dropdown');
+    this.listEl     = this.container.querySelector('.ms-list');
+
+    this.inputEl.placeholder = '';
+
+    this.triggerEl.addEventListener('mousedown', (e) => {
+      if (e.target === this.clearAllBtn || e.target.closest('.ms-chip button')) return;
+      e.preventDefault();
+      this.isOpen ? this.close() : this.open();
+    });
+    this.inputEl.addEventListener('input', () => {
+      this.query = this.inputEl.value;
+      this.renderList();
+    });
+    this.clearAllBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.clearAll();
+    });
+    this.renderChips();
+  }
+
+  setOptions(options) {
+    this.allOptions = options;
+    this.selected.clear();
+    this.query = '';
+    this.inputEl.value = '';
+    this.renderChips();
+    if (this.isOpen) this.renderList();
+  }
+
+  renderChips() {
+    this.chipsEl.querySelectorAll('.ms-chip, .ms-placeholder').forEach(el => el.remove());
+    if (this.selected.size === 0) {
+      const pl = document.createElement('span');
+      pl.className = 'ms-placeholder';
+      pl.textContent = this.container.dataset.placeholder ?? '';
+      this.chipsEl.insertBefore(pl, this.inputEl);
+    } else {
+      this.selected.forEach(val => {
+        const opt = this.allOptions.find(o => o.value === val);
+        const label = opt ? opt.label : val;
+        const chip = document.createElement('span');
+        chip.className = 'ms-chip';
+        chip.innerHTML = `${escHtml(label)} <button type="button" aria-label="Quitar ${escHtml(label)}">✕</button>`;
+        chip.querySelector('button').addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.deselect(val);
+        });
+        this.chipsEl.insertBefore(chip, this.inputEl);
+      });
+    }
+    this.clearAllBtn.hidden = this.selected.size === 0;
+    this.triggerEl.setAttribute('aria-expanded', String(this.isOpen));
+  }
+
+  renderList() {
+    const q = norm(this.query);
+    const filtered = q
+      ? this.allOptions.filter(o => norm(o.label).includes(q))
+      : this.allOptions;
+    if (!filtered.length) {
+      this.listEl.innerHTML = '<li class="ms-empty">Sin resultados</li>';
+      return;
+    }
+    this.listEl.innerHTML = filtered.map(opt => {
+      const sel = this.selected.has(opt.value);
+      let labelHtml = escHtml(opt.label);
+      if (q) {
+        const idx = norm(opt.label).indexOf(q);
+        if (idx >= 0) {
+          labelHtml = escHtml(opt.label.slice(0, idx))
+            + '<mark>' + escHtml(opt.label.slice(idx, idx + q.length)) + '</mark>'
+            + escHtml(opt.label.slice(idx + q.length));
+        }
+      }
+      return `<li class="ms-option" role="option" aria-selected="${sel}" data-value="${escHtml(opt.value)}">
+        <span class="ms-check">✓</span> ${labelHtml}</li>`;
+    }).join('');
+    this.listEl.querySelectorAll('.ms-option').forEach(li => {
+      li.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        this.toggleOption(li.dataset.value);
+      });
+    });
+  }
+
+  toggleOption(value) {
+    this.selected.has(value) ? this.selected.delete(value) : this.selected.add(value);
+    this.renderChips();
+    this.renderList();
+    this.onChange(Array.from(this.selected));
+  }
+
+  deselect(value) {
+    this.selected.delete(value);
+    this.renderChips();
+    if (this.isOpen) this.renderList();
+    this.onChange(Array.from(this.selected));
+  }
+
+  clearAll() {
+    this.selected.clear();
+    this.renderChips();
+    if (this.isOpen) this.renderList();
+    this.onChange([]);
+  }
+
+  open() {
+    this.isOpen = true;
+    this.dropdownEl.hidden = false;
+    this.triggerEl.setAttribute('aria-expanded', 'true');
+    this.renderList();
+    this.inputEl.focus();
+    this._outsideHandler = (e) => { if (!this.container.contains(e.target)) this.close(); };
+    this._keyHandler = (e) => { if (e.key === 'Escape') this.close(); };
+    document.addEventListener('mousedown', this._outsideHandler);
+    document.addEventListener('keydown', this._keyHandler);
+  }
+
+  close() {
+    this.isOpen = false;
+    this.dropdownEl.hidden = true;
+    this.triggerEl.setAttribute('aria-expanded', 'false');
+    this.query = '';
+    this.inputEl.value = '';
+    document.removeEventListener('mousedown', this._outsideHandler);
+    document.removeEventListener('keydown', this._keyHandler);
+  }
+}
+
+// ─── SessionCalendar component ────────────────────────────────────────────────
+class SessionCalendar {
+  constructor(onSelect) {
+    this.onSelect = onSelect;
+    this.sessions = [];
+    this.sessionsByDate = new Map();
+    this.selectedId = null;
+    this.viewYear = new Date().getFullYear();
+    this.viewMonth = new Date().getMonth();
+    this.isOpen = false;
+    this._outsideHandler = null;
+    this._keyHandler = null;
+
+    const wrap = document.getElementById('session-calendar-wrap');
+    wrap.innerHTML = `
+      <button class="session-cal-trigger" id="session-cal-trigger" type="button"
+              aria-haspopup="true" aria-expanded="false" aria-controls="session-cal-popup">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        <span id="session-cal-label">Cargando sesiones…</span>
+        <svg class="cal-trigger-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="cal-popup" id="session-cal-popup" hidden role="dialog" aria-label="Seleccionar sesión">
+        <div class="cal-header">
+          <button class="cal-nav" id="cal-prev" type="button" aria-label="Mes anterior">‹</button>
+          <span class="cal-month-label" id="cal-month-label"></span>
+          <button class="cal-nav" id="cal-next" type="button" aria-label="Mes siguiente">›</button>
+        </div>
+        <div class="cal-weekdays">
+          <span>Lu</span><span>Ma</span><span>Mi</span><span>Ju</span><span>Vi</span><span>Sá</span><span>Do</span>
+        </div>
+        <div class="cal-grid" id="cal-grid" role="grid"></div>
+        <div class="cal-session-list" id="cal-session-list" hidden></div>
+      </div>`;
+
+    this.triggerEl    = document.getElementById('session-cal-trigger');
+    this.labelEl      = document.getElementById('session-cal-label');
+    this.popupEl      = document.getElementById('session-cal-popup');
+    this.gridEl       = document.getElementById('cal-grid');
+    this.monthLabelEl = document.getElementById('cal-month-label');
+    this.sessionListEl = document.getElementById('cal-session-list');
+
+    this.triggerEl.addEventListener('click', () => this.toggle());
+    document.getElementById('cal-prev').addEventListener('click', () => this.prevMonth());
+    document.getElementById('cal-next').addEventListener('click', () => this.nextMonth());
+  }
+
+  setSessions(sessions) {
+    this.sessions = sessions;
+    this.sessionsByDate = new Map();
+    sessions.forEach(s => {
+      if (!s.fecha) return;
+      const key = s.fecha.slice(0, 10);
+      if (!this.sessionsByDate.has(key)) this.sessionsByDate.set(key, []);
+      this.sessionsByDate.get(key).push(s);
+    });
+  }
+
+  // silent=true: updates visual state only, does not fire onSelect callback
+  selectSession(id, silent = true) {
+    const session = this.sessions.find(s => s.id === id);
+    if (!session) return;
+    this.selectedId = id;
+    if (session.fecha) {
+      const d = new Date(session.fecha + 'T00:00:00');
+      this.viewYear = d.getFullYear();
+      this.viewMonth = d.getMonth();
+    }
+    this.updateLabel(session);
+    if (this.isOpen) this.render();
+    if (!silent) this.onSelect(id);
+  }
+
+  updateLabel(session) {
+    if (!session) { this.labelEl.textContent = 'Seleccionar sesión…'; return; }
+    const fecha = session.fecha
+      ? new Date(session.fecha + 'T00:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+      : '—';
+    this.labelEl.textContent = `${fecha}${session.organo ? ' · ' + session.organo : ''}`;
+  }
+
+  render() {
+    const months = ['enero','febrero','marzo','abril','mayo','junio',
+                    'julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    this.monthLabelEl.textContent = `${months[this.viewMonth]} ${this.viewYear}`;
+    this.renderGrid();
+  }
+
+  renderGrid() {
+    const { viewYear: y, viewMonth: m } = this;
+    const firstDow = new Date(y, m, 1).getDay();
+    const offset = firstDow === 0 ? 6 : firstDow - 1; // Mon-based
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+    let selDateStr = null;
+    if (this.selectedId) {
+      const sel = this.sessions.find(s => s.id === this.selectedId);
+      if (sel?.fecha) selDateStr = sel.fecha.slice(0, 10);
+    }
+
+    const months = ['enero','febrero','marzo','abril','mayo','junio',
+                    'julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    let html = '<span class="cal-day-empty"></span>'.repeat(offset);
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const hasSess = this.sessionsByDate.has(dateStr);
+      const isSel   = dateStr === selDateStr;
+      const isToday = dateStr === todayStr;
+      let cls = 'cal-day';
+      if (hasSess) cls += ' cal-day--has-session';
+      if (isSel)   cls += ' cal-day--selected';
+      if (isToday) cls += ' cal-day--today';
+      html += hasSess
+        ? `<button class="${cls}" type="button" data-date="${dateStr}" aria-label="${d} de ${months[m]}">${d}</button>`
+        : `<span class="${cls}">${d}</span>`;
+    }
+    this.gridEl.innerHTML = html;
+    this.gridEl.querySelectorAll('.cal-day--has-session').forEach(btn => {
+      btn.addEventListener('click', () => this.handleDayClick(btn.dataset.date));
+    });
+  }
+
+  handleDayClick(dateStr) {
+    const sessions = this.sessionsByDate.get(dateStr) ?? [];
+    if (sessions.length === 1) {
+      this.selectedId = sessions[0].id;
+      this.updateLabel(sessions[0]);
+      this.renderGrid();
+      this.sessionListEl.hidden = true;
+      this.close();
+      this.onSelect(sessions[0].id);
+    } else {
+      this.sessionListEl.hidden = false;
+      this.sessionListEl.innerHTML = sessions.map(s =>
+        `<button class="cal-session-item" type="button" data-id="${s.id}">${escHtml([s.organo, s.tipo].filter(Boolean).join(' · '))}</button>`
+      ).join('');
+      this.sessionListEl.querySelectorAll('.cal-session-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const session = sessions.find(s => s.id === btn.dataset.id);
+          this.selectedId = btn.dataset.id;
+          this.updateLabel(session);
+          this.renderGrid();
+          this.sessionListEl.hidden = true;
+          this.close();
+          this.onSelect(btn.dataset.id);
+        });
+      });
+    }
+  }
+
+  prevMonth() {
+    if (--this.viewMonth < 0) { this.viewMonth = 11; this.viewYear--; }
+    this.render();
+  }
+
+  nextMonth() {
+    if (++this.viewMonth > 11) { this.viewMonth = 0; this.viewYear++; }
+    this.render();
+  }
+
+  toggle() { this.isOpen ? this.close() : this.open(); }
+
+  open() {
+    this.isOpen = true;
+    this.popupEl.hidden = false;
+    this.triggerEl.setAttribute('aria-expanded', 'true');
+    this.render();
+    this._outsideHandler = (e) => {
+      if (!document.getElementById('session-calendar-wrap').contains(e.target)) this.close();
+    };
+    this._keyHandler = (e) => { if (e.key === 'Escape') this.close(); };
+    document.addEventListener('mousedown', this._outsideHandler);
+    document.addEventListener('keydown', this._keyHandler);
+  }
+
+  close() {
+    this.isOpen = false;
+    this.popupEl.hidden = true;
+    this.triggerEl.setAttribute('aria-expanded', 'false');
+    document.removeEventListener('mousedown', this._outsideHandler);
+    document.removeEventListener('keydown', this._keyHandler);
+  }
+}
+
 // ─── Session selector + content filters ───────────────────────────────────────
 function setupFilters() {
-  document.getElementById('filter-session').addEventListener('change', e => {
-    if (e.target.value) loadSession(e.target.value);
-  });
+  sessionCalendar = new SessionCalendar(id => loadSession(id));
 
-  document.querySelectorAll('#filters select:not(#filter-session)').forEach(sel => {
-    sel.addEventListener('change', applyFilters);
-  });
+  msResultado = new MultiSelect(
+    document.getElementById('ms-resultado'), [],
+    vals => { filterState.resultado = vals; applyFilters(); }
+  );
+  msTematico = new MultiSelect(
+    document.getElementById('ms-tematico'), [],
+    vals => { filterState.tematico = vals; applyFilters(); }
+  );
+  msPolitico = new MultiSelect(
+    document.getElementById('ms-politico'), [],
+    vals => { filterState.politico = vals; applyFilters(); }
+  );
 
   document.getElementById('search-claim').addEventListener('input', applyFilters);
+
+  document.getElementById('btn-clear-filters')?.addEventListener('click', clearAllFilters);
 }
 
 // ─── Sessions ─────────────────────────────────────────────────────────────────
 async function loadSessions() {
-  const sel = document.getElementById('filter-session');
-  sel.disabled = true;
-
   const [{ data, error }, { count: headerCount }, { data: claimSessions }] = await Promise.all([
     supabase.from('session').select('id, legislatura, tipo, numero, fecha, organo, status').order('fecha', { ascending: false }),
     supabase.from('claim').select('id', { count: 'exact', head: true }),
     supabase.from('claim').select('session_id, verification!inner(id)'),
   ]);
 
-  sel.disabled = false;
-
   if (error || !data?.length) {
-    sel.innerHTML = '<option value="">Sin sesiones disponibles</option>';
+    const lbl = document.getElementById('session-cal-label');
+    if (lbl) lbl.textContent = 'Sin sesiones disponibles';
     return;
   }
 
@@ -139,26 +510,19 @@ async function loadSessions() {
 
   const statsEl = document.getElementById('header-stats');
   if (statsEl) {
-    statsEl.innerHTML =
-      `<strong>${sessions.length}</strong> sesiones · <strong>${claimCount.toLocaleString('es-ES')}</strong> afirmaciones`;
+    headerStatsBase = `<strong>${sessions.length}</strong> sesiones · <strong>${claimCount.toLocaleString('es-ES')}</strong> afirmaciones`;
+    statsEl.innerHTML = headerStatsBase;
   }
 
   if (!sessions.length) {
-    sel.innerHTML = '<option value="">Sin sesiones disponibles</option>';
+    const lbl = document.getElementById('session-cal-label');
+    if (lbl) lbl.textContent = 'Sin sesiones disponibles';
     return;
   }
 
-  sel.innerHTML = '<option value="">Seleccionar sesión…</option>' +
-    sessions.map(s => {
-      const fecha = s.fecha
-        ? new Date(s.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
-        : '—';
-      const organ = s.organo ? ` · ${s.organo}` : '';
-      return `<option value="${s.id}">${fecha}${organ}</option>`;
-    }).join('');
-
-  // Pre-select and load the latest session automatically
-  sel.value = sessions[0].id;
+  sessionCalendar.setSessions(sessions);
+  // Visually select the latest session, then load it
+  sessionCalendar.selectSession(sessions[0].id, /* silent */ true);
   loadSession(sessions[0].id);
 }
 
@@ -191,12 +555,14 @@ async function loadSession(sessionId) {
   allClaims = data ?? [];
   claimsById = Object.fromEntries(allClaims.map(c => [c.id, c]));
 
-  ['filter-resultado', 'filter-tematico', 'filter-politico'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.selectedIndex = 0;
-  });
+  // Reset filter state
+  filterState.resultado = [];
+  filterState.tematico  = [];
+  filterState.politico  = [];
   populateFilters(allClaims);
   renderClaims(allClaims);
+  updateClaimsCount(allClaims.length, allClaims.length);
+  updateFilterPills();
 }
 
 // ─── Filters ──────────────────────────────────────────────────────────────────
@@ -212,52 +578,93 @@ function populateFilters(claims) {
     (a.nombre_completo ?? '').localeCompare(b.nombre_completo ?? '')
   );
 
-  setSelectOptions('filter-tematico',
-    tematicos.map(t => ({ value: t, label: TEMATICO_LABELS[t] ?? snakeToLabel(t) })),
-    'Temática'
-  );
-  setSelectOptions('filter-resultado',
-    resultados.map(r => ({ value: r, label: RESULTADO_LABELS[r] ?? snakeToLabel(r) })),
-    'Resultado'
-  );
-  setSelectOptions('filter-politico',
-    politicos.map(p => ({ value: p.nombre_completo, label: p.nombre_completo })),
-    'Político'
-  );
-}
-
-function setSelectOptions(id, items, placeholder) {
-  const sel = document.getElementById(id);
-  sel.innerHTML = `<option value="">${placeholder}</option>` +
-    items.map(item => {
-      const value = typeof item === 'string' ? item : item.value;
-      const label = typeof item === 'string' ? item : item.label;
-      return `<option value="${value}">${label}</option>`;
-    }).join('');
+  msTematico?.setOptions(tematicos.map(t => ({ value: t, label: TEMATICO_LABELS[t] ?? snakeToLabel(t) })));
+  msResultado?.setOptions(resultados.map(r => ({ value: r, label: RESULTADO_LABELS[r] ?? snakeToLabel(r) })));
+  msPolitico?.setOptions(politicos.map(p => ({ value: p.nombre_completo, label: p.nombre_completo })));
 }
 
 function applyFilters() {
-  const tematico = document.getElementById('filter-tematico').value;
-  const resultado = document.getElementById('filter-resultado').value;
-  const politico = document.getElementById('filter-politico').value;
-  const search = document.getElementById('search-claim').value.trim().toLowerCase();
+  const search = norm(document.getElementById('search-claim').value.trim());
 
   const filtered = allClaims.filter(c => {
-    if (tematico && c.ambito_tematico !== tematico) return false;
-    if (politico && c.politician?.nombre_completo !== politico) return false;
-    if (resultado) {
-      const hasResult = c.verification?.some(v => v.resultado === resultado);
-      if (!hasResult) return false;
+    if (filterState.tematico.length && !filterState.tematico.includes(c.ambito_tematico)) return false;
+    if (filterState.politico.length && !filterState.politico.includes(c.politician?.nombre_completo)) return false;
+    if (filterState.resultado.length) {
+      const claimResults = c.verification?.map(v => v.resultado) ?? [];
+      if (!filterState.resultado.some(r => claimResults.includes(r))) return false;
     }
     if (search) {
-      const haystack = [c.texto_normalizado, c.texto_original]
-        .filter(Boolean).join(' ').toLowerCase();
+      const haystack = norm([c.texto_normalizado, c.texto_original].filter(Boolean).join(' '));
       if (!haystack.includes(search)) return false;
     }
     return true;
   });
 
   renderClaims(filtered);
+  updateClaimsCount(filtered.length, allClaims.length);
+  updateFilterPills();
+}
+
+function updateClaimsCount(shown, total) {
+  const el = document.getElementById('claims-count');
+  if (el) el.hidden = true;
+
+  const statsEl = document.getElementById('header-stats');
+  if (!statsEl || !headerStatsBase) return;
+  if (!total) { statsEl.innerHTML = headerStatsBase; return; }
+
+  const pleno = shown === total
+    ? `<strong>${total.toLocaleString('es-ES')}</strong> en este pleno`
+    : `<strong>${shown.toLocaleString('es-ES')}</strong>/<strong>${total.toLocaleString('es-ES')}</strong> en este pleno`;
+
+  statsEl.innerHTML = `${headerStatsBase} · ${pleno}`;
+}
+
+function updateFilterPills() {
+  const pillsEl = document.getElementById('filter-pills');
+  const clearBtn = document.getElementById('btn-clear-filters');
+  if (!pillsEl) return;
+
+  const pills = [];
+  filterState.resultado.forEach(v =>
+    pills.push({ label: RESULTADO_LABELS[v] ?? v, remove: () => msResultado.deselect(v) }));
+  filterState.tematico.forEach(v =>
+    pills.push({ label: TEMATICO_LABELS[v] ?? snakeToLabel(v), remove: () => msTematico.deselect(v) }));
+  filterState.politico.forEach(v =>
+    pills.push({ label: v, remove: () => msPolitico.deselect(v) }));
+
+  const searchVal = document.getElementById('search-claim').value.trim();
+  if (searchVal) pills.push({
+    label: `"${searchVal}"`,
+    remove: () => { document.getElementById('search-claim').value = ''; applyFilters(); },
+  });
+
+  pillsEl.hidden = pills.length === 0;
+  if (clearBtn) clearBtn.hidden = pills.length === 0;
+
+  const badge = document.getElementById('filters-badge');
+  if (badge) {
+    badge.hidden = pills.length === 0;
+    badge.textContent = pills.length || '';
+  }
+
+  pillsEl.innerHTML = pills.map((p, i) =>
+    `<button class="filter-pill" data-pill="${i}">${escHtml(p.label)} <span aria-hidden="true">✕</span></button>`
+  ).join('');
+  pillsEl.querySelectorAll('.filter-pill').forEach((btn, i) => {
+    btn.addEventListener('click', () => pills[i].remove());
+  });
+}
+
+function clearAllFilters() {
+  msResultado?.clearAll();
+  msTematico?.clearAll();
+  msPolitico?.clearAll();
+  document.getElementById('search-claim').value = '';
+  filterState.resultado = [];
+  filterState.tematico  = [];
+  filterState.politico  = [];
+  applyFilters();
 }
 
 // ─── Render claims ────────────────────────────────────────────────────────────
