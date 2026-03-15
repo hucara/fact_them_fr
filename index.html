@@ -53,14 +53,25 @@
   }
   </script>
 
+  <!-- Supabase config — safe to expose (anon key, RLS enforced) -->
+  <script>
+    const SUPABASE_URL  = 'https://kivkdkddhjkrdafkgxmb.supabase.co';
+    const SUPABASE_ANON = 'sb_publishable_hZ4T6T0F_whJfF2jjBnYJw_JJnsEdBJ';
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://esm.sh" crossorigin />
+  <link rel="preload" as="image" href="/assets/portada.webp" fetchpriority="high" />
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'" />
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" /></noscript>
   <link rel="stylesheet" href="css/style.css" />
-  <script src="js/config.js"></script>
-  <!-- Google Tag Manager -->
-  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-M6ZJVS39');</script>
+  <!-- Google Tag Manager — deferred to avoid render-blocking -->
+  <script>
+    window.addEventListener('load', function() {
+      (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-M6ZJVS39');
+    });
+  </script>
 </head>
 <body>
   <!-- Google Tag Manager (noscript) -->
