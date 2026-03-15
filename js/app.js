@@ -504,7 +504,7 @@ async function loadSessions() {
   }
 
   const sessionIdsWithClaims = new Set((claimSessions ?? []).map(c => c.session_id));
-  const sessions = data.filter(s => sessionIdsWithClaims.has(s.id));
+  const sessions = data.filter(s => sessionIdsWithClaims.has(s.id) && s.fecha);
 
   claimCount = headerCount ?? 0;
 
