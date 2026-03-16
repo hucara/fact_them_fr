@@ -1653,6 +1653,12 @@ body {
 
   .hero-actions {
     justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .hero-cta {
+    flex: 0 0 calc(50% - .25rem);
+    justify-content: center;
   }
 
   .dashboard-view {
