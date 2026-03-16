@@ -186,6 +186,18 @@
           <ul id="politician-suggestions" class="politician-suggestions" role="listbox" aria-label="Políticos sugeridos" hidden></ul>
         </div>
       </div>
+      <div id="search-filters" hidden>
+        <div class="multisel" id="ms-search-resultado" data-placeholder="Resultado" aria-label="Filtrar por resultado"></div>
+        <div class="multisel" id="ms-search-tematico"  data-placeholder="Temática"  aria-label="Filtrar por temática"></div>
+        <span class="filter-sep"></span>
+        <div class="search-wrap">
+          <svg class="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input type="search" id="search-busqueda-claim" placeholder="Buscar afirmaciones…"
+                 aria-label="Buscar en afirmaciones del representante" autocomplete="off" spellcheck="false">
+        </div>
+      </div>
       <div id="search-results-area" class="search-results-area">
         <div class="search-welcome">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">

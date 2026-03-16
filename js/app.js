@@ -67,6 +67,11 @@ let allPoliticians = [];
 let searchLoaded = false;
 let activeSearchIndex = -1;
 let searchClaimsCache = {};
+let currentSearchClaims = [];
+
+// ─── Búsqueda filter state ────────────────────────────────────────────────────
+const searchFilterState = { resultado: [], tematico: [] };
+let msSearchResultado = null, msSearchTematico = null;
 let claimCount = 0;
 let headerStatsBase = '';
 
@@ -75,9 +80,11 @@ document.addEventListener('DOMContentLoaded', boot);
 
 async function boot() {
   setupTabs();
+  history.replaceState({ tab: 'view-sesiones' }, '', window.location.href);
   setupHeroCTAs();
   setupFilters();
   setupFiltersToggle();
+  setupSearchFilters();
   setupModal();
   setupShare();
   await Promise.all([loadSessions(), handleClaimDeepLink()]);
@@ -93,31 +100,87 @@ function setupFiltersToggle() {
   });
 }
 
+// ─── Búsqueda filters ────────────────────────────────────────────────────────
+function setupSearchFilters() {
+  msSearchResultado = new MultiSelect(
+    document.getElementById('ms-search-resultado'), [],
+    vals => { searchFilterState.resultado = vals; applySearchFilters(); }
+  );
+  msSearchTematico = new MultiSelect(
+    document.getElementById('ms-search-tematico'), [],
+    vals => { searchFilterState.tematico = vals; applySearchFilters(); }
+  );
+  document.getElementById('search-busqueda-claim')
+    .addEventListener('input', applySearchFilters);
+}
+
+function populateSearchFilters(claims) {
+  const tematicos = [...new Set(claims.map(c => c.ambito_tematico).filter(Boolean))].sort();
+  const resultados = [...new Set(
+    claims.flatMap(c => c.verification?.map(v => v.resultado) ?? []).filter(Boolean)
+  )].sort();
+  msSearchTematico.setOptions(tematicos.map(t => ({ value: t, label: TEMATICO_LABELS[t] ?? t })));
+  msSearchResultado.setOptions(resultados.map(r => ({ value: r, label: RESULTADO_LABELS[r] ?? r })));
+}
+
+function applySearchFilters() {
+  const search = norm(document.getElementById('search-busqueda-claim').value.trim());
+  const filtered = currentSearchClaims.filter(c => {
+    if (searchFilterState.tematico.length && !searchFilterState.tematico.includes(c.ambito_tematico)) return false;
+    if (searchFilterState.resultado.length) {
+      const claimResults = c.verification?.map(v => v.resultado) ?? [];
+      if (!searchFilterState.resultado.some(r => claimResults.includes(r))) return false;
+    }
+    if (search) {
+      const haystack = norm([c.texto_normalizado, c.texto_original].filter(Boolean).join(' '));
+      if (!haystack.includes(search)) return false;
+    }
+    return true;
+  });
+  renderSearchResults(filtered, document.getElementById('politician-search-input').value);
+}
+
+function resetSearchFilters() {
+  searchFilterState.resultado = [];
+  searchFilterState.tematico = [];
+  document.getElementById('search-busqueda-claim').value = '';
+}
+
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
+function activateTab(tabId, pushToHistory = true) {
+  document.querySelectorAll('.tab-button').forEach(t =>
+    t.classList.toggle('active', t.dataset.tab === tabId));
+  document.querySelectorAll('.view-container').forEach(v =>
+    v.classList.toggle('active', v.id === tabId));
+  if (tabId === 'view-estadisticas' && !window.statsLoaded) loadGlobalDashboard();
+  if (tabId === 'view-busqueda' && !searchLoaded) loadPoliticians();
+  if (pushToHistory) {
+    history.pushState({ tab: tabId }, '', window.location.href);
+  }
+}
+
 function setupTabs() {
   document.querySelectorAll('.tab-button').forEach(tab => {
     tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab-button').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
-      tab.classList.add('active');
-      document.getElementById(tab.dataset.tab).classList.add('active');
-      if (tab.dataset.tab === 'view-estadisticas' && !window.statsLoaded) {
-        loadGlobalDashboard();
-      }
-      if (tab.dataset.tab === 'view-busqueda' && !searchLoaded) {
-        loadPoliticians();
-      }
+      const current = document.querySelector('.tab-button.active')?.dataset.tab;
+      if (tab.dataset.tab === current) return;
+      activateTab(tab.dataset.tab, true);
     });
+  });
+  window.addEventListener('popstate', e => {
+    if (e.state?.tab) activateTab(e.state.tab, false);
   });
 }
 
 // ─── Hero CTAs ────────────────────────────────────────────────────────────────
 function setupHeroCTAs() {
   document.querySelectorAll('.hero-cta[data-cta]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
       const target = btn.dataset.cta;
       const tabBtn = document.querySelector(`.tab-button[data-tab="view-${target}"]`);
       if (tabBtn) tabBtn.click();
+      document.getElementById('app-header')?.scrollIntoView({ behavior: 'smooth' });
     });
   });
 }
@@ -1664,6 +1727,9 @@ function clearSearch() {
   input.value = '';
   clearBtn.hidden = true;
   closeSuggestions();
+  document.getElementById('search-filters').hidden = true;
+  resetSearchFilters();
+  currentSearchClaims = [];
   area.innerHTML = `<div class="search-welcome">
     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
       <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
@@ -1682,7 +1748,11 @@ async function selectPolitician(politicianId, politicianName) {
   document.getElementById('search-clear-btn').hidden = false;
 
   if (searchClaimsCache[politicianId]) {
-    renderSearchResults(searchClaimsCache[politicianId], politicianName);
+    currentSearchClaims = searchClaimsCache[politicianId];
+    resetSearchFilters();
+    document.getElementById('search-filters').hidden = false;
+    populateSearchFilters(currentSearchClaims);
+    renderSearchResults(currentSearchClaims, politicianName);
     return;
   }
 
@@ -1707,6 +1777,10 @@ async function selectPolitician(politicianId, politicianName) {
 
   const claims = data ?? [];
   searchClaimsCache[politicianId] = claims;
+  currentSearchClaims = claims;
+  resetSearchFilters();
+  document.getElementById('search-filters').hidden = false;
+  populateSearchFilters(claims);
   renderSearchResults(claims, politicianName);
 }
 
