@@ -731,17 +731,84 @@ function sessionDayLabel(index) {
   return DAY_SESSION_LABELS[index] ?? `Pleno ${index + 1}`;
 }
 
+const CLAIMS_PAGE_SIZE = 30;
+let lazyObserver = null;
+let pendingClaims = [];   // flat ordered list yet to render
+let pendingGroups = null; // for multi-session: [{dividerHtml, claims[]}]
+
+function bindClaimToggle(container) {
+  container.querySelectorAll('.claim-toggle:not([data-bound])').forEach(btn => {
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', () => openModal(claimsById[btn.dataset.id]));
+  });
+}
+
+function appendNextBatch(container) {
+  const sentinel = container.querySelector('.claims-sentinel');
+  const insert = html => {
+    if (sentinel) sentinel.insertAdjacentHTML('beforebegin', html);
+    else container.insertAdjacentHTML('beforeend', html);
+  };
+
+  if (pendingGroups) {
+    let added = 0;
+    while (added < CLAIMS_PAGE_SIZE && pendingGroups.length) {
+      const g = pendingGroups[0];
+      if (g.dividerHtml) { insert(g.dividerHtml); g.dividerHtml = null; }
+      const take = Math.min(CLAIMS_PAGE_SIZE - added, g.claims.length);
+      insert(g.claims.splice(0, take).map(c => claimCard(c)).join(''));
+      added += take;
+      if (!g.claims.length) pendingGroups.shift();
+    }
+  } else {
+    insert(pendingClaims.splice(0, CLAIMS_PAGE_SIZE).map(c => claimCard(c)).join(''));
+  }
+  bindClaimToggle(container);
+  updateSentinel(container);
+}
+
+function updateSentinel(container) {
+  const remaining = pendingGroups
+    ? pendingGroups.reduce((n, g) => n + g.claims.length, 0)
+    : pendingClaims.length;
+
+  let sentinel = container.querySelector('.claims-sentinel');
+  if (remaining === 0) {
+    if (sentinel) sentinel.remove();
+    if (lazyObserver) { lazyObserver.disconnect(); lazyObserver = null; }
+    return;
+  }
+  if (!sentinel) {
+    sentinel = document.createElement('div');
+    sentinel.className = 'claims-sentinel';
+    sentinel.style.cssText = 'height:1px;margin-top:1rem;';
+    container.appendChild(sentinel);
+  }
+  if (!lazyObserver) {
+    lazyObserver = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) appendNextBatch(container);
+    }, { rootMargin: '200px' });
+    lazyObserver.observe(sentinel);
+  }
+}
+
 function renderClaims(claims) {
   const container = document.getElementById('claims-container');
+
+  // Tear down previous lazy loader
+  if (lazyObserver) { lazyObserver.disconnect(); lazyObserver = null; }
+  pendingClaims = [];
+  pendingGroups = null;
 
   if (!claims.length) {
     container.innerHTML = '<p class="empty">No hay afirmaciones que coincidan con los filtros.</p>';
     return;
   }
 
+  container.innerHTML = '';
+
   if (currentSessionIds.length > 1) {
     const sessionsMap = new Map((sessionCalendar?.sessions ?? []).map(s => [s.id, s]));
-    // Order session IDs by numero ASC within the day
     const orderedIds = currentSessionIds
       .map(id => sessionsMap.get(id))
       .filter(Boolean)
@@ -754,20 +821,17 @@ function renderClaims(claims) {
       grouped.get(c.session_id).push(c);
     }
 
-    container.innerHTML = orderedIds
+    pendingGroups = orderedIds
       .filter(sid => grouped.has(sid))
-      .map((sid, i) => {
-        const label = sessionDayLabel(i);
-        const divider = `<div class="session-divider" role="separator"><span>${escHtml(label)}</span></div>`;
-        return divider + grouped.get(sid).map(c => claimCard(c)).join('');
-      }).join('');
+      .map((sid, i) => ({
+        dividerHtml: `<div class="session-divider" role="separator"><span>${escHtml(sessionDayLabel(i))}</span></div>`,
+        claims: grouped.get(sid),
+      }));
   } else {
-    container.innerHTML = claims.map(c => claimCard(c)).join('');
+    pendingClaims = [...claims];
   }
 
-  container.querySelectorAll('.claim-toggle').forEach(btn => {
-    btn.addEventListener('click', () => openModal(claimsById[btn.dataset.id]));
-  });
+  appendNextBatch(container);
 }
 
 function claimCard(claim) {
@@ -1447,10 +1511,12 @@ function renderDashboard(s) {
     especializado: t.partido_especializado || '—',
   }));
 
-  const claimsPorPartido = (s.claims_por_partido || []).map(p => ({
-    tema: p.partido,
-    partido: p.count.toString(),
-  }));
+  const claimsPorPartido = (s.claims_por_partido || [])
+    .filter(p => p.count >= 40)
+    .map(p => ({
+      tema: p.partido,
+      partido: p.count.toString(),
+    }));
 
   grid.innerHTML = `
     ${statCard('Partido con más claims', d('top_partido_claims').name || '-', `${d('top_partido_claims').count || 0} claims totales`, false, 'El partido que más afirmaciones ha realizado en total.')}
