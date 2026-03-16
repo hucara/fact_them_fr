@@ -1,3 +1,3 @@
 User-agent: *
 Allow: /
-Sitemap: https://fackthem.es/sitemap.xml
+Sitemap: https://facthem.es/sitemap.xml
