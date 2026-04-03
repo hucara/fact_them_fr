@@ -545,10 +545,9 @@ function setupFilters() {
 
 // ─── Sessions ─────────────────────────────────────────────────────────────────
 async function loadSessions() {
-  const [{ data, error }, { count: headerCount }, { data: claimSessions }] = await Promise.all([
+  const [{ data, error }, { count: headerCount }] = await Promise.all([
     supabase.from('session').select('id, legislatura, tipo, numero, fecha, organo, status').order('fecha', { ascending: false }),
     supabase.from('claim').select('id', { count: 'exact', head: true }),
-    supabase.from('claim').select('session_id, verification!inner(id)'),
   ]);
 
   if (error || !data?.length) {
@@ -557,8 +556,7 @@ async function loadSessions() {
     return;
   }
 
-  const sessionIdsWithClaims = new Set((claimSessions ?? []).map(c => c.session_id));
-  const sessions = data.filter(s => sessionIdsWithClaims.has(s.id) && s.fecha);
+  const sessions = data.filter(s => s.status === 'verified' && s.fecha);
 
   claimCount = headerCount ?? 0;
 
@@ -611,7 +609,12 @@ async function loadSession(sessionIds) {
   }
 
   allClaims = data ?? [];
+  const prevById = claimsById;
   claimsById = Object.fromEntries(allClaims.map(c => [c.id, c]));
+  // Preserve any pre-loaded claims not in this session (e.g. deeplink)
+  for (const [id, claim] of Object.entries(prevById)) {
+    if (!claimsById[id]) claimsById[id] = claim;
+  }
 
   // Reset filter state
   filterState.resultado = [];
@@ -1329,6 +1332,8 @@ async function handleClaimDeepLink() {
     claimsById[data.id] = data;
     updateOGTags(data);
     openModal(data);
+  } else {
+    console.warn('[deeplink] claim not found or fetch failed', claimId, error?.message);
   }
 }
 
