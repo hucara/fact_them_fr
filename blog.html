@@ -109,6 +109,29 @@
       background: var(--c-border);
       margin: 2.5rem 0;
     }
+
+    .yt-shorts-grid {
+      display: flex;
+      gap: 1rem;
+      margin: 1.25rem 0;
+      flex-wrap: wrap;
+    }
+
+    .yt-short {
+      flex: 1 1 180px;
+      max-width: 280px;
+      aspect-ratio: 9 / 16;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #000;
+    }
+
+    .yt-short iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+    }
   </style>
 </head>
 
@@ -128,6 +151,40 @@
     <p class="blog-subtitle">Actualizaciones y mejoras de Facthem</p>
 
     <!-- ── Posts (más reciente primero) ──────────────────────────────────── -->
+    <div class="blog-divider"></div>
+
+    <article class="blog-post">
+      <time datetime="2026-04-21">21 abril 2026</time>
+      <h2>Superamos los 3.100 claims verificados — y estrenamos canal de YouTube</h2>
+      <p>
+        Dos noticias esta semana. La primera: Facthem ha superado las <strong>3.100 afirmaciones verificadas</strong>
+        en la base de datos, un hito que celebramos con nuevas sesiones parlamentarias en camino.
+      </p>
+      <p>
+        La segunda: ya tenemos canal de YouTube. Publicaremos resúmenes en vídeo de las sesiones más destacadas,
+        clips con las afirmaciones más llamativas y contenido de divulgación sobre el proceso de verificación.
+        Puedes suscribirte aquí: <a href="https://www.youtube.com/@facthem_es" target="_blank" rel="noopener">@facthem_es</a>.
+      </p>
+      <p>Estos son los dos primeros Shorts que hemos publicado:</p>
+      <div class="yt-shorts-grid">
+        <div class="yt-short">
+          <iframe src="https://www.youtube.com/embed/QiUlSI--v1A"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen title="Facthem Short — QiUlSI--v1A"></iframe>
+        </div>
+        <div class="yt-short">
+          <iframe src="https://www.youtube.com/embed/OZV1ZZ2cS3M"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen title="Facthem Short — OZV1ZZ2cS3M"></iframe>
+        </div>
+      </div>
+      <p>
+        Si el proyecto te resulta útil, comparte los vídeos o apóyanos directamente:
+        <a href="https://paypal.me/hcasero" target="_blank" rel="noopener">PayPal</a> ·
+        <a href="https://ko-fi.com/hugocasero" target="_blank" rel="noopener">Ko-fi</a>
+      </p>
+    </article>
+
     <div class="blog-divider"></div>
 
     <article class="blog-post">

@@ -1,3 +1,5 @@
 .claude
 .DS_Store
 DESIGN.md
+.env
+_debug_server.py
