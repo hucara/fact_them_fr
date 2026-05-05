@@ -975,8 +975,20 @@ function closeModal() {
 }
 
 // ─── Share ────────────────────────────────────────────────────────────────────
-function buildShareUrl(claimId) {
-  return `https://facthem.es/?claim=${claimId}`;
+function slugifyClaim(text, claimId) {
+  const shortId = String(claimId).split('-')[0];
+  let s = String(text ?? '').trim().toLowerCase();
+  for (const [src, dst] of [['á','a'],['é','e'],['í','i'],['ó','o'],['ú','u'],['ñ','n'],['ç','c'],['ü','u']]) {
+    s = s.replaceAll(src, dst);
+  }
+  s = s.replace(/[^a-z0-9\s-]/g, '');
+  const slug = s.split(/\s+/).slice(0, 8).join('-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  return slug ? `${slug}-${shortId}` : shortId;
+}
+
+function buildShareUrl(claim) {
+  const slug = slugifyClaim(claim.texto_normalizado, claim.id);
+  return `https://facthem.es/claim/${slug}.html`;
 }
 
 function formatNombre(str) {
@@ -1002,7 +1014,7 @@ function buildShareTextPlain(claim) {
 }
 
 function buildShareMenu(claim) {
-  const shareUrl = buildShareUrl(claim.id);
+  const shareUrl = buildShareUrl(claim);
   const shareText = buildShareTextPlain(claim);
   const fullText = shareText + '\n\n' + shareUrl;
   const encodedUrl = encodeURIComponent(shareUrl);
@@ -1088,7 +1100,7 @@ function updateOGTags(claim) {
   setMeta('name', 'description', desc);
   setMeta('property', 'og:title', title);
   setMeta('property', 'og:description', desc);
-  setMeta('property', 'og:url', `https://facthem.es/?claim=${claim.id}`);
+  setMeta('property', 'og:url', buildShareUrl(claim));
   setMeta('name', 'twitter:title', title);
   setMeta('name', 'twitter:description', desc);
 }
@@ -1289,7 +1301,7 @@ async function handleShareImage(btn, claim) {
   try {
     const blob = await generateShareImage(claim);
     const file = new File([blob], 'facthem-claim.png', { type: 'image/png' });
-    const shareUrl = buildShareUrl(claim.id);
+    const shareUrl = buildShareUrl(claim);
     const shareText = buildShareText(claim);
     if (navigator.canShare?.({ files: [file] })) {
       await navigator.share({ files: [file], text: shareText, url: shareUrl });
