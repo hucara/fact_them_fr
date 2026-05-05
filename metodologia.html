@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Metodología (Facthem)</title>
+  <meta name="description" content="Cómo Facthem verifica las afirmaciones de los diputados del Congreso español usando modelos de IA y fuentes primarias." />
+  <meta property="og:image" content="https://facthem.es/assets/portada_opt.png" />
+  <meta name="twitter:image" content="https://facthem.es/assets/portada_opt.png" />
+  <link rel="canonical" href="https://facthem.es/metodologia.html" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" />
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- Google Tag Manager -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-M6ZJVS39');</script>
+  <style>
+    .legal-page {
+      flex: 1;
+      max-width: 760px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 4rem 1.75rem 5rem;
+    }
+    .legal-page h1 {
+      font-size: 1.6rem;
+      font-weight: 900;
+      letter-spacing: -.03em;
+      background: linear-gradient(135deg, #f0b8c4 0%, #c8607a 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: .5rem;
+    }
+    .legal-page .legal-meta {
+      font-size: .72rem;
+      color: var(--c-text-muted);
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin-bottom: 3rem;
+    }
+    .legal-page h2 {
+      font-size: .78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: var(--c-text-muted);
+      margin: 2.25rem 0 .75rem;
+    }
+    .legal-page p {
+      font-size: .95rem;
+      line-height: 1.8;
+      color: var(--c-text);
+      margin-bottom: 1rem;
+      text-align: justify;
+      hyphens: auto;
+      -webkit-hyphens: auto;
+    }
+    .legal-page a {
+      color: var(--c-accent);
+      text-decoration: none;
+      border-bottom: 1px solid rgba(160,120,0,.45);
+    }
+    .legal-page a:hover { border-color: var(--c-accent); }
+    .legal-divider {
+      height: 1px;
+      background: var(--c-border);
+      margin: 2.5rem 0;
+    }
+    .verdict-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .88rem;
+      margin: 1.25rem 0 1.5rem;
+    }
+    .verdict-table th {
+      text-align: left;
+      font-size: .7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--c-text-muted);
+      padding: .5rem .75rem;
+      border-bottom: 1px solid var(--c-border);
+    }
+    .verdict-table td {
+      padding: .6rem .75rem;
+      border-bottom: 1px solid var(--c-border);
+      vertical-align: top;
+      line-height: 1.55;
+    }
+    .verdict-table tr:last-child td { border-bottom: none; }
+    .verdict-table td:first-child { white-space: nowrap; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <!-- Google Tag Manager (noscript) -->
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-M6ZJVS39" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+
+  <header class="site-header">
+    <nav class="tabs">
+      <a href="index.html" class="tab-button" style="text-decoration:none">← Volver</a>
+    </nav>
+  </header>
+
+  <div class="legal-page">
+    <h1>Metodología</h1>
+    <p class="legal-meta">Última actualización: mayo de 2026</p>
+
+    <h2>Visión general</h2>
+    <p>
+      Facthem monitoriza los debates del Congreso de los Diputados y verifica automáticamente las
+      afirmaciones factuales realizadas por los parlamentarios. Todo el proceso (desde la
+      transcripción bruta hasta el veredicto publicado) funciona sin intervención editorial humana.
+      Esta página explica cada paso.
+    </p>
+
+    <div class="legal-divider"></div>
+
+    <h2>Paso 1: Obtención de sesiones y segmentación de intervenciones</h2>
+    <p>
+      Cada sesión del Congreso de los Diputados se obtiene directamente del
+      <a href="https://www.congreso.es/es/busqueda-de-publicaciones" target="_blank" rel="noopener">portal oficial del Congreso</a>.
+      La transcripción de cada sesión se descarga y se divide en intervenciones individuales,
+      una por turno de palabra. Cada intervención se asocia a su diputado junto con metadatos
+      disponibles como grupo parlamentario, partido y fecha de la sesión. Esta representación
+      estructurada es la que alimenta el resto del pipeline.
+    </p>
+
+    <div class="legal-divider"></div>
+
+    <h2>Paso 2: Extracción, normalización y enriquecimiento de afirmaciones</h2>
+    <p>
+      Cada intervención es procesada por un modelo de lenguaje con la tarea de identificar
+      afirmaciones factuales discretas y falsables. Las opiniones, predicciones, preguntas
+      retóricas y declaraciones normativas («deberíamos…», «sería mejor si…») quedan excluidas;
+      solo se extraen afirmaciones que aseveran un hecho concreto y verificable sobre el mundo.
+    </p>
+    <p>
+      Para cada afirmación extraída, el modelo realiza tres operaciones:
+    </p>
+    <ul style="font-size:.95rem;line-height:1.8;padding-left:1.4rem;margin-bottom:1rem">
+      <li><strong>Normaliza</strong> la afirmación en una frase canónica e independiente del contexto que puede evaluarse sin necesidad de consultar el discurso original.</li>
+      <li><strong>Categoriza</strong> la afirmación por tema (economía, defensa, sanidad, etc.) y alcance geográfico.</li>
+      <li><strong>Enriquece</strong> la afirmación con metadatos estructurados (etiquetas temáticas, entidades mencionadas y cualquier afirmación numérica o temporal implícita) que mejoran la calidad del paso de verificación.</li>
+    </ul>
+
+    <div class="legal-divider"></div>
+
+    <h2>Paso 3: Verificación automatizada mediante LLM + búsqueda web</h2>
+    <p>
+      Cada afirmación normalizada se pasa a un modelo de lenguaje con acceso a búsqueda web en
+      tiempo real. El modelo busca evidencia de forma autónoma, razona sobre lo que encuentra y
+      produce un veredicto. No es una coincidencia de palabras clave: el modelo lee fuentes, evalúa
+      su relevancia y fiabilidad, y construye un argumento a favor o en contra de la afirmación
+      antes de llegar a una conclusión.
+    </p>
+    <p>
+      <strong>Una afirmación solo puede recibir un veredicto definitivo si la evidencia cumple uno de los siguientes umbrales:</strong>
+    </p>
+    <ul style="font-size:.95rem;line-height:1.8;padding-left:1.4rem;margin-bottom:1rem">
+      <li><strong>1 fuente primaria oficial</strong> (institución pública, organismo estadístico oficial u organización intergubernamental que confirme o refute directamente la afirmación: INE, Banco de España, Eurostat, OCDE, Banco Mundial, etc.), <em>o bien</em></li>
+      <li><strong>2 fuentes secundarias independientes</strong> (medios de comunicación, publicaciones académicas u organismos de referencia reputados que corroboren el mismo hallazgo sin depender entre sí).</li>
+    </ul>
+    <p>
+      Si no se cumple ninguno de los dos umbrales, la afirmación se marca como <em>No verificable</em>
+      independientemente de lo que el modelo considere probable. El resultado de este paso incluye
+      el veredicto, una puntuación de confianza, las fuentes citadas, las omisiones identificadas
+      en la afirmación original y cualquier error factual detectado. Todo esto se publica en la
+      página de cada afirmación.
+    </p>
+
+    <div class="legal-divider"></div>
+
+    <h2>Definiciones de los veredictos</h2>
+    <p>Cada afirmación recibe exactamente uno de los siguientes veredictos:</p>
+
+    <table class="verdict-table">
+      <thead>
+        <tr>
+          <th>Veredicto</th>
+          <th>Significado</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>✅ Confirmado</td>
+          <td>La afirmación es exacta y está respaldada por al menos una fuente primaria oficial o dos fuentes secundarias independientes.</td>
+        </tr>
+        <tr>
+          <td>⚠️ Con matices</td>
+          <td>La afirmación es ampliamente correcta, pero omite contexto, calificaciones o matices importantes que afectan materialmente a su interpretación.</td>
+        </tr>
+        <tr>
+          <td>🟠 Sobreestimado</td>
+          <td>La afirmación asevera un valor o magnitud verificablemente superior a lo que avalan las evidencias.</td>
+        </tr>
+        <tr>
+          <td>🟠 Subestimado</td>
+          <td>La afirmación asevera un valor o magnitud verificablemente inferior a lo que avalan las evidencias.</td>
+        </tr>
+        <tr>
+          <td>❌ Falso</td>
+          <td>La afirmación está directamente contradicha por evidencias de fuentes primarias.</td>
+        </tr>
+        <tr>
+          <td>❓ No verificable</td>
+          <td>No existe evidencia pública suficiente para confirmar o refutar la afirmación en el momento de su procesamiento.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="legal-divider"></div>
+
+    <h2>Puntuación de confianza</h2>
+    <p>
+      Cada veredicto va acompañado de una puntuación de confianza de 0 a 100. Esta puntuación
+      refleja la certeza interna del modelo sobre el veredicto dado la evidencia disponible;
+      <strong>no</strong> es una probabilidad objetiva. Una puntuación alta indica que la evidencia
+      fue clara y coherente; una baja indica que la evidencia fue ambigua, escasa o contradictoria.
+    </p>
+    <p>
+      Como referencia: puntuaciones superiores a 80 indican un respaldo probatorio sólido; entre 50
+      y 80, un respaldo moderado; por debajo de 50, el veredicto debe tratarse como tentativo.
+      Los veredictos <em>No verificable</em> suelen tener puntuaciones bajas por definición.
+    </p>
+
+    <div class="legal-divider"></div>
+
+    <h2>Jerarquía de fuentes</h2>
+    <p>
+      Las fuentes se ponderan en el siguiente orden. Cuando una afirmación puede resolverse con una
+      fuente primaria, esa fuente es determinante y las fuentes secundarias se listan únicamente
+      como complemento.
+    </p>
+    <p>
+      <strong>Fuentes primarias</strong>: datos y documentos publicados directamente por
+      instituciones públicas: el <a href="https://www.ine.es" target="_blank" rel="noopener">INE</a>,
+      el <a href="https://www.bde.es" target="_blank" rel="noopener">Banco de España</a>,
+      el <a href="https://ec.europa.eu/eurostat" target="_blank" rel="noopener">Eurostat</a>,
+      la <a href="https://eur-lex.europa.eu" target="_blank" rel="noopener">EUR-Lex</a>
+      y los informes de la OCDE, FMI, Banco Mundial y otros organismos intergubernamentales.
+    </p>
+    <p>
+      <strong>Fuentes académicas</strong>: publicaciones revisadas por pares en revistas indexadas.
+      Con mayor peso que la prensa generalista, pero por debajo de los datos institucionales primarios.
+    </p>
+    <p>
+      <strong>Fuentes secundarias</strong>: prensa especializada de referencia, organismos analíticos
+      independientes y medios de comunicación reputados. Se utilizan cuando las fuentes primarias son
+      insuficientes o no están disponibles. Tienen menos peso en el veredicto final.
+    </p>
+    <p>
+      Una sola fuente primaria oficial es suficiente para un veredicto definitivo. Se requieren dos
+      fuentes secundarias independientes cuando no hay fuente primaria disponible. Si no se cumple
+      ninguno de los dos umbrales, la afirmación se marca como <em>No verificable</em>.
+    </p>
+
+    <div class="legal-divider"></div>
+
+    <h2>Limitaciones</h2>
+    <p>
+      Este pipeline es experimental. Los modelos de lenguaje pueden alucinar fuentes, malinterpretar
+      afirmaciones numéricas, no recuperar datos recientes o juzgar mal la relevancia de la
+      evidencia. Cada veredicto publicado en este sitio debe tratarse como un punto de partida para
+      la investigación, no como una conclusión definitiva.
+    </p>
+    <p>
+      Ningún veredicto ha sido revisado, corroborado ni validado por un periodista, experto jurídico
+      u otro profesional humano antes de su publicación. Consulta el
+      <a href="aviso.html">aviso legal</a> para el descargo de responsabilidad completo.
+    </p>
+
+    <div class="legal-divider"></div>
+
+    <h2>Datos estructurados</h2>
+    <p>
+      Cada página de afirmación incluye datos estructurados
+      <a href="https://schema.org/ClaimReview" target="_blank" rel="noopener">schema.org ClaimReview</a>,
+      siguiendo las
+      <a href="https://developers.google.com/search/docs/appearance/structured-data/factcheck" target="_blank" rel="noopener">directrices de Google para datos estructurados de fact-check</a>.
+      Esto permite a los motores de búsqueda mostrar el veredicto directamente en los resultados.
+    </p>
+
+    <div class="legal-divider"></div>
+
+    <h2>Contacto</h2>
+    <p>
+      Para reportar un error en un veredicto o sugerir una mejora en la metodología, escribe a
+      <a class="footer-email" href="#" aria-label="Dirección de contacto"></a>.
+    </p>
+  </div>
+
+  <footer class="site-footer">
+    <p class="footer-links">
+      <a href="aviso.html" class="footer-link">Aviso legal</a>
+      &nbsp;·&nbsp;
+      <a href="metodologia.html" class="footer-link" style="border-bottom:none">Metodología</a>
+      &nbsp;·&nbsp;
+      <a href="acerca.html" class="footer-link">Acerca de</a>
+      &nbsp;·&nbsp;
+      <a href="blog.html" class="footer-link">Blog</a>
+      &nbsp;·&nbsp;
+      <a href="archive.html" class="footer-link">Archivo</a>
+    </p>
+    <p class="footer-links footer-links--secondary">
+      Contacto: <a class="footer-email" href="#" aria-label="Dirección de contacto"></a>
+      &nbsp;·&nbsp;
+      <a href="https://www.youtube.com/@facthem_es" class="footer-link" target="_blank" rel="noopener">YouTube</a>
+      &nbsp;·&nbsp;
+      ♥ Apóyanos:
+      <a href="https://paypal.me/hcasero" class="donate-btn" target="_blank" rel="noopener">PayPal</a>
+      <a href="https://ko-fi.com/hugocasero" class="donate-btn" target="_blank" rel="noopener">Ko-fi</a>
+    </p>
+  </footer>
+
+  <script>
+    (function () {
+      var u = 'contact', d = 'facthem' + '.' + 'es';
+      document.querySelectorAll('.footer-email[aria-label]').forEach(function(el) {
+        el.href = 'mailto:' + u + '@' + d;
+        el.textContent = u + '@' + d;
+      });
+    })();
+  </script>
+</body>
+</html>

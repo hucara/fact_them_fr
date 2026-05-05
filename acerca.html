@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Acerca de — Facthem</title>
+  <meta name="description" content="Facthem es un proyecto personal de Hugo Casero, ingeniero de ML con pasión por la transparencia, los datos abiertos y la rendición de cuentas política." />
+  <meta property="og:image" content="https://facthem.es/assets/portada_opt.png" />
+  <meta name="twitter:image" content="https://facthem.es/assets/portada_opt.png" />
+  <link rel="canonical" href="https://facthem.es/acerca.html" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" />
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- Google Tag Manager -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-M6ZJVS39');</script>
+  <style>
+    .legal-page {
+      flex: 1;
+      max-width: 760px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 4rem 1.75rem 5rem;
+    }
+    .legal-page h1 {
+      font-size: 1.6rem;
+      font-weight: 900;
+      letter-spacing: -.03em;
+      background: linear-gradient(135deg, #f0b8c4 0%, #c8607a 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: .5rem;
+    }
+    .legal-page h2 {
+      font-size: .78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: var(--c-text-muted);
+      margin: 2.25rem 0 .75rem;
+    }
+    .legal-page p {
+      font-size: .95rem;
+      line-height: 1.8;
+      color: var(--c-text);
+      margin-bottom: 1rem;
+      text-align: justify;
+      hyphens: auto;
+      -webkit-hyphens: auto;
+    }
+    .legal-page a {
+      color: var(--c-accent);
+      text-decoration: none;
+      border-bottom: 1px solid rgba(160,120,0,.45);
+    }
+    .legal-page a:hover { border-color: var(--c-accent); }
+    .legal-divider {
+      height: 1px;
+      background: var(--c-border);
+      margin: 2.5rem 0;
+    }
+    .donate-row {
+      display: flex;
+      gap: .75rem;
+      margin-top: 1.25rem;
+      flex-wrap: wrap;
+    }
+    .donate-row .donate-btn {
+      border-bottom: none !important;
+    }
+  </style>
+</head>
+<body>
+  <!-- Google Tag Manager (noscript) -->
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-M6ZJVS39" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+
+  <header class="site-header">
+    <nav class="tabs">
+      <a href="index.html" class="tab-button" style="text-decoration:none">← Volver</a>
+    </nav>
+  </header>
+
+  <div class="legal-page">
+    <h1>Acerca de</h1>
+
+    <h2>Quién soy</h2>
+    <p>
+      Hola, soy <a href="https://www.linkedin.com/in/hugocasero" target="_blank" rel="noopener">Hugo Casero</a>,
+      ingeniero de ML con un interés permanente por la transparencia, los datos abiertos y el uso
+      responsable de la inteligencia artificial. Cuando no estoy pensando en modelos y pipelines,
+      suelo estar haciendo carpintería o dibujando.
+    </p>
+    <p>
+      Mi página personal está en <a href="https://hucara.github.io/" target="_blank" rel="noopener">hucara.github.io</a>
+      y el código que comparto públicamente está en <a href="https://github.com/hucara" target="_blank" rel="noopener">GitHub</a>.
+    </p>
+
+    <div class="legal-divider"></div>
+
+    <h2>Por qué construí esto</h2>
+    <p>
+      Facthem empezó como una pregunta que no podía dejar de hacerme: <em>¿hasta dónde puede llegar la IA
+      para automatizar la verificación política a escala?</em> El Congreso de los Diputados produce
+      cientos de intervenciones en cada sesión, la mayoría de las cuales nunca se contrastan más allá
+      del hemiciclo. Quería ver si un pipeline totalmente automatizado (desde la transcripción bruta
+      hasta el veredicto publicado podía ofrecer algo útil.
+    </p>
+    <p>
+      Es un proyecto personal, construido y mantenido en mi tiempo libre. No hay empresa, ni equipo
+      editorial, ni inversores. Cada euro destinado a cómputo, infraestructura y costes de API sale
+      de mi propio bolsillo.
+    </p>
+
+    <div class="legal-divider"></div>
+
+    <h2>Apoya el proyecto</h2>
+    <p>
+      Procesar cada sesión parlamentaria cuesta aproximadamente <strong>4–5 USD</strong> solo en uso
+      de modelos de IA, y hay decenas de sesiones al año. Si encuentras Facthem útil y quieres ayudar
+      a mantenerlo en marcha, cualquier contribución (por pequeña que sea) marca una diferencia real.
+    </p>
+    <div class="donate-row">
+      <a href="https://ko-fi.com/hugocasero" class="donate-btn" target="_blank" rel="noopener">Ko-fi</a>
+      <a href="https://paypal.me/hcasero" class="donate-btn" target="_blank" rel="noopener">PayPal</a>
+    </div>
+    <p style="margin-top:1.5rem">¡Gracias por tu apoyo! 🥸</p>
+  </div>
+
+  <footer class="site-footer">
+    <p class="footer-links">
+      <a href="aviso.html" class="footer-link">Aviso legal</a>
+      &nbsp;·&nbsp;
+      <a href="metodologia.html" class="footer-link">Metodología</a>
+      &nbsp;·&nbsp;
+      <a href="acerca.html" class="footer-link" style="border-bottom:none">Acerca de</a>
+      &nbsp;·&nbsp;
+      <a href="blog.html" class="footer-link">Blog</a>
+      &nbsp;·&nbsp;
+      <a href="archive.html" class="footer-link">Archivo</a>
+    </p>
+    <p class="footer-links footer-links--secondary">
+      Contacto: <a class="footer-email" href="#" aria-label="Dirección de contacto"></a>
+      &nbsp;·&nbsp;
+      <a href="https://www.youtube.com/@facthem_es" class="footer-link" target="_blank" rel="noopener">YouTube</a>
+      &nbsp;·&nbsp;
+      ♥ Apóyanos:
+      <a href="https://paypal.me/hcasero" class="donate-btn" target="_blank" rel="noopener">PayPal</a>
+      <a href="https://ko-fi.com/hugocasero" class="donate-btn" target="_blank" rel="noopener">Ko-fi</a>
+    </p>
+  </footer>
+
+  <script>
+    (function () {
+      var u = 'contact', d = 'facthem' + '.' + 'es';
+      document.querySelectorAll('.footer-email[aria-label]').forEach(function(el) {
+        el.href = 'mailto:' + u + '@' + d;
+        el.textContent = u + '@' + d;
+      });
+    })();
+  </script>
+</body>
+</html>

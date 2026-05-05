@@ -14,24 +14,39 @@ import html
 import json
 import os
 import re
+import sqlite3
 import sys
 import urllib.parse
 from datetime import date
 from pathlib import Path
 
-try:
-    from supabase import create_client
-except ImportError:
-    sys.exit("supabase package not installed.  Run: pip install -r requirements.txt")
-
 # ── Config ────────────────────────────────────────────────────────────────────
+DEBUG_DB_PATH = os.environ.get("DEBUG_DB_PATH")
+if not DEBUG_DB_PATH:
+    env_file = Path(__file__).parent / ".env"
+    if env_file.exists():
+        for line in env_file.read_text().splitlines():
+            line = line.strip()
+            if line.startswith("DEBUG_DB_PATH=") and "=" in line:
+                DEBUG_DB_PATH = line.split("=", 1)[1].strip().strip('"').strip("'")
+                break
+
+USE_SQLITE = bool(DEBUG_DB_PATH and Path(DEBUG_DB_PATH).exists())
+
+if not USE_SQLITE:
+    try:
+        from supabase import create_client
+    except ImportError:
+        sys.exit("supabase package not installed.  Run: pip install -r requirements.txt")
+
 SUPABASE_URL  = os.environ.get("SUPABASE_URL")
 SUPABASE_ANON = os.environ.get("SUPABASE_ANON")
 
-if not SUPABASE_URL or not SUPABASE_ANON:
-    sys.exit("SUPABASE_URL and SUPABASE_ANON environment variables must be set.")
+if not USE_SQLITE and (not SUPABASE_URL or not SUPABASE_ANON):
+    sys.exit("Set SUPABASE_URL+SUPABASE_ANON, or DEBUG_DB_PATH (local SQLite).")
 BASE_URL      = "https://facthem.es"
 OUT_DIR       = Path(__file__).parent / "claim"
+POL_OUT_DIR   = Path(__file__).parent / "politician"
 SITEMAP_PATH  = Path(__file__).parent / "sitemap.xml"
 TODAY         = date.today().isoformat()
 
@@ -57,49 +72,53 @@ TEMATICO_LABELS = {
 }
 
 RESULTADO_LABELS = {
-    "CONFIRMED":             "Confirmado",
-    "CONFIRMED_WITH_NUANCE": "Con matices",
-    "DECONTEXTUALIZED":      "Descontextualizado",
-    "FALSE":                 "Falso",
-    "INACCURATE":            "Inexacto",
-    "UNVERIFIABLE":          "No verificable",
-    "OVERESTIMATED":         "Sobreestimado",
-    "UNDERESTIMATED":        "Subestimado",
+    "CONFIRMADO":            "Confirmado",
+    "CONFIRMADO CON MATIZ":  "Confirmado con matiz",
+    "DESCONTEXTUALIZADO":    "Descontextualizado",
+    "FALSO":                 "Falso",
+    "IMPRECISO":             "Inexacto",
+    "NO VERIFICABLE":        "No verificable",
+    "SOBREESTIMADO":         "Sobreestimado",
+    "SUBESTIMADO":           "Subestimado",
 }
 
 RESULTADO_TO_CLASS = {
-    "CONFIRMED":             "verdadero",
-    "CONFIRMED_WITH_NUANCE": "parcial",
-    "DECONTEXTUALIZED":      "enganoso",
-    "INACCURATE":            "nv",
-    "FALSE":                 "falso",
-    "UNVERIFIABLE":          "nv",
-    "OVERESTIMATED":         "enganoso",
-    "UNDERESTIMATED":        "enganoso",
+    "CONFIRMADO":            "verdadero",
+    "CONFIRMADO CON MATIZ":  "parcial",
+    "DESCONTEXTUALIZADO":    "enganoso",
+    "IMPRECISO":             "nv",
+    "FALSO":                 "falso",
+    "NO VERIFICABLE":        "nv",
+    "SOBREESTIMADO":         "enganoso",
+    "SUBESTIMADO":           "enganoso",
 }
 
 # schema.org ClaimReview rating (1 = False … 5 = True)
 CLAIM_REVIEW_RATINGS = {
-    "CONFIRMED":             (5, "True"),
-    "CONFIRMED_WITH_NUANCE": (4, "Mostly True"),
-    "DECONTEXTUALIZED":      (3, "Out of Context"),
-    "INACCURATE":            (2, "Inaccurate"),
-    "FALSE":                 (1, "False"),
-    "UNVERIFIABLE":          (3, "Unverifiable"),
-    "OVERESTIMATED":         (2, "Overestimated"),
-    "UNDERESTIMATED":        (2, "Underestimated"),
+    "CONFIRMADO":            (5, "True"),
+    "CONFIRMADO CON MATIZ":  (4, "Mostly True"),
+    "DESCONTEXTUALIZADO":    (3, "Out of Context"),
+    "IMPRECISO":             (2, "Inaccurate"),
+    "FALSO":                 (1, "False"),
+    "NO VERIFICABLE":        (3, "Unverifiable"),
+    "SOBREESTIMADO":         (2, "Overestimated"),
+    "SUBESTIMADO":           (2, "Underestimated"),
 }
 
 RESULTADO_EMOJIS = {
-    "CONFIRMED":             "✅",
-    "CONFIRMED_WITH_NUANCE": "⚠️",
-    "FALSE":                 "❌",
-    "DECONTEXTUALIZED":      "🟠",
-    "INACCURATE":            "🔸",
-    "UNVERIFIABLE":          "❓",
-    "OVERESTIMATED":         "🟠",
-    "UNDERESTIMATED":        "🟠",
+    "CONFIRMADO":            "✅",
+    "CONFIRMADO CON MATIZ":  "⚠️",
+    "FALSO":                 "❌",
+    "DESCONTEXTUALIZADO":    "🟠",
+    "IMPRECISO":             "🔸",
+    "NO VERIFICABLE":        "❓",
+    "SOBREESTIMADO":         "🟠",
+    "SUBESTIMADO":           "🟠",
 }
+
+
+def normalize_resultado_key(resultado):
+    return str(resultado or "").strip().upper().replace("_", " ")
 
 FUENTE_TIPO_ORDER = {
     "Primary": 0, "Academic": 1, "Secondary": 2, "Tertiary": 3,
@@ -141,13 +160,13 @@ def format_nombre(full_name):
 def resultado_to_class(resultado):
     if not resultado:
         return "nv"
-    return RESULTADO_TO_CLASS.get(resultado.upper(), "nv")
+    return RESULTADO_TO_CLASS.get(normalize_resultado_key(resultado), "nv")
 
 
 def format_resultado(resultado):
     if not resultado:
         return "No verificado"
-    return RESULTADO_LABELS.get(resultado.upper(), snake_to_label(resultado))
+    return RESULTADO_LABELS.get(normalize_resultado_key(resultado), snake_to_label(resultado))
 
 
 def slugify(text, claim_id):
@@ -161,6 +180,18 @@ def slugify(text, claim_id):
     words = s.split()[:8]
     slug = re.sub(r"-+", "-", "-".join(words)).strip("-")
     return f"{slug}-{short_id}" if slug else short_id
+
+
+def slugify_politician(nombre_completo, partido=""):
+    """URL-safe slug from a politician's full name + party (Apellido, Nombre format)."""
+    name = format_nombre(nombre_completo)
+    s = f"{name} {partido}".strip().lower()
+    for src, dst in [("á","a"),("é","e"),("í","i"),("ó","o"),("ú","u"),
+                     ("ä","a"),("ö","o"),("ü","u"),("ñ","n"),("ç","c")]:
+        s = s.replace(src, dst)
+    s = re.sub(r"[^a-z0-9\s-]", "", s)
+    slug = re.sub(r"-+", "-", "-".join(s.split())).strip("-")
+    return slug or "desconocido"
 
 
 # ── HTML renderers (mirror app.js) ────────────────────────────────────────────
@@ -259,7 +290,7 @@ def render_fuentes(raw):
 def build_claim_review_schema(claim, slug, pol_name, session_date):
     v = claim.get("verification") or []
     v = v[0] if isinstance(v, list) and v else (v if isinstance(v, dict) else {})
-    resultado_key = (v.get("resultado") or "").upper()
+    resultado_key = normalize_resultado_key(v.get("resultado"))
     rating_val, rating_name = CLAIM_REVIEW_RATINGS.get(resultado_key, (3, "Unverifiable"))
 
     schema = {
@@ -302,9 +333,10 @@ def render_page(claim, slug, session_date):
     score_raw       = v.get("confidence_score")
     score           = round(float(score_raw) * 100) if score_raw is not None else None
 
-    pol_nombre  = format_nombre(pol.get("nombre_completo", ""))
-    pol_partido = pol.get("grupo_parlamentario", "")
-    is_gobierno = pol_partido in ("Gobierno", "Gobierno de España")
+    pol_nombre       = format_nombre(pol.get("nombre_completo", ""))
+    pol_partido      = pol.get("partido", "")
+    pol_grupo        = pol.get("grupo_parlamentario", "")
+    is_gobierno      = pol_grupo == "Cargo de Gobierno"
 
     texto_norm = capitalize(str(claim.get("texto_normalizado") or "").strip())
     texto_orig = str(claim.get("texto_original") or "").strip()
@@ -322,7 +354,7 @@ def render_page(claim, slug, session_date):
     back_url   = f"{BASE_URL}/?session={session_id}" if session_id else f"{BASE_URL}/"
 
     # ── Share text ──
-    resultado_key  = (v.get("resultado") or "").upper()
+    resultado_key  = normalize_resultado_key(v.get("resultado"))
     verdict_emoji  = RESULTADO_EMOJIS.get(resultado_key, "🔍")
     nombre_share   = pol_nombre or "Un político"
     partido_share  = f" ({pol_partido})" if pol_partido else ""
@@ -341,25 +373,32 @@ def render_page(claim, slug, session_date):
     url_tg      = f"https://t.me/share/url?url={enc_url}&text={enc_text}"
 
     # ── Politician line ──
+    pol_slug     = slugify_politician(pol.get("nombre_completo", ""), pol_partido) if pol_nombre else None
+    pol_page_url = f"{BASE_URL}/?tab=parlamentarios&amp;politician={pol_slug}" if pol_slug else None
+
     if pol_nombre:
+        name_inner = (
+            f'<a href="{pol_page_url}" class="politician-link">{esc(pol_nombre)}</a>'
+            if pol_page_url else esc(pol_nombre)
+        )
         if is_gobierno:
             pol_html = (
                 f'<span class="politician-name" style="font-size:1.05rem">'
-                f'{esc(pol_nombre)}'
+                f'{name_inner}'
                 f'<span class="politician-gobierno" title="Gobierno de España">🏛️</span>'
                 f'</span>'
             )
         elif pol_partido:
             pol_html = (
                 f'<span class="politician-name" style="font-size:1.05rem">'
-                f'{esc(pol_nombre)}'
+                f'{name_inner}'
                 f'<span class="politician-partido">· {esc(pol_partido)}</span>'
                 f'</span>'
             )
         else:
             pol_html = (
                 f'<span class="politician-name" style="font-size:1.05rem">'
-                f'{esc(pol_nombre)}</span>'
+                f'{name_inner}</span>'
             )
     else:
         pol_html = '<span class="politician-name unknown">Político desconocido</span>'
@@ -384,7 +423,7 @@ def render_page(claim, slug, session_date):
         confidence_html = (
             f'<div class="confidence-bar" style="margin-bottom:1rem" '
             f'title="Confianza del modelo: {score}%">\n'
-            f'      <div class="confidence-track" style="width:160px">\n'
+            f'      <div class="confidence-track">\n'
             f'        <div class="confidence-fill confidence-{resultado_class}" '
             f'style="width:{score}%"></div>\n'
             f'      </div>\n'
@@ -499,38 +538,6 @@ def render_page(claim, slug, session_date):
       color: var(--c-text);
     }}
 
-    /* ── Share row ── */
-    .cp-share-row {{
-      display: flex;
-      align-items: center;
-      gap: .5rem;
-      flex-wrap: wrap;
-      margin-top: 1.25rem;
-      padding-top: 1.25rem;
-      border-top: 1px solid var(--c-border);
-    }}
-    .cp-share-btn {{
-      display: inline-flex;
-      align-items: center;
-      gap: .35rem;
-      padding: .35rem .7rem;
-      border: 1px solid var(--c-border);
-      border-radius: var(--radius-xs);
-      font-size: .72rem;
-      font-weight: 600;
-      font-family: inherit;
-      color: var(--c-text-muted);
-      text-decoration: none;
-      background: none;
-      cursor: pointer;
-      transition: border-color .12s, color .12s;
-      white-space: nowrap;
-    }}
-    .cp-share-btn:hover {{
-      border-color: var(--c-accent);
-      color: var(--c-accent);
-    }}
-
     /* ── Subtle brand footer ── */
     .cp-brand {{
       margin-top: 1.5rem;
@@ -579,28 +586,39 @@ def render_page(claim, slug, session_date):
 
       {details_html}
 
-      <!-- Share row -->
-      <div class="cp-share-row">
-        <a class="cp-share-btn" href="{url_twitter}" target="_blank" rel="noopener">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-          X / Twitter
-        </a>
-        <a class="cp-share-btn" href="{url_wa}" target="_blank" rel="noopener">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.373 0 0 5.373 0 12c0 2.127.557 4.123 1.532 5.856L0 24l6.335-1.652A11.954 11.954 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z"/></svg>
-          WhatsApp
-        </a>
-        <a class="cp-share-btn" href="{url_tg}" target="_blank" rel="noopener">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
-          Telegram
-        </a>
-        <button class="cp-share-btn" id="cp-copy" data-url="{esc(canon_url)}">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-          </svg>
-          <span>Copiar enlace</span>
-        </button>
+      <!-- Share -->
+      <div class="modal-share">
+        <div class="share-wrapper">
+          <button class="share-btn share-btn--labeled" id="cp-share-btn" aria-label="Compartir afirmación">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+            Compartir
+          </button>
+          <div class="share-menu" id="cp-share-menu" hidden>
+            <a class="share-option" href="{url_wa}" target="_blank" rel="noopener">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.373 0 0 5.373 0 12c0 2.127.557 4.123 1.532 5.856L0 24l6.335-1.652A11.954 11.954 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z"/></svg>
+              WhatsApp
+            </a>
+            <a class="share-option" href="{url_twitter}" target="_blank" rel="noopener">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+              X / Twitter
+            </a>
+            <a class="share-option" href="https://www.facebook.com/sharer/sharer.php?u={enc_url}" target="_blank" rel="noopener">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+              Facebook
+            </a>
+            <a class="share-option" href="{url_tg}" target="_blank" rel="noopener">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+              Telegram
+            </a>
+            <button class="share-option share-copy-btn" id="cp-copy" data-url="{esc(canon_url)}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <span>Copiar enlace</span>
+            </button>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -609,12 +627,27 @@ def render_page(claim, slug, session_date):
   <p class="cp-brand">
     <a href="{BASE_URL}/" style="color:inherit;text-decoration:none">facthem.es</a>
     &nbsp;·&nbsp;
+    <a href="{BASE_URL}/metodologia.html" style="color:inherit;text-decoration:none">Metodología</a>
+    &nbsp;·&nbsp;
+    <a href="{BASE_URL}/acerca.html" style="color:inherit;text-decoration:none">Acerca de</a>
+    &nbsp;·&nbsp;
     <a href="{BASE_URL}/aviso.html" style="color:inherit;text-decoration:none">Aviso legal</a>
     &nbsp;·&nbsp;
     <a href="{BASE_URL}/archive.html" style="color:inherit;text-decoration:none">Todas las afirmaciones</a>
   </p>
 
   <script>
+    // Share dropdown toggle
+    document.getElementById('cp-share-btn').addEventListener('click', function (e) {{
+      e.stopPropagation();
+      var menu = document.getElementById('cp-share-menu');
+      menu.hidden = !menu.hidden;
+    }});
+    document.addEventListener('click', function () {{
+      document.getElementById('cp-share-menu').hidden = true;
+    }});
+
+    // Copy link
     document.getElementById('cp-copy').addEventListener('click', function () {{
       navigator.clipboard.writeText(this.dataset.url).then(() => {{
         this.querySelector('span').textContent = '¡Copiado!';
@@ -645,26 +678,83 @@ def render_page(claim, slug, session_date):
 SELECT_FIELDS = """
   id, session_id, texto_normalizado, texto_original,
   ambito_geografico, ambito_tematico,
-  politician:politician_id (nombre_completo, grupo_parlamentario),
+  politician:politician_id (nombre_completo, partido, grupo_parlamentario),
   verification (resultado, confidence_score, omisiones, errores, fuentes)
 """
 
 
+def _sqlite_conn():
+    con = sqlite3.connect(DEBUG_DB_PATH)
+    con.row_factory = sqlite3.Row
+    return con
+
+
+def fetch_all_claims_sqlite():
+    con = _sqlite_conn()
+    total = con.execute("SELECT COUNT(*) FROM claim").fetchone()[0]
+    print(f"  SQLite reporta {total} afirmaciones en la tabla claim")
+    rows = con.execute("""
+        SELECT c.id, c.session_id, c.texto_normalizado, c.texto_original,
+               c.ambito_geografico, c.ambito_tematico,
+               p.nombre_completo AS pol_nombre, p.partido AS pol_partido,
+               p.grupo_parlamentario AS pol_grupo,
+               v.resultado, v.confidence_score, v.omisiones, v.errores, v.fuentes
+        FROM claim c
+        LEFT JOIN politician p ON p.id = c.politician_id
+        LEFT JOIN verification v ON v.claim_id = c.id
+    """).fetchall()
+    con.close()
+    claims = []
+    for r in rows:
+        pol = None
+        if r["pol_nombre"]:
+            pol = {"nombre_completo": r["pol_nombre"],
+                   "partido": r["pol_partido"],
+                   "grupo_parlamentario": r["pol_grupo"]}
+        ver = []
+        if r["resultado"]:
+            ver = [{"resultado": r["resultado"],
+                    "confidence_score": r["confidence_score"],
+                    "omisiones": r["omisiones"],
+                    "errores": r["errores"],
+                    "fuentes": r["fuentes"]}]
+        claims.append({
+            "id": r["id"], "session_id": r["session_id"],
+            "texto_normalizado": r["texto_normalizado"],
+            "texto_original": r["texto_original"],
+            "ambito_geografico": r["ambito_geografico"],
+            "ambito_tematico": r["ambito_tematico"],
+            "politician": pol,
+            "verification": ver,
+        })
+    return claims
+
+
+def fetch_session_dates_sqlite():
+    con = _sqlite_conn()
+    rows = con.execute("SELECT id, fecha FROM session").fetchall()
+    con.close()
+    return {r["id"]: (r["fecha"] or "")[:10] for r in rows}
+
+
 def fetch_all_claims(supabase):
-    """Paginate through all claims (Supabase default page = 1 000 rows)."""
+    """Paginate through all claims. Keep going until an empty batch."""
+    total = supabase.from_("claim").select("id", count="exact", head=True).execute().count
+    print(f"  DB reporta {total} afirmaciones en la tabla claim")
     all_claims, page_size, offset = [], 1000, 0
     while True:
         resp = (
             supabase.from_("claim")
             .select(SELECT_FIELDS)
+            .order("id")
             .range(offset, offset + page_size - 1)
             .execute()
         )
         batch = resp.data or []
         all_claims.extend(batch)
-        if len(batch) < page_size:
+        if not batch:
             break
-        offset += page_size
+        offset += len(batch)
     return all_claims
 
 
@@ -677,9 +767,11 @@ def fetch_session_dates(supabase):
 # ── Sitemap ───────────────────────────────────────────────────────────────────
 
 STATIC_URLS = [
-    ("https://facthem.es/",            "2026-03-11T00:00:00+00:00", "weekly",  "1.0"),
-    ("https://facthem.es/aviso.html",  "2026-03-11T00:00:00+00:00", "yearly",  "0.3"),
-    ("https://facthem.es/blog.html",   "2026-03-13T00:00:00+00:00", "monthly", "0.5"),
+    ("https://facthem.es/",                  "2026-03-11T00:00:00+00:00", "weekly",  "1.0"),
+    ("https://facthem.es/aviso.html",        "2026-03-11T00:00:00+00:00", "yearly",  "0.3"),
+    ("https://facthem.es/metodologia.html",  "2026-05-05T00:00:00+00:00", "yearly",  "0.4"),
+    ("https://facthem.es/acerca.html",       "2026-05-05T00:00:00+00:00", "yearly",  "0.4"),
+    ("https://facthem.es/blog.html",         "2026-03-13T00:00:00+00:00", "monthly", "0.5"),
 ]
 
 
@@ -699,7 +791,7 @@ def _loc(url):
                .replace(">", "&gt;"))
 
 
-def update_sitemap(slug_dates):
+def update_sitemap(slug_dates, politician_slugs):
     parts = [
         '<?xml version="1.0" encoding="UTF-8"?>\n',
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n',
@@ -709,6 +801,12 @@ def update_sitemap(slug_dates):
             f"  <url>\n    <loc>{_loc(loc)}</loc>\n    <lastmod>{_iso(lastmod)}</lastmod>\n"
             f"    <changefreq>{changefreq}</changefreq>\n    <priority>{priority}</priority>\n  </url>\n"
         )
+    for slug in sorted(politician_slugs):
+        url = f"{BASE_URL}/politician/{slug}.html"
+        parts.append(
+            f"  <url>\n    <loc>{_loc(url)}</loc>\n    <lastmod>{_iso(TODAY)}</lastmod>\n"
+            f"    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>\n"
+        )
     for slug, lastmod in sorted(slug_dates.items()):
         url = f"{BASE_URL}/claim/{slug}.html"
         parts.append(
@@ -717,7 +815,7 @@ def update_sitemap(slug_dates):
         )
     parts.append("</urlset>\n")
     SITEMAP_PATH.write_bytes("".join(parts).encode("utf-8"))
-    print(f"  sitemap.xml actualizado — {len(slug_dates)} URLs de afirmaciones")
+    print(f"  sitemap.xml actualizado — {len(politician_slugs)} políticos, {len(slug_dates)} afirmaciones")
 
 
 # ── Archive page ──────────────────────────────────────────────────────────────
@@ -738,7 +836,10 @@ def generate_archive(claims_data):
 
     rows = []
     for name in sorted(by_pol):
-        rows.append(f'  <h2>{esc(name)}</h2>\n  <ul>')
+        sample_pol = by_pol[name][0][1].get("politician") or {}
+        pol_slug = slugify_politician(sample_pol.get("nombre_completo", name), sample_pol.get("partido", ""))
+        pol_url  = f"{BASE_URL}/politician/{pol_slug}.html"
+        rows.append(f'  <h2><a href="{pol_url}" style="color:inherit;text-decoration:none">{esc(name)}</a></h2>\n  <ul>')
         for slug, claim in by_pol[name]:
             text = esc(str(claim.get("texto_normalizado") or slug).strip()[:120])
             url  = f"{BASE_URL}/claim/{slug}.html"
@@ -767,7 +868,7 @@ def generate_archive(claims_data):
       font-size: 1.4rem;
       font-weight: 900;
       letter-spacing: -.03em;
-      background: linear-gradient(135deg, #c9a020 0%, #b08800 100%);
+      background: linear-gradient(135deg, #f0b8c4 0%, #c8607a 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -815,20 +916,250 @@ def generate_archive(claims_data):
     print(f"  archive.html generado — {sum(len(v) for v in by_pol.values())} afirmaciones, {len(by_pol)} políticos")
 
 
+# ── Politician pages ──────────────────────────────────────────────────────────
+
+def generate_politician_pages(claims_with_slugs):
+    """One static page per politician listing all their claims."""
+    # Group by nombre_completo first, then derive slug from best available partido
+    by_nombre = {}
+    for claim_slug, claim in claims_with_slugs:
+        pol = claim.get("politician") or {}
+        nombre_completo = pol.get("nombre_completo", "")
+        if not nombre_completo:
+            continue
+        entry = by_nombre.setdefault(nombre_completo, {
+            "nombre":  format_nombre(nombre_completo),
+            "partido": pol.get("partido", ""),
+            "grupo":   pol.get("grupo_parlamentario", ""),
+            "claims":  [],
+        })
+        # Keep the first non-empty partido we see
+        if not entry["partido"] and pol.get("partido"):
+            entry["partido"] = pol["partido"]
+        if not entry["grupo"] and pol.get("grupo_parlamentario"):
+            entry["grupo"] = pol["grupo_parlamentario"]
+        entry["claims"].append((claim_slug, claim))
+
+    # Re-key by slug now that partido is stable
+    by_pol = {}
+    for nombre_completo, info in by_nombre.items():
+        pol_slug = slugify_politician(nombre_completo, info["partido"])
+        by_pol[pol_slug] = info
+
+    POL_OUT_DIR.mkdir(exist_ok=True)
+    for f in POL_OUT_DIR.glob("*.html"):
+        f.unlink()
+
+    for pol_slug, info in by_pol.items():
+        _write_politician_page(pol_slug, info)
+
+    print(f"  politician/ generado — {len(by_pol)} páginas")
+    return list(by_pol.keys())
+
+
+def _verdict_counts(claims):
+    counts = {}
+    for _, claim in claims:
+        v = claim.get("verification") or []
+        v = v[0] if isinstance(v, list) and v else (v if isinstance(v, dict) else {})
+        r = normalize_resultado_key(v.get("resultado") or "NO VERIFICABLE")
+        counts[r] = counts.get(r, 0) + 1
+    return counts
+
+
+def _write_politician_page(pol_slug, info):
+    nombre  = info["nombre"]
+    partido = info["partido"]
+    grupo   = info["grupo"]
+    claims  = info["claims"]
+    pol_url = f"{BASE_URL}/politician/{pol_slug}.html"
+
+    title = f"{nombre} — Afirmaciones verificadas | Facthem"
+    desc  = f"Todas las afirmaciones de {nombre} verificadas por Facthem."
+    if partido:
+        desc = f"Afirmaciones de {nombre} ({partido}) verificadas por Facthem."
+
+    # ── Stats bar ──
+    counts = _verdict_counts(claims)
+    total  = len(claims)
+    stats_items = []
+    for resultado, label in RESULTADO_LABELS.items():
+        n = counts.get(resultado, 0)
+        if n:
+            cls = RESULTADO_TO_CLASS.get(resultado, "nv")
+            stats_items.append(
+                f'<span class="resultado-badge resultado-{cls}" style="font-size:.7rem">'
+                f'{esc(label)}: {n}</span>'
+            )
+    stats_html = (
+        f'<div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1.5rem">'
+        f'{"".join(stats_items)}</div>'
+        if stats_items else ""
+    )
+
+    # ── Claim list ──
+    rows = []
+    for claim_slug, claim in claims:
+        v = claim.get("verification") or []
+        v = v[0] if isinstance(v, list) and v else (v if isinstance(v, dict) else {})
+        resultado    = normalize_resultado_key(v.get("resultado"))
+        res_class    = RESULTADO_TO_CLASS.get(resultado, "nv")
+        res_label    = RESULTADO_LABELS.get(resultado, resultado.lower().replace("_", " ").capitalize())
+        texto        = esc(capitalize(str(claim.get("texto_normalizado") or "").strip())[:160])
+        claim_url    = f"{BASE_URL}/claim/{claim_slug}.html"
+        rows.append(
+            f'  <article class="claim-card" data-resultado="{res_class}" style="margin-bottom:.75rem">\n'
+            f'    <header class="claim-header">\n'
+            f'      <span class="resultado-badge resultado-{res_class}">{esc(res_label)}</span>\n'
+            f'    </header>\n'
+            f'    <blockquote class="claim-text" style="margin:.5rem 0 .75rem">\n'
+            f'      <a href="{claim_url}" style="color:inherit;text-decoration:none">{texto}</a>\n'
+            f'    </blockquote>\n'
+            f'  </article>'
+        )
+    claims_html = "\n".join(rows)
+
+    # ── Subtitle ──
+    subtitle_parts = []
+    if partido:
+        subtitle_parts.append(esc(partido))
+    if grupo and grupo != partido:
+        subtitle_parts.append(esc(grupo))
+    subtitle_html = (
+        f'<p style="font-size:.82rem;color:var(--c-text-muted);margin:.25rem 0 2rem">'
+        f'{"&nbsp;·&nbsp;".join(subtitle_parts)}</p>'
+        if subtitle_parts else '<div style="margin-bottom:2rem"></div>'
+    )
+
+    page = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{esc(title)}</title>
+  <meta name="description" content="{esc(desc)}" />
+  <link rel="canonical" href="{esc(pol_url)}" />
+  <meta property="og:type"        content="website" />
+  <meta property="og:url"         content="{esc(pol_url)}" />
+  <meta property="og:title"       content="{esc(title)}" />
+  <meta property="og:description" content="{esc(desc)}" />
+  <meta property="og:image"       content="{BASE_URL}/assets/portada_opt.png" />
+  <meta property="og:locale"      content="es_ES" />
+  <meta property="og:site_name"   content="Facthem" />
+  <meta name="twitter:card"        content="summary_large_image" />
+  <meta name="twitter:site"        content="@facthem_ES" />
+  <meta name="twitter:title"       content="{esc(title)}" />
+  <meta name="twitter:description" content="{esc(desc)}" />
+  <meta name="twitter:image"       content="{BASE_URL}/assets/portada_opt.png" />
+  <link rel="icon" href="../assets/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32x32.png" />
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png" />
+  <meta name="theme-color" content="#0f0f0f" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        as="style" onload="this.onload=null;this.rel='stylesheet'" />
+  <noscript>
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" />
+  </noscript>
+  <!-- Google Tag Manager -->
+  <script>(function(w,d,s,l,i){{w[l]=w[l]||[];w[l].push({{'gtm.start':new Date().getTime(),event:'gtm.js'}});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);}})(window,document,'script','dataLayer','GTM-M6ZJVS39');</script>
+  <link rel="stylesheet" href="../css/style.css" />
+  <style>
+    .pol-page {{
+      max-width: 760px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 3rem 1.25rem 5rem;
+    }}
+    .pol-page h1 {{
+      font-size: 1.5rem;
+      font-weight: 900;
+      letter-spacing: -.03em;
+      background: linear-gradient(135deg, #f0b8c4 0%, #c8607a 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: .15rem;
+    }}
+    .pol-total {{
+      font-size: .72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--c-text-muted);
+      margin-bottom: 1.25rem;
+    }}
+  </style>
+</head>
+<body>
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-M6ZJVS39"
+  height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+
+  <header class="site-header">
+    <nav class="tabs">
+      <a href="{BASE_URL}/" class="tab-button" style="text-decoration:none">← Volver</a>
+    </nav>
+  </header>
+
+  <div class="pol-page">
+    <h1>{esc(nombre)}</h1>
+    {subtitle_html}
+    <p class="pol-total">{total} afirmaci{"ón" if total == 1 else "ones"} verificadas</p>
+    {stats_html}
+{claims_html}
+  </div>
+
+  <footer class="site-footer">
+    <p class="footer-links">
+      <a href="{BASE_URL}/aviso.html" class="footer-link">Aviso legal</a>
+      &nbsp;·&nbsp;
+      <a href="{BASE_URL}/metodologia.html" class="footer-link">Metodología</a>
+      &nbsp;·&nbsp;
+      <a href="{BASE_URL}/acerca.html" class="footer-link">Acerca de</a>
+      &nbsp;·&nbsp;
+      <a href="{BASE_URL}/blog.html" class="footer-link">Blog</a>
+      &nbsp;·&nbsp;
+      <a href="{BASE_URL}/archive.html" class="footer-link">Archivo</a>
+    </p>
+    <p class="footer-links footer-links--secondary">
+      <a href="https://www.youtube.com/@facthem_es" class="footer-link" target="_blank" rel="noopener">YouTube</a>
+      &nbsp;·&nbsp;
+      ♥ Apóyanos:
+      <a href="https://paypal.me/hcasero" class="donate-btn" target="_blank" rel="noopener">PayPal</a>
+      <a href="https://ko-fi.com/hugocasero" class="donate-btn" target="_blank" rel="noopener">Ko-fi</a>
+    </p>
+  </footer>
+</body>
+</html>
+"""
+    (POL_OUT_DIR / f"{pol_slug}.html").write_text(page, encoding="utf-8")
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
-    print("Conectando a Supabase…")
-    supabase = create_client(SUPABASE_URL, SUPABASE_ANON)
-
-    print("Obteniendo afirmaciones…")
-    claims = fetch_all_claims(supabase)
-    print(f"  {len(claims)} afirmaciones obtenidas")
-
-    print("Obteniendo fechas de sesión…")
-    session_dates = fetch_session_dates(supabase)
+    if USE_SQLITE:
+        print(f"Modo DEBUG: leyendo SQLite local ({DEBUG_DB_PATH})")
+        print("Obteniendo afirmaciones…")
+        claims = fetch_all_claims_sqlite()
+        print(f"  {len(claims)} afirmaciones obtenidas")
+        print("Obteniendo fechas de sesión…")
+        session_dates = fetch_session_dates_sqlite()
+    else:
+        print("Conectando a Supabase…")
+        supabase = create_client(SUPABASE_URL, SUPABASE_ANON)
+        print("Obteniendo afirmaciones…")
+        claims = fetch_all_claims(supabase)
+        print(f"  {len(claims)} afirmaciones obtenidas")
+        print("Obteniendo fechas de sesión…")
+        session_dates = fetch_session_dates(supabase)
 
     OUT_DIR.mkdir(exist_ok=True)
+    for f in OUT_DIR.glob("*.html"):
+        f.unlink()
 
     generated, errors = {}, []
 
@@ -851,10 +1182,6 @@ def main():
         for cid, err in errors[:20]:
             print(f"    claim {cid}: {err}")
 
-    print("Actualizando sitemap…")
-    update_sitemap(generated)
-
-    print("Generando página de archivo…")
     claims_with_slugs = []
     for claim in claims:
         try:
@@ -862,6 +1189,15 @@ def main():
             claims_with_slugs.append((slug, claim))
         except Exception:
             pass
+
+    print("Generando páginas de políticos…")
+    POL_OUT_DIR.mkdir(exist_ok=True)
+    politician_slugs = generate_politician_pages(claims_with_slugs)
+
+    print("Actualizando sitemap…")
+    update_sitemap(generated, politician_slugs)
+
+    print("Generando página de archivo…")
     generate_archive(claims_with_slugs)
 
     print("Hecho.")
