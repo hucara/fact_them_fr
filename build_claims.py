@@ -25,8 +25,11 @@ except ImportError:
     sys.exit("supabase package not installed.  Run: pip install -r requirements.txt")
 
 # ── Config ────────────────────────────────────────────────────────────────────
-SUPABASE_URL  = os.environ.get("SUPABASE_URL",  "https://kivkdkddhjkrdafkgxmb.supabase.co")
-SUPABASE_ANON = os.environ.get("SUPABASE_ANON", "sb_publishable_hZ4T6T0F_whJfF2jjBnYJw_JJnsEdBJ")
+SUPABASE_URL  = os.environ.get("SUPABASE_URL")
+SUPABASE_ANON = os.environ.get("SUPABASE_ANON")
+
+if not SUPABASE_URL or not SUPABASE_ANON:
+    sys.exit("SUPABASE_URL and SUPABASE_ANON environment variables must be set.")
 BASE_URL      = "https://facthem.es"
 OUT_DIR       = Path(__file__).parent / "claim"
 SITEMAP_PATH  = Path(__file__).parent / "sitemap.xml"
