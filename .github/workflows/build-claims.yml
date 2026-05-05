@@ -1,0 +1,49 @@
+name: Deploy site
+
+# Runs on every push to main (keeps CSS/JS/HTML changes live)
+# and can be triggered manually to rebuild claim pages from Supabase.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  pages:    write
+  id-token: write   # required by actions/deploy-pages
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate claim pages + sitemap
+        env:
+          SUPABASE_URL:  ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON: ${{ secrets.SUPABASE_ANON }}
+        run: python build_claims.py
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .   # deploy the whole repo dir (claim/ now included after generation)
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
