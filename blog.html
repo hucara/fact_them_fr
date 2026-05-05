@@ -110,6 +110,21 @@
       margin: 2.5rem 0;
     }
 
+    .blog-donate-row {
+      display: flex;
+      gap: .75rem;
+      margin: 1rem 0 .75rem;
+      flex-wrap: wrap;
+    }
+
+    .blog-donate-row .donate-btn {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.9rem;
+      line-height: 1.2;
+      border-bottom: none !important;
+    }
+
     .yt-shorts-grid {
       display: flex;
       gap: 1rem;
@@ -151,6 +166,36 @@
     <p class="blog-subtitle">Actualizaciones y mejoras de Facthem</p>
 
     <!-- ── Posts (más reciente primero) ──────────────────────────────────── -->
+
+    <article class="blog-post">
+      <time datetime="2026-05-05">5 mayo 2026</time>
+      <h2>Más páginas indexables, más transparencia y una nueva sección Acerca de</h2>
+      <p>
+        Esta actualización se centra en hacer Facthem más fácil de encontrar, entender y compartir.
+        Hemos mejorado la estructura pública del sitio para que cada afirmación tenga una página más
+        clara y útil, tanto para lectores como para buscadores.
+      </p>
+      <ul>
+        <li>Mejoras de <strong>SEO</strong>: las páginas de afirmaciones tienen URLs estables, metadatos sociales, enlaces canónicos y datos estructurados para que cada verificación pueda circular mejor fuera de la portada.</li>
+        <li>Más <strong>transparencia metodológica</strong>: la página de metodología explica con más detalle cómo se obtienen las sesiones, cómo se extraen las afirmaciones y qué umbrales de evidencia se usan antes de publicar un veredicto.</li>
+        <li>Nueva sección <strong>Acerca de</strong>: añadimos una página para explicar quién mantiene Facthem, por qué existe el proyecto y qué costes implica procesar sesiones parlamentarias con modelos de IA.</li>
+      </ul>
+      <p>
+        También hemos mejorado los enlaces compartibles de la sección de representantes: ahora puedes abrir
+        directamente el perfil de un parlamentario con una URL y ver sus afirmaciones verificadas sin tener
+        que repetir la búsqueda.
+      </p>
+      <p>
+        Facthem sigue siendo un proyecto personal e independiente. Procesar sesiones parlamentarias implica
+        costes de cómputo, infraestructura y uso de modelos de IA. Si el proyecto te resulta útil y quieres
+        ayudar a mantenerlo en marcha, cualquier contribución ayuda. 🥸
+      </p>
+      <div class="blog-donate-row">
+        <a href="https://ko-fi.com/hugocasero" class="donate-btn" target="_blank" rel="noopener">Ko-fi</a>
+        <a href="https://paypal.me/hcasero" class="donate-btn" target="_blank" rel="noopener">PayPal</a>
+      </div>
+    </article>
+
     <div class="blog-divider"></div>
 
     <article class="blog-post">
@@ -307,14 +352,23 @@
   </div>
 
   <footer class="site-footer">
-    <p>
+    <p class="footer-links">
       <a href="aviso.html" class="footer-link">Aviso legal</a>
+      &nbsp;·&nbsp;
+      <a href="metodologia.html" class="footer-link">Metodología</a>
+      &nbsp;·&nbsp;
+      <a href="acerca.html" class="footer-link">Acerca de</a>
       &nbsp;·&nbsp;
       <a href="blog.html" class="footer-link">Blog</a>
       &nbsp;·&nbsp;
+      <a href="archive.html" class="footer-link">Archivo</a>
+    </p>
+    <p class="footer-links footer-links--secondary">
       Contacto: <a class="footer-email" href="#" aria-label="Dirección de contacto"></a>
       &nbsp;·&nbsp;
-      ♥ Apóyanos y facthem:
+      <a href="https://www.youtube.com/@facthem_es" class="footer-link" target="_blank" rel="noopener">YouTube</a>
+      &nbsp;·&nbsp;
+      ♥ Apóyanos:
       <a href="https://paypal.me/hcasero" class="donate-btn" target="_blank" rel="noopener">PayPal</a>
       <a href="https://ko-fi.com/hugocasero" class="donate-btn" target="_blank" rel="noopener">Ko-fi</a>
     </p>

@@ -1,5 +1,10 @@
 .claude
+.venv/
 .DS_Store
 DESIGN.md
 .env
 _debug_server.py
+claim/
+politician/
+archive.html
+__pycache__/

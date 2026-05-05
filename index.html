@@ -49,6 +49,14 @@
       "name": "Facthem",
       "url": "https://facthem.es",
       "sameAs": ["https://twitter.com/facthem_ES"]
+    },
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": "https://facthem.es/?q={search_term_string}"
+      },
+      "query-input": "required name=search_term_string"
     }
   }
   </script>
@@ -219,15 +227,23 @@
   </div>
 
   <footer class="site-footer">
-    <p>
+    <p class="footer-links">
       Las verificaciones se generan mediante un proceso automatizado con IA y pueden contener inexactitudes.
       &nbsp;·&nbsp;
       <a href="aviso.html" class="footer-link">Aviso legal</a>
       &nbsp;·&nbsp;
+      <a href="metodologia.html" class="footer-link">Metodología</a>
+      &nbsp;·&nbsp;
+      <a href="acerca.html" class="footer-link">Acerca de</a>
+      &nbsp;·&nbsp;
       <a href="blog.html" class="footer-link">Blog</a>
+      &nbsp;·&nbsp;
+      <a href="archive.html" class="footer-link">Archivo</a>
     </p>
-    <p>
+    <p class="footer-links footer-links--secondary">
       Síguenos en X: <a href="https://x.com/facthem_es" class="footer-link" target="_blank" rel="noopener">@facthem_es</a>
+      &nbsp;·&nbsp;
+      <a href="https://www.youtube.com/@facthem_es" class="footer-link" target="_blank" rel="noopener">YouTube</a>
       &nbsp;·&nbsp;
       Contacto: <a class="footer-email" href="#" aria-label="Dirección de contacto"></a>
       &nbsp;·&nbsp;

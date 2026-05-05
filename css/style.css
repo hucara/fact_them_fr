@@ -518,6 +518,16 @@ body {
   color: var(--c-text);
 }
 
+.politician-link {
+  color: inherit;
+  font-weight: inherit;
+  text-decoration: none;
+}
+
+.politician-link:hover {
+  color: var(--c-accent);
+}
+
 .politician-name.unknown {
   color: var(--c-text-muted);
   font-style: italic;
@@ -881,6 +891,8 @@ body {
 
 /* ── Toggle button ────────────────────────────────────────────────────────── */
 .claim-toggle {
+  display: inline-block;
+  text-decoration: none;
   background: none;
   border: 1px solid var(--c-border);
   border-radius: var(--radius-xs);
@@ -1223,6 +1235,14 @@ body {
   font-size: .8rem;
   color: var(--c-text-muted);
   line-height: 2;
+}
+
+.footer-links {
+  margin: 0;
+}
+
+.footer-links + .footer-links {
+  margin-top: .35rem;
 }
 
 .footer-email,
