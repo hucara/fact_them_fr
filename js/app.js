@@ -124,6 +124,7 @@ function applyUrlTab(initial = false) {
 function updateAppUrl(tabId, { politicianSlug = currentPoliticianSlug, replace = false } = {}) {
   const params = new URLSearchParams(window.location.search);
   params.delete('claim');
+  params.delete('session');
   params.set('tab', TAB_TO_SLUG[tabId] || TAB_TO_SLUG['view-sesiones']);
 
   if (tabId === 'view-busqueda' && politicianSlug) {
@@ -137,6 +138,20 @@ function updateAppUrl(tabId, { politicianSlug = currentPoliticianSlug, replace =
   const nextState = { tab: tabId, politician: params.get('politician') };
   const method = replace ? 'replaceState' : 'pushState';
   history[method](nextState, '', nextUrl);
+}
+
+function updateSessionUrl(sessionIds, { replace = false } = {}) {
+  const ids = Array.isArray(sessionIds) ? sessionIds : [sessionIds];
+  const params = new URLSearchParams(window.location.search);
+  params.delete('claim');
+  params.delete('politician');
+  params.delete('tab');
+  params.set('session', ids.join(','));
+
+  const query = params.toString();
+  const nextUrl = `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`;
+  const method = replace ? 'replaceState' : 'pushState';
+  history[method]({ tab: 'view-sesiones', session: ids }, '', nextUrl);
 }
 
 async function handlePoliticianDeepLink() {
@@ -240,6 +255,7 @@ function setupTabs() {
   window.addEventListener('popstate', e => {
     applyUrlTab();
     handlePoliticianDeepLink();
+    handleSessionDeepLink();
   });
 }
 
@@ -594,7 +610,7 @@ class SessionCalendar {
 
 // ─── Session selector + content filters ───────────────────────────────────────
 function setupFilters() {
-  sessionCalendar = new SessionCalendar(ids => loadSession(ids));
+  sessionCalendar = new SessionCalendar(ids => loadSession(ids, { updateUrl: true }));
 
   msResultado = new MultiSelect(
     document.getElementById('ms-resultado'), [],
@@ -644,9 +660,35 @@ async function loadSessions() {
   }
 
   sessionCalendar.setSessions(sessions);
-  // Visually select the latest session, then load it
-  sessionCalendar.selectSession(sessions[0].id, /* silent */ true);
-  loadSession([sessions[0].id]);
+
+  const urlSessionIds = getSessionIdsFromUrl().filter(id => sessions.some(s => s.id === id));
+  const idsToLoad = urlSessionIds.length ? urlSessionIds : [sessions[0].id];
+  sessionCalendar.selectSession(idsToLoad[0], /* silent */ true);
+  if (idsToLoad.length > 1) {
+    const selectedSessions = idsToLoad.map(id => sessions.find(s => s.id === id)).filter(Boolean);
+    sessionCalendar.updateLabel(selectedSessions);
+  }
+  return loadSession(idsToLoad, { scrollToClaims: urlSessionIds.length > 0 });
+}
+
+function getSessionIdsFromUrl() {
+  const raw = new URLSearchParams(window.location.search).get('session');
+  return raw ? raw.split(',').map(s => s.trim()).filter(Boolean) : [];
+}
+
+async function handleSessionDeepLink() {
+  const ids = getSessionIdsFromUrl();
+  if (!ids.length || !sessionCalendar?.sessions?.length) return;
+  const validIds = ids.filter(id => sessionCalendar.sessions.some(s => s.id === id));
+  if (!validIds.length) return;
+
+  activateTab('view-sesiones', false);
+  sessionCalendar.selectSession(validIds[0], /* silent */ true);
+  if (validIds.length > 1) {
+    const selectedSessions = validIds.map(id => sessionCalendar.sessions.find(s => s.id === id)).filter(Boolean);
+    sessionCalendar.updateLabel(selectedSessions);
+  }
+  await loadSession(validIds, { scrollToClaims: true });
 }
 
 async function loadClaimById(id) {
@@ -662,9 +704,10 @@ async function loadClaimById(id) {
 }
 
 // ─── Claims for a session ─────────────────────────────────────────────────────
-async function loadSession(sessionIds) {
+async function loadSession(sessionIds, { updateUrl = false, scrollToClaims = false } = {}) {
   const ids = Array.isArray(sessionIds) ? sessionIds : [sessionIds];
   currentSessionIds = ids;
+  if (updateUrl) updateSessionUrl(ids);
 
   const container = document.getElementById('claims-container');
   container.innerHTML = '<p class="loading">Cargando afirmaciones…</p>';
@@ -707,6 +750,7 @@ async function loadSession(sessionIds) {
   renderClaims(allClaims);
   updateClaimsCount(allClaims.length, allClaims.length);
   updateFilterPills();
+  if (scrollToClaims) scrollToClaimPreviews();
 }
 
 // ─── Filters ──────────────────────────────────────────────────────────────────
@@ -873,6 +917,12 @@ function updateSentinel(container) {
     }, { rootMargin: '200px' });
     lazyObserver.observe(sentinel);
   }
+}
+
+function scrollToClaimPreviews() {
+  requestAnimationFrame(() => {
+    document.getElementById('claims-area')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
 }
 
 function renderClaims(claims) {
