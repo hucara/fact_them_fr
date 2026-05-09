@@ -49,7 +49,7 @@ BASE_URL      = "https://facthem.es"
 OUT_DIR       = Path(__file__).parent / "claim"
 POL_OUT_DIR   = Path(__file__).parent / "politician"
 SITEMAP_PATH  = Path(__file__).parent / "sitemap.xml"
-SALARY_ASSET_PATH = Path(__file__).parent / "assets" / "politician_salary.json"
+SALARY_DATA_PATH = Path(__file__).parent / "assets" / "salary-data.js"
 TODAY         = date.today().isoformat()
 
 # ── Label maps (mirror app.js) ────────────────────────────────────────────────
@@ -796,7 +796,7 @@ def fetch_salaries(supabase):
         pid = row.get("politician_id")
         if pid:
             out[pid] = row
-    return _merge_salary_asset_photos(out)
+    return out
 
 
 def fetch_salaries_sqlite():
@@ -807,29 +807,28 @@ def fetch_salaries_sqlite():
         con.close()
         return {}
     con.close()
-    return _merge_salary_asset_photos({r["politician_id"]: dict(r) for r in rows if r["politician_id"]})
+    return {r["politician_id"]: dict(r) for r in rows if r["politician_id"]}
 
 
-def _merge_salary_asset_photos(salaries):
-    """Keep generated pages in sync with local photo overrides used by the app."""
-    if not SALARY_ASSET_PATH.exists():
-        return salaries
-    try:
-        asset_rows = json.loads(SALARY_ASSET_PATH.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        print(f"  aviso: no se pudo leer {SALARY_ASSET_PATH.name} ({exc})")
-        return salaries
-
-    by_pid = {row.get("politician_id"): row for row in asset_rows if row.get("politician_id")}
-    by_name = {row.get("nombre_completo"): row for row in asset_rows if row.get("nombre_completo")}
+def generate_salary_data(salaries):
+    """Generated frontend fallback: salary facts from DB, photo paths from assets."""
+    keys = [
+        "politician_id", "nombre_completo", "grupo_parlamentario", "partido",
+        "circunscripcion", "cod_parlamentario", "base_monthly_eur",
+        "indemnizacion_monthly_eur", "complements_monthly_eur",
+        "total_monthly_eur", "total_annual_eur", "breakdown",
+        "government_role",
+    ]
+    rows = []
     for row in salaries.values():
-        asset = by_pid.get(row.get("politician_id")) or by_name.get(row.get("nombre_completo"))
-        if not asset:
-            continue
-        for key in ("photo_url", "photo_path"):
-            if asset.get(key):
-                row[key] = asset[key]
-    return salaries
+        item = {k: row.get(k) for k in keys if row.get(k) not in (None, "")}
+        if item.get("politician_id") and item.get("nombre_completo"):
+            rows.append(item)
+    rows.sort(key=lambda r: str(r.get("nombre_completo", "")))
+    SALARY_DATA_PATH.parent.mkdir(exist_ok=True)
+    payload = json.dumps(rows, ensure_ascii=False, separators=(",", ":"))
+    SALARY_DATA_PATH.write_text(f"window.FACTHEM_SALARIES={payload};\n", encoding="utf-8")
+    print(f"  {SALARY_DATA_PATH.relative_to(Path(__file__).parent)} generado — {len(rows)} retribuciones")
 
 
 # ── Sitemap ───────────────────────────────────────────────────────────────────
@@ -1096,27 +1095,47 @@ def _slugify_photo(value):
     return re.sub(r"-+", "-", "-".join(s.split())).strip("-")
 
 
+def _format_photo_name(value):
+    parts = str(value or "").split(",", 1)
+    if len(parts) == 2:
+        return f"{parts[1].strip()} {parts[0].strip()}"
+    return str(value or "")
+
+
+def _government_photo_file(row):
+    full_name = _salary_value(row, ["full_name", "nombre_completo", "name", "politician_name"])
+    group = _salary_value(row, ["parliamentary_group", "grupo_parlamentario", "group"])
+    gov_role = _salary_value(row, ["government_role"])
+    if not full_name or (group != "Cargo de Gobierno" and not gov_role):
+        return ""
+
+    names = {_format_photo_name(full_name)}
+    for name in list(names):
+        names.add(re.sub(r"\bAbed\b", "", name).strip())
+        names.add(re.sub(r"\bi\b", "", name).strip())
+
+    photos_dir = Path(__file__).parent / "assets" / "photos"
+    for name in names:
+        slug = _slugify_photo(name)
+        if not slug:
+            continue
+        for ext in (".jpg", ".png", ".webp"):
+            candidate = f"gobierno-{slug}{ext}"
+            if (photos_dir / candidate).exists():
+                return candidate
+    return ""
+
+
 def _salary_photo_src(row):
-    raw = _salary_value(row, [
-        "photo_path", "local_photo_path", "asset_photo_path",
-        "asset_path", "photo_asset_path",
-    ])
-    file = ""
-    if raw:
-        s = str(raw)
-        if re.match(r"^https?://", s, re.I):
-            return ""
-        file = [p for p in s.split("/") if p][-1] if s else ""
-        legacy = re.match(r"^([^_]+)_(.+)_([0-9]+)(\.[^.]+)$", file or "")
-        if legacy:
-            party, name, code, ext = legacy.groups()
-            file = f"{name}_{code}_{party}{ext}"
+    file = _government_photo_file(row)
     if not file:
         full_name = _salary_value(row, ["full_name", "nombre_completo", "name", "politician_name"])
         party = _salary_value(row, ["party", "partido"])
         code = _salary_value(row, ["cod_parlamentario", "congress_code", "code"])
         if full_name and party and code:
-            file = f"{_slugify_photo(full_name)}_{code}_{_slugify_photo(party)}.jpg"
+            candidate = f"{_slugify_photo(full_name)}_{code}_{_slugify_photo(party)}.jpg"
+            if (Path(__file__).parent / "assets" / "photos" / candidate).exists():
+                file = candidate
     return f"/assets/photos/{urllib.parse.quote(file)}" if file else ""
 
 
@@ -1146,9 +1165,9 @@ def render_politician_panel(salary, nombre, partido, grupo, claim_count, falsos=
         return "", "", ""
 
     stats = "".join(filter(None, [
-        f'<div class="politician-panel-stat politician-panel-stat--primary"><span>Mensual total</span><strong>{monthly}</strong></div>' if monthly else "",
-        f'<div class="politician-panel-stat politician-panel-stat--annual"><span>Anual estimado</span><strong>{annual}</strong></div>' if annual else "",
-        f'<div class="politician-panel-stat"><span>Base mensual</span><strong>{base}</strong></div>' if base else "",
+        f'<div class="politician-panel-stat politician-panel-stat--primary"><span>Sueldo mensual total</span><strong>{monthly}</strong></div>' if monthly else "",
+        f'<div class="politician-panel-stat politician-panel-stat--annual"><span>Salario anual</span><strong>{annual}</strong></div>' if annual else "",
+        f'<div class="politician-panel-stat"><span>Salario base mensual</span><strong>{base}</strong></div>' if base else "",
         f'<div class="politician-panel-stat"><span>Indemnización</span><strong>{indemnity}</strong></div>' if indemnity else "",
         f'<div class="politician-panel-stat"><span>Complementos</span><strong>{complements}</strong></div>' if complements else "",
     ]))
@@ -1186,7 +1205,7 @@ def render_politician_panel(salary, nombre, partido, grupo, claim_count, falsos=
     )
 
     panel = f"""
-    <section class="politician-panel{'' if photo else ' politician-panel--no-photo'}" aria-label="Resumen del representante">
+    <section class="politician-panel{'' if photo else ' politician-panel--no-photo'}" aria-label="Resumen del representante y salario público">
       {photo_html}
       <div class="politician-panel-body">
         <div class="politician-panel-header">
@@ -1271,7 +1290,7 @@ def _render_politician_claim_card(claim_slug, claim):
         </div>"""
         if score is not None else ""
     )
-    claim_url = f"/claim/{claim_slug}.html"
+    claim_url = f"../claim/{claim_slug}.html"
     return f"""
     <article class="claim-card" data-resultado="{resultado_class}"{(' data-gobierno' if pol.get('grupo_parlamentario') == 'Cargo de Gobierno' else '')}>
       <header class="claim-header">
@@ -1502,6 +1521,8 @@ def main():
         print("Obteniendo retribuciones…")
         salaries = fetch_salaries(supabase)
         print(f"  {len(salaries)} retribuciones obtenidas")
+
+    generate_salary_data(salaries)
 
     OUT_DIR.mkdir(exist_ok=True)
     for f in OUT_DIR.glob("*.html"):

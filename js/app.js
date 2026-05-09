@@ -74,6 +74,7 @@ let searchSalaryCache = {};
 let searchPhotoCache = {};
 let allSalaries = null;
 let allSalariesPromise = null;
+const photoAssetProbeCache = {};
 let currentSearchClaims = [];
 let currentSearchSalary = null;
 let currentSearchPolitician = null;
@@ -2103,38 +2104,15 @@ async function fetchPoliticianSalary(politicianId, politicianDbName = '') {
   if (!politicianId) return null;
   if (searchSalaryCache[politicianId]) return searchSalaryCache[politicianId];
 
-  let { data, error } = await supabase
-    .from(SALARY_TABLE)
-    .select('*')
-    .eq('politician_id', politicianId)
-    .limit(1);
+  let row = findSalaryInRows(localSalaryRows(), politicianId, politicianDbName);
 
-  if (error) {
-    console.warn('[salary] fetch failed', error.message);
-  }
-
-  let row = error ? null : (data?.[0] ?? null);
   if (!row) {
     row = await fetchSalaryRest({ politician_id: politicianId });
   }
 
   for (const name of salaryNameCandidates(politicianDbName)) {
     if (row) break;
-    const { data: byNameData, error: byNameError } = await supabase
-      .from(SALARY_TABLE)
-      .select('*')
-      .eq('nombre_completo', name)
-      .limit(1);
-
-    if (byNameError) {
-      console.warn('[salary] name fallback failed', byNameError.message);
-    } else {
-      row = byNameData?.[0] ?? null;
-    }
-
-    if (!row) {
-      row = await fetchSalaryRest({ nombre_completo: name });
-    }
+    row = await fetchSalaryRest({ nombre_completo: name });
   }
 
   if (!row) {
@@ -2147,8 +2125,8 @@ async function fetchPoliticianSalary(politicianId, politicianDbName = '') {
 }
 
 async function fetchSalaryRest(filters = {}) {
-  const urlBase = typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : window.SUPABASE_URL;
-  const anonKey = typeof SUPABASE_ANON !== 'undefined' ? SUPABASE_ANON : window.SUPABASE_ANON;
+  const urlBase = window.SUPABASE_URL || 'https://kivkdkddhjkrdafkgxmb.supabase.co';
+  const anonKey = window.SUPABASE_ANON || 'sb_publishable_hZ4T6T0F_whJfF2jjBnYJw_JJnsEdBJ';
   if (!urlBase || !anonKey) return null;
 
   const url = new URL(`${urlBase}/rest/v1/${SALARY_TABLE}`);
@@ -2179,40 +2157,48 @@ async function fetchSalaryRest(filters = {}) {
 
 async function loadSalaryTable() {
   if (allSalaries) return allSalaries;
+  const localRows = localSalaryRows();
+  if (localRows.length) {
+    allSalaries = localRows;
+    return allSalaries;
+  }
   if (!allSalariesPromise) {
-    allSalariesPromise = fetchFirstJson(['assets/politician_salary.json', '/assets/politician_salary.json'])
-      .then(localRows => {
-        if (Array.isArray(localRows) && localRows.length) return localRows;
-        return supabase
-          .from(SALARY_TABLE)
-          .select('*')
-          .then(({ data, error }) => {
-            if (error) {
-              console.warn('[salary] table fallback failed', error.message);
-              return [];
-            }
-            return data || [];
-          });
+    allSalariesPromise = fetchSalaryRowsRest()
+      .catch(err => {
+        console.warn('[salary] table fallback failed', err.message);
+        return [];
       });
   }
   allSalaries = await allSalariesPromise;
   return allSalaries;
 }
 
-async function fetchFirstJson(paths) {
-  for (const path of paths) {
-    try {
-      const resp = await fetch(path);
-      if (resp.ok) return await resp.json();
-    } catch {
-      // Try the next local path.
-    }
-  }
-  return null;
+function localSalaryRows() {
+  return Array.isArray(window.FACTHEM_SALARIES) ? window.FACTHEM_SALARIES : [];
+}
+
+async function fetchSalaryRowsRest() {
+  const urlBase = window.SUPABASE_URL || 'https://kivkdkddhjkrdafkgxmb.supabase.co';
+  const anonKey = window.SUPABASE_ANON || 'sb_publishable_hZ4T6T0F_whJfF2jjBnYJw_JJnsEdBJ';
+  const url = new URL(`${urlBase}/rest/v1/${SALARY_TABLE}`);
+  url.searchParams.set('select', '*');
+
+  const resp = await fetch(url.toString(), {
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${anonKey}`,
+    },
+  });
+  if (!resp.ok) throw new Error(`status ${resp.status}`);
+  return await resp.json();
 }
 
 async function findSalaryFromTable(politicianId, politicianDbName = '') {
   const salaries = await loadSalaryTable();
+  return findSalaryInRows(salaries, politicianId, politicianDbName);
+}
+
+function findSalaryInRows(salaries, politicianId, politicianDbName = '') {
   const byId = salaries.find(row => String(row.politician_id) === String(politicianId));
   if (byId) return byId;
 
@@ -2293,42 +2279,80 @@ function photoFilenameByConvention({ party, fullName, code }) {
   return `${nameSlug}_${code}_${partySlug}.jpg`;
 }
 
+function governmentPhotoName(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const parts = raw.split(',', 2);
+  return parts.length === 2 ? `${parts[1].trim()} ${parts[0].trim()}` : raw;
+}
+
+function governmentPhotoNames(salary, politician, politicianName) {
+  const names = [
+    salaryValue(salary, ['full_name', 'nombre_completo', 'name', 'politician_name'], 5),
+    politician?.nombre_completo,
+    politicianName,
+  ]
+    .map(governmentPhotoName)
+    .filter(Boolean);
+
+  const variants = [];
+  for (const name of names) {
+    variants.push(name);
+    variants.push(name.replace(/\bAbed\b/gi, '').replace(/\s+/g, ' ').trim());
+    variants.push(name.replace(/\bi\b/gi, '').replace(/\s+/g, ' ').trim());
+  }
+  return [...new Set(variants.filter(Boolean))];
+}
+
+function isGovernmentSalary(salary, politician) {
+  const group = salaryValue(salary, ['parliamentary_group', 'grupo_parlamentario', 'group'], 6)
+    || politician?.grupo_parlamentario
+    || '';
+  return Boolean(salaryValue(salary, ['government_role']))
+    || normalizeSearchText(group) === normalizeSearchText('Cargo de Gobierno');
+}
+
+function imageAssetExists(src) {
+  if (!src) return Promise.resolve(false);
+  if (!photoAssetProbeCache[src]) {
+    photoAssetProbeCache[src] = new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
+      img.src = src;
+    });
+  }
+  return photoAssetProbeCache[src];
+}
+
+async function governmentPhotoSrc(salary, politician, politicianName) {
+  if (!isGovernmentSalary(salary, politician)) return '';
+  for (const name of governmentPhotoNames(salary, politician, politicianName)) {
+    const slug = slugifyForPhoto(name);
+    if (!slug) continue;
+    for (const ext of ['jpg', 'png', 'webp']) {
+      const src = `/assets/photos/gobierno-${slug}.${ext}`;
+      if (await imageAssetExists(src)) return src;
+    }
+  }
+  return '';
+}
+
 async function resolvePhotoOverride(politicianId, salary, politician, politicianName) {
   if (politicianId && searchPhotoCache[politicianId]) return searchPhotoCache[politicianId];
-  const src = salaryPhotoSrc(salary, politician, politicianName);
+  const src = await governmentPhotoSrc(salary, politician, politicianName)
+    || salaryPhotoSrc(salary, politician, politicianName);
   if (politicianId) searchPhotoCache[politicianId] = src;
   return src;
 }
 
 function salaryPhotoSrc(row, politician = null, politicianName = '') {
-  const raw = salaryValue(row, [
-    'photo_path',
-    'local_photo_path',
-    'asset_photo_path',
-    'asset_path',
-    'photo_asset_path',
-  ], 23);
-  let file = '';
-  if (raw) {
-    const path = String(raw);
-    if (/^https?:\/\//i.test(path)) return '';
-    file = legacyPhotoFilenameToSuffix(path.split('/').filter(Boolean).pop());
-  }
-  if (!file) {
-    file = photoFilenameByConvention({
-      party: salaryValue(row, ['party', 'partido'], 7) || politician?.partido || '',
-      fullName: salaryValue(row, ['full_name', 'nombre_completo', 'name', 'politician_name'], 5) || politician?.nombre_completo || politicianName || '',
-      code: salaryValue(row, ['cod_parlamentario', 'congress_code', 'code']),
-    });
-  }
+  const file = photoFilenameByConvention({
+    party: salaryValue(row, ['party', 'partido']) || politician?.partido || '',
+    fullName: salaryValue(row, ['full_name', 'nombre_completo', 'name', 'politician_name']) || politician?.nombre_completo || politicianName || '',
+    code: salaryValue(row, ['cod_parlamentario', 'congress_code', 'code']),
+  });
   return file ? `/assets/photos/${encodeURIComponent(file)}` : '';
-}
-
-function legacyPhotoFilenameToSuffix(file) {
-  const match = String(file || '').match(/^([^_]+)_(.+)_([0-9]+)(\.[^.]+)$/);
-  if (!match) return file;
-  const [, party, name, code, ext] = match;
-  return `${name}_${code}_${party}${ext}`;
 }
 
 function salaryBreakdown(row) {
@@ -2377,9 +2401,9 @@ function renderPoliticianPanel({ politician, politicianName, salary, claims, pho
   const provinceMeta = normalizeSearchText(province) === normalizeSearchText(group) ? '' : province;
 
   const stats = [
-    monthly ? `<div class="politician-panel-stat politician-panel-stat--primary"><span>Mensual total</span><strong>${monthly}</strong></div>` : '',
-    annual ? `<div class="politician-panel-stat politician-panel-stat--annual"><span>Anual estimado</span><strong>${annual}</strong></div>` : '',
-    base ? `<div class="politician-panel-stat"><span>Base mensual</span><strong>${base}</strong></div>` : '',
+    monthly ? `<div class="politician-panel-stat politician-panel-stat--primary"><span>Sueldo mensual total</span><strong>${monthly}</strong></div>` : '',
+    annual ? `<div class="politician-panel-stat politician-panel-stat--annual"><span>Salario anual</span><strong>${annual}</strong></div>` : '',
+    base ? `<div class="politician-panel-stat"><span>Salario base mensual</span><strong>${base}</strong></div>` : '',
     indemnity ? `<div class="politician-panel-stat"><span>Indemnización</span><strong>${indemnity}</strong></div>` : '',
     complements ? `<div class="politician-panel-stat"><span>Complementos</span><strong>${complements}</strong></div>` : '',
   ].filter(Boolean).join('');
@@ -2412,7 +2436,7 @@ function renderPoliticianPanel({ politician, politicianName, salary, claims, pho
   </div>`;
 
   return `
-    <section class="politician-panel${photoSrc ? '' : ' politician-panel--no-photo'}" aria-label="Resumen del representante">
+    <section class="politician-panel${photoSrc ? '' : ' politician-panel--no-photo'}" aria-label="Resumen del representante y salario público">
       ${photoSrc ? `<img class="politician-panel-photo" src="${photoSrc}" alt="${escHtml(displayName)}" loading="lazy" onerror="this.closest('.politician-panel')?.classList.add('politician-panel--no-photo');this.remove()">` : ''}
       <div class="politician-panel-body">
         <div class="politician-panel-header">

@@ -739,12 +739,6 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://facthem.es/politician/jordi-hereu-boher-psoe.html</loc>
-    <lastmod>2026-05-10T00:00:00+00:00</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://facthem.es/politician/jordi-hereu-i-boher-psoe.html</loc>
     <lastmod>2026-05-10T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
@@ -8719,38 +8713,8 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://facthem.es/claim/el-ministro-afirma-que-fue-convocado-en-el-9edfda9a.html</loc>
-    <lastmod>2026-04-22T00:00:00+00:00</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://facthem.es/claim/el-ministro-afirma-que-ha-dedicado-doce-horas-8ec47b70.html</loc>
-    <lastmod>2026-04-22T00:00:00+00:00</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://facthem.es/claim/el-ministro-afirma-que-la-ley-de-industria-6e58d52f.html</loc>
-    <lastmod>2026-04-15T00:00:00+00:00</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://facthem.es/claim/el-ministro-bustinduy-afirmo-que-casi-el-75-b1637114.html</loc>
     <lastmod>2026-04-28T00:00:00+00:00</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://facthem.es/claim/el-ministro-de-cultura-afirma-que-la-decision-f3c9e6d8.html</loc>
-    <lastmod>2026-04-22T00:00:00+00:00</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://facthem.es/claim/el-ministro-de-cultura-afirma-que-la-sentencia-ceac3523.html</loc>
-    <lastmod>2026-04-22T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -12451,6 +12415,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/en-cataluna-se-estan-construyendo-actualmente-50000-viviendas-08cb8a66.html</loc>
+    <lastmod>2025-10-15T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/en-cataluna-se-han-documentado-83-casos-de-7427465d.html</loc>
     <lastmod>2026-04-21T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -15319,6 +15289,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/existe-un-retraso-de-mas-de-dos-anos-880c6223.html</loc>
+    <lastmod>2026-04-14T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/existe-un-solo-tren-de-auscultacion-para-inspeccionar-f4ee1c03.html</loc>
     <lastmod>2026-03-25T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -15909,12 +15885,6 @@
   <url>
     <loc>https://facthem.es/claim/galicia-tiene-una-deuda-de-aproximadamente-12-000-c2338fef.html</loc>
     <lastmod>2025-12-10T00:00:00+00:00</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://facthem.es/claim/garcia-adanero-afirma-que-la-presion-fiscal-actual-620d84f2.html</loc>
-    <lastmod>2026-04-22T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -17563,6 +17533,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/la-decision-sobre-la-obra-guernica-corresponde-al-f3c9e6d8.html</loc>
+    <lastmod>2026-04-22T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/la-declaracion-de-zonas-tensionadas-beneficia-a-9-6de731a3.html</loc>
     <lastmod>2026-03-25T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -18955,6 +18931,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/la-ley-de-industria-vigente-data-de-1992-6e58d52f.html</loc>
+    <lastmod>2026-04-15T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/la-ley-de-memoria-democratica-de-2022-extiende-767ea995.html</loc>
     <lastmod>2026-03-18T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -19879,6 +19861,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/la-presion-fiscal-actual-es-la-mas-alta-620d84f2.html</loc>
+    <lastmod>2026-04-22T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/la-presion-fiscal-de-espana-se-situa-35-56f75154.html</loc>
     <lastmod>2026-03-18T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -20727,6 +20715,12 @@
   <url>
     <loc>https://facthem.es/claim/la-sentencia-del-tribunal-supremo-condenatoria-del-fiscal-63a8a911.html</loc>
     <lastmod>2025-11-26T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/la-sentencia-firme-sobre-los-murales-de-sixena-ceac3523.html</loc>
+    <lastmod>2026-04-22T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -24601,6 +24595,18 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/oscar-puente-fue-convocado-en-el-senado-la-9edfda9a.html</loc>
+    <lastmod>2026-04-22T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/oscar-puente-ha-dedicado-doce-horas-a-dar-8ec47b70.html</loc>
+    <lastmod>2026-04-22T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/otros-cuatro-espanoles-fueron-liberados-por-venezuela-93828263.html</loc>
     <lastmod>2026-01-15T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -24861,18 +24867,6 @@
   <url>
     <loc>https://facthem.es/claim/se-adjudicaron-7-millones-de-euros-a-la-15b26958.html</loc>
     <lastmod>2026-04-29T00:00:00+00:00</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://facthem.es/claim/se-afirma-que-en-cataluna-se-estan-construyendo-08cb8a66.html</loc>
-    <lastmod>2025-10-15T00:00:00+00:00</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://facthem.es/claim/se-afirma-que-existe-un-retraso-de-mas-880c6223.html</loc>
-    <lastmod>2026-04-14T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
