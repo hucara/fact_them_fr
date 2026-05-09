@@ -16,8 +16,9 @@ import os
 import re
 import sqlite3
 import sys
+import unicodedata
 import urllib.parse
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 # ── Config ────────────────────────────────────────────────────────────────────
@@ -48,6 +49,7 @@ BASE_URL      = "https://facthem.es"
 OUT_DIR       = Path(__file__).parent / "claim"
 POL_OUT_DIR   = Path(__file__).parent / "politician"
 SITEMAP_PATH  = Path(__file__).parent / "sitemap.xml"
+SALARY_ASSET_PATH = Path(__file__).parent / "assets" / "politician_salary.json"
 TODAY         = date.today().isoformat()
 
 # ── Label maps (mirror app.js) ────────────────────────────────────────────────
@@ -679,6 +681,7 @@ SELECT_FIELDS = """
   id, session_id, texto_normalizado, texto_original,
   ambito_geografico, ambito_tematico,
   politician:politician_id (id, nombre_completo, partido, grupo_parlamentario),
+  session:session_id (id, fecha, organo, legislatura, tipo, numero),
   verification (resultado, confidence_score, omisiones, errores, fuentes)
 """
 
@@ -701,10 +704,15 @@ def fetch_all_claims_sqlite():
                p.id AS pol_id,
                p.nombre_completo AS pol_nombre, p.partido AS pol_partido,
                p.grupo_parlamentario AS pol_grupo,
-               v.resultado, v.confidence_score, v.omisiones, v.errores, v.fuentes
+               v.resultado, v.confidence_score, v.omisiones, v.errores, v.fuentes,
+               s.fecha AS session_fecha, s.organo AS session_organo,
+               s.legislatura AS session_legislatura, s.tipo AS session_tipo,
+               s.numero AS session_numero
         FROM claim c
         LEFT JOIN politician p ON p.id = c.politician_id
+        LEFT JOIN session s ON s.id = c.session_id
         LEFT JOIN verification v ON v.claim_id = c.id
+        ORDER BY c.session_id DESC
     """).fetchall()
     con.close()
     claims = []
@@ -729,6 +737,14 @@ def fetch_all_claims_sqlite():
             "ambito_geografico": r["ambito_geografico"],
             "ambito_tematico": r["ambito_tematico"],
             "politician": pol,
+            "session": {
+                "id": r["session_id"],
+                "fecha": r["session_fecha"],
+                "organo": r["session_organo"],
+                "legislatura": r["session_legislatura"],
+                "tipo": r["session_tipo"],
+                "numero": r["session_numero"],
+            } if r["session_fecha"] else None,
             "verification": ver,
         })
     return claims
@@ -780,7 +796,7 @@ def fetch_salaries(supabase):
         pid = row.get("politician_id")
         if pid:
             out[pid] = row
-    return out
+    return _merge_salary_asset_photos(out)
 
 
 def fetch_salaries_sqlite():
@@ -791,7 +807,29 @@ def fetch_salaries_sqlite():
         con.close()
         return {}
     con.close()
-    return {r["politician_id"]: dict(r) for r in rows if r["politician_id"]}
+    return _merge_salary_asset_photos({r["politician_id"]: dict(r) for r in rows if r["politician_id"]})
+
+
+def _merge_salary_asset_photos(salaries):
+    """Keep generated pages in sync with local photo overrides used by the app."""
+    if not SALARY_ASSET_PATH.exists():
+        return salaries
+    try:
+        asset_rows = json.loads(SALARY_ASSET_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"  aviso: no se pudo leer {SALARY_ASSET_PATH.name} ({exc})")
+        return salaries
+
+    by_pid = {row.get("politician_id"): row for row in asset_rows if row.get("politician_id")}
+    by_name = {row.get("nombre_completo"): row for row in asset_rows if row.get("nombre_completo")}
+    for row in salaries.values():
+        asset = by_pid.get(row.get("politician_id")) or by_name.get(row.get("nombre_completo"))
+        if not asset:
+            continue
+        for key in ("photo_url", "photo_path"):
+            if asset.get(key):
+                row[key] = asset[key]
+    return salaries
 
 
 # ── Sitemap ───────────────────────────────────────────────────────────────────
@@ -951,9 +989,16 @@ def generate_archive(claims_data):
 def generate_politician_pages(claims_with_slugs, salaries=None):
     """One static page per politician listing all their claims."""
     salaries = salaries or {}
+    salary_by_name = {
+        row.get("nombre_completo"): row
+        for row in salaries.values()
+        if row.get("nombre_completo")
+    }
     # Group by nombre_completo first, then derive slug from best available partido
     by_nombre = {}
     for claim_slug, claim in claims_with_slugs:
+        if not claim.get("verification"):
+            continue
         pol = claim.get("politician") or {}
         nombre_completo = pol.get("nombre_completo", "")
         if not nombre_completo:
@@ -978,7 +1023,10 @@ def generate_politician_pages(claims_with_slugs, salaries=None):
     by_pol = {}
     for nombre_completo, info in by_nombre.items():
         pol_slug = slugify_politician(nombre_completo, info["partido"])
-        info["salary"] = salaries.get(info["pol_id"]) if info.get("pol_id") else None
+        salary = salaries.get(info["pol_id"]) if info.get("pol_id") else None
+        if not salary:
+            salary = salary_by_name.get(nombre_completo)
+        info["salary"] = salary
         by_pol[pol_slug] = info
 
     POL_OUT_DIR.mkdir(exist_ok=True)
@@ -1039,44 +1087,60 @@ def _salary_breakdown(row):
         return None
 
 
+def _slugify_photo(value):
+    s = str(value or "").strip().lower().replace(",", " ")
+    s = s.replace("ª", "a").replace("º", "o")
+    s = unicodedata.normalize("NFD", s)
+    s = "".join(ch for ch in s if unicodedata.category(ch) != "Mn")
+    s = re.sub(r"[^a-z0-9\s-]", "", s)
+    return re.sub(r"-+", "-", "-".join(s.split())).strip("-")
+
+
 def _salary_photo_src(row):
     raw = _salary_value(row, [
         "photo_path", "local_photo_path", "asset_photo_path",
         "asset_path", "photo_asset_path",
     ])
-    if not raw:
-        return ""
-    s = str(raw)
-    if re.match(r"^https?://", s, re.I):
-        return s
-    file = [p for p in s.split("/") if p][-1] if s else ""
+    file = ""
+    if raw:
+        s = str(raw)
+        if re.match(r"^https?://", s, re.I):
+            return ""
+        file = [p for p in s.split("/") if p][-1] if s else ""
+        legacy = re.match(r"^([^_]+)_(.+)_([0-9]+)(\.[^.]+)$", file or "")
+        if legacy:
+            party, name, code, ext = legacy.groups()
+            file = f"{name}_{code}_{party}{ext}"
+    if not file:
+        full_name = _salary_value(row, ["full_name", "nombre_completo", "name", "politician_name"])
+        party = _salary_value(row, ["party", "partido"])
+        code = _salary_value(row, ["cod_parlamentario", "congress_code", "code"])
+        if full_name and party and code:
+            file = f"{_slugify_photo(full_name)}_{code}_{_slugify_photo(party)}.jpg"
     return f"/assets/photos/{urllib.parse.quote(file)}" if file else ""
 
 
-def render_politician_panel(salary, nombre, partido, grupo, claim_count):
+def render_politician_panel(salary, nombre, partido, grupo, claim_count, falsos=0, pct_falsos=0):
     """Returns (panel_html, json_ld_dict_or_None, photo_url)."""
     photo = _salary_photo_src(salary) if salary else ""
-    province = _salary_value(salary, ["province", "provincia", "district"]) if salary else None
+    photo_src = f"..{photo}" if photo.startswith("/assets/") else photo
+    province = _salary_value(salary, ["province", "provincia", "district", "circunscripcion"]) if salary else None
 
     base_raw       = float(_salary_value(salary, ["base_monthly_eur", "base_mensual_eur", "base_monthly"]) or 0)
     indemnity_raw  = float(_salary_value(salary, ["indemnizacion_monthly_eur", "indemnity_monthly_eur", "indemnizacion_mensual_eur"]) or 0)
     complements_raw= float(_salary_value(salary, ["complements_monthly_eur", "complement_monthly_eur", "complementos_mensuales_eur"]) or 0)
-    gov_annual_raw = float(_salary_value(salary, ["government_annual_eur"]) or 0)
-    complements_total = complements_raw + gov_annual_raw / 12
-
     base        = _format_eur(base_raw) if base_raw else None
     indemnity   = _format_eur(indemnity_raw) if indemnity_raw else None
-    complements = _format_eur(complements_total) if complements_total else None
+    complements = _format_eur(complements_raw) if complements_raw else None
     monthly = _format_eur(_salary_value(salary, ["total_monthly_eur", "monthly_total_eur", "salary_monthly_total_eur", "monthly_with_indemnity_eur"]))
     annual  = _format_eur(_salary_value(salary, ["total_annual_eur", "annual_total_eur", "salary_annual_total_eur"]), compact=True)
 
-    source_url        = _salary_value(salary, ["source_url", "profile_url", "congress_url"])
-    salary_source_url = _salary_value(salary, ["salary_source_url", "source_salary_url"])
+    source_url = _salary_value(salary, ["source_url", "profile_url", "congress_url"])
     bd = _salary_breakdown(salary) or {}
     role = (bd.get("complements") or {}).get("commission", {}).get("role") or ""
     gov_role_raw = _salary_value(salary, ["government_role"])
     gov_role_label = GOVERNMENT_ROLE_LABELS.get(gov_role_raw, snake_to_label(gov_role_raw)) if gov_role_raw else ""
-    gov_source_url = (bd.get("government") or {}).get("source_url", "") if bd else ""
+    province_meta = "" if str(province or "").casefold() == str(grupo or "").casefold() else province
 
     if not salary:
         return "", "", ""
@@ -1086,36 +1150,54 @@ def render_politician_panel(salary, nombre, partido, grupo, claim_count):
         f'<div class="politician-panel-stat politician-panel-stat--annual"><span>Anual estimado</span><strong>{annual}</strong></div>' if annual else "",
         f'<div class="politician-panel-stat"><span>Base mensual</span><strong>{base}</strong></div>' if base else "",
         f'<div class="politician-panel-stat"><span>Indemnización</span><strong>{indemnity}</strong></div>' if indemnity else "",
-        f'<div class="politician-panel-stat"><span>Complementos{" + AGE" if gov_annual_raw else ""}</span><strong>{complements}</strong></div>' if complements else "",
+        f'<div class="politician-panel-stat"><span>Complementos</span><strong>{complements}</strong></div>' if complements else "",
     ]))
 
-    meta = "".join(filter(None, [
-        f"<span>{esc(partido)}</span>" if partido else "",
-        f"<span>{esc(province)}</span>" if province else "",
-        f"<span>{esc(grupo)}</span>" if grupo and grupo != partido else "",
-        f'<span class="politician-panel-meta-gov">{esc(gov_role_label)}</span>' if gov_role_label else "",
-    ]))
+    meta_items = []
+    seen_meta = set()
+    for label, class_name in [
+        (partido, ""),
+        (province_meta, ""),
+        (grupo, ""),
+        (gov_role_label, "politician-panel-meta-gov"),
+    ]:
+        label = str(label or "").strip()
+        key = label.casefold()
+        if not label or key in seen_meta:
+            continue
+        seen_meta.add(key)
+        class_attr = f' class="{class_name}"' if class_name else ""
+        meta_items.append(f"<span{class_attr}>{esc(label)}</span>")
+    meta = "".join(meta_items)
 
-    links = "".join(filter(None, [
-        f'<a href="{esc(source_url)}" target="_blank" rel="noopener">Ficha del Congreso</a>' if source_url else "",
-        f'<a href="{esc(salary_source_url)}" target="_blank" rel="noopener">Régimen económico</a>' if salary_source_url else "",
-        f'<a href="{esc(gov_source_url)}" target="_blank" rel="noopener">Retribuciones AGE</a>' if gov_source_url else "",
-    ]))
+    count_badge = f"""
+          <div class="search-count-badge politician-panel-count-badge">
+            <span><strong>{claim_count}</strong> afirmaci{'ón' if claim_count == 1 else 'ones'}</span>
+            <span class="badge-sep">·</span>
+            <span><strong>{falsos}</strong> falsa{'' if falsos == 1 else 's'}</span>
+            <span class="badge-sep">·</span>
+            <span><strong>{pct_falsos}%</strong> falsas</span>
+          </div>"""
+    photo_html = (
+        f'<img class="politician-panel-photo" src="{esc(photo_src)}" alt="{esc(nombre)}" '
+        'loading="lazy" '
+        'onerror="this.closest(\'.politician-panel\')?.classList.add(\'politician-panel--no-photo\');this.remove()">'
+        if photo else ""
+    )
 
     panel = f"""
-    <section class="politician-panel" aria-label="Resumen del representante">
-      {f'<img class="politician-panel-photo" src="{esc(photo)}" alt="{esc(nombre)}" loading="lazy">' if photo else ''}
+    <section class="politician-panel{'' if photo else ' politician-panel--no-photo'}" aria-label="Resumen del representante">
+      {photo_html}
       <div class="politician-panel-body">
         <div class="politician-panel-header">
           <div>
             <h2>{esc(nombre)}</h2>
             {f'<div class="politician-panel-meta">{meta}</div>' if meta else ''}
           </div>
-          <div class="politician-panel-claims"><strong>{claim_count}</strong><span>afirmaci{'ón' if claim_count == 1 else 'ones'}</span></div>
+{count_badge}
         </div>
         {f'<div class="politician-panel-stats">{stats}</div>' if stats else '<p class="politician-panel-empty">Sin datos salariales disponibles.</p>'}
         {f'<p class="politician-panel-role">{esc(role)}</p>' if role else ''}
-        {f'<div class="politician-panel-links">{links}</div>' if links else ''}
       </div>
     </section>"""
 
@@ -1132,6 +1214,118 @@ def _verdict_counts(claims):
     return counts
 
 
+MONTHS_ES = [
+    "", "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+]
+
+
+def _format_session_date_es(raw):
+    if not raw:
+        return "Sesión desconocida"
+    try:
+        dt = datetime.fromisoformat(str(raw)[:10])
+        return f"{dt.day:02d} de {MONTHS_ES[dt.month]} de {dt.year}"
+    except ValueError:
+        return str(raw)
+
+
+def _render_politician_claim_card(claim_slug, claim):
+    v = claim.get("verification") or []
+    v = v[0] if isinstance(v, list) and v else (v if isinstance(v, dict) else {})
+    pol = claim.get("politician") or {}
+
+    resultado_class = resultado_to_class(v.get("resultado") if v else None)
+    resultado_label = format_resultado(v.get("resultado") if v else None)
+    score_raw = v.get("confidence_score") if v else None
+    try:
+        score = round(float(score_raw) * 100) if score_raw is not None else None
+    except (TypeError, ValueError):
+        score = None
+
+    tags = "".join(filter(None, [
+        f'<span class="tag tag-tematico">{esc(TEMATICO_LABELS.get(claim.get("ambito_tematico"), snake_to_label(claim.get("ambito_tematico"))))}</span>'
+        if claim.get("ambito_tematico") else "",
+        f'<span class="tag tag-geo">{esc(snake_to_label(claim.get("ambito_geografico")))}</span>'
+        if claim.get("ambito_geografico") else "",
+    ]))
+
+    pol_html = (
+        f'<span class="politician-name">{esc(format_nombre(pol.get("nombre_completo")))}'
+        f'{f'<span class="politician-partido">· {esc(pol.get("partido"))}</span>' if pol.get("partido") else ""}</span>'
+        if pol else '<span class="politician-name unknown">Político desconocido</span>'
+    )
+    confidence_html = (
+        f"""
+        <div class="confidence-bar" title="Confianza del modelo: {score}%">
+          <div class="confidence-track">
+            <div class="confidence-fill confidence-{resultado_class}" style="width:{score}%"></div>
+          </div>
+          <span class="confidence-label">{score}% confianza</span>
+        </div>"""
+        if score is not None else ""
+    )
+    claim_url = f"/claim/{claim_slug}.html"
+    return f"""
+    <article class="claim-card" data-resultado="{resultado_class}"{(' data-gobierno' if pol.get('grupo_parlamentario') == 'Cargo de Gobierno' else '')}>
+      <header class="claim-header">
+        <div class="claim-meta-top">
+          {pol_html}
+        </div>
+        <span class="resultado-badge resultado-{resultado_class}">{esc(resultado_label)}</span>
+      </header>
+
+      <blockquote class="claim-text" title="{esc(claim.get('texto_original'))}">
+        {esc(capitalize(claim.get('texto_normalizado')))}
+      </blockquote>
+
+      {confidence_html}
+
+      {f'<div class="claim-tags">{tags}</div>' if tags else ''}
+
+      <div class="claim-actions">
+        {f'<a class="claim-toggle" href="{claim_url}">Ver más →</a>' if v else ''}
+        <div class="share-wrapper">
+          <button class="share-btn" data-claim-id="{esc(claim.get('id'))}" aria-label="Compartir afirmación">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+          </button>
+          <div class="share-menu" hidden></div>
+        </div>
+      </div>
+    </article>"""
+
+
+def _render_politician_claim_groups(claims):
+    grouped = {}
+    ordered = []
+    for claim_slug, claim in claims:
+        session = claim.get("session") or {}
+        key = session.get("id") or claim.get("session_id") or "unknown"
+        if key not in grouped:
+            grouped[key] = {"session": session, "claims": []}
+            ordered.append(key)
+        grouped[key]["claims"].append((claim_slug, claim))
+
+    groups = []
+    for key in ordered:
+        group = grouped[key]
+        session = group["session"] or {}
+        fecha = _format_session_date_es(session.get("fecha"))
+        organ = f' · {esc(session.get("organo"))}' if session.get("organo") else ""
+        cards = "".join(_render_politician_claim_card(slug, claim) for slug, claim in group["claims"])
+        groups.append(f"""<section class="search-session-group">
+      <h3 class="search-session-header">
+        <span class="search-session-date">{esc(fecha)}</span>
+        <span class="search-session-organ">{organ}</span>
+      </h3>
+      <div class="search-claims-grid">{cards}</div>
+    </section>""")
+    return "".join(groups)
+
+
 def _write_politician_page(pol_slug, info):
     nombre  = info["nombre"]
     partido = info["partido"]
@@ -1143,6 +1337,7 @@ def _write_politician_page(pol_slug, info):
     counts = _verdict_counts(claims)
     total  = len(claims)
     falsos = counts.get("FALSO", 0)
+    pct_falsos = round((falsos / total) * 100) if total else 0
 
     title = f"{nombre} — Afirmaciones verificadas | Facthem"
     desc_who = f"{nombre} ({partido})" if partido else nombre
@@ -1156,7 +1351,7 @@ def _write_politician_page(pol_slug, info):
         desc = f"Afirmaciones de {desc_who} verificadas por Facthem."
 
     panel_html, photo_url, congress_url = render_politician_panel(
-        salary, nombre, partido, grupo, total
+        salary, nombre, partido, grupo, total, falsos, pct_falsos
     )
 
     person_ld = {
@@ -1180,55 +1375,7 @@ def _write_politician_page(pol_slug, info):
         og_image = f"{BASE_URL}/assets/portada_opt.png"
     og_image = esc(og_image)
 
-    # ── Stats bar ──
-    stats_items = []
-    for resultado, label in RESULTADO_LABELS.items():
-        n = counts.get(resultado, 0)
-        if n:
-            cls = RESULTADO_TO_CLASS.get(resultado, "nv")
-            stats_items.append(
-                f'<span class="resultado-badge resultado-{cls}" style="font-size:.7rem">'
-                f'{esc(label)}: {n}</span>'
-            )
-    stats_html = (
-        f'<div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1.5rem">'
-        f'{"".join(stats_items)}</div>'
-        if stats_items else ""
-    )
-
-    # ── Claim list ──
-    rows = []
-    for claim_slug, claim in claims:
-        v = claim.get("verification") or []
-        v = v[0] if isinstance(v, list) and v else (v if isinstance(v, dict) else {})
-        resultado    = normalize_resultado_key(v.get("resultado"))
-        res_class    = RESULTADO_TO_CLASS.get(resultado, "nv")
-        res_label    = RESULTADO_LABELS.get(resultado, resultado.lower().replace("_", " ").capitalize())
-        texto        = esc(capitalize(str(claim.get("texto_normalizado") or "").strip())[:160])
-        claim_url    = f"{BASE_URL}/claim/{claim_slug}.html"
-        rows.append(
-            f'  <article class="claim-card" data-resultado="{res_class}" style="margin-bottom:.75rem">\n'
-            f'    <header class="claim-header">\n'
-            f'      <span class="resultado-badge resultado-{res_class}">{esc(res_label)}</span>\n'
-            f'    </header>\n'
-            f'    <blockquote class="claim-text" style="margin:.5rem 0 .75rem">\n'
-            f'      <a href="{claim_url}" style="color:inherit;text-decoration:none">{texto}</a>\n'
-            f'    </blockquote>\n'
-            f'  </article>'
-        )
-    claims_html = "\n".join(rows)
-
-    # ── Subtitle ──
-    subtitle_parts = []
-    if partido:
-        subtitle_parts.append(esc(partido))
-    if grupo and grupo != partido:
-        subtitle_parts.append(esc(grupo))
-    subtitle_html = (
-        f'<p style="font-size:.82rem;color:var(--c-text-muted);margin:.25rem 0 2rem">'
-        f'{"&nbsp;·&nbsp;".join(subtitle_parts)}</p>'
-        if subtitle_parts else '<div style="margin-bottom:2rem"></div>'
-    )
+    claims_html = _render_politician_claim_groups(claims)
 
     page = f"""<!DOCTYPE html>
 <html lang="es">
@@ -1269,10 +1416,10 @@ def _write_politician_page(pol_slug, info):
   <script type="application/ld+json">{person_ld_json}</script>
   <style>
     .pol-page {{
-      max-width: 760px;
+      max-width: 1200px;
       margin: 0 auto;
       width: 100%;
-      padding: 3rem 1.25rem 5rem;
+      padding: 2rem 1.75rem 5rem;
     }}
     .pol-page h1 {{
       font-size: 1.5rem;
@@ -1283,14 +1430,6 @@ def _write_politician_page(pol_slug, info):
       -webkit-text-fill-color: transparent;
       background-clip: text;
       margin-bottom: .15rem;
-    }}
-    .pol-total {{
-      font-size: .72rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: .1em;
-      color: var(--c-text-muted);
-      margin-bottom: 1.25rem;
     }}
   </style>
 </head>
@@ -1306,10 +1445,6 @@ def _write_politician_page(pol_slug, info):
 
   <div class="pol-page">
     {panel_html}
-    <h1>{esc(nombre)}</h1>
-    {subtitle_html}
-    <p class="pol-total">{total} afirmaci{"ón" if total == 1 else "ones"} verificadas</p>
-    {stats_html}
 {claims_html}
   </div>
 

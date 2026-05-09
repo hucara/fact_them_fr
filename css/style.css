@@ -1616,29 +1616,6 @@ body {
   opacity: .55;
 }
 
-.politician-panel-claims {
-  flex-shrink: 0;
-  display: grid;
-  gap: .1rem;
-  min-width: 78px;
-  padding: .45rem .6rem;
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-sm);
-  text-align: center;
-  background: var(--c-surface-2);
-}
-
-.politician-panel-claims strong {
-  font-size: 1.15rem;
-  line-height: 1;
-  color: var(--c-accent);
-}
-
-.politician-panel-claims span {
-  font-size: .65rem;
-  color: var(--c-text-muted);
-}
-
 .politician-panel-stats {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -1708,22 +1685,6 @@ body {
   color: var(--c-text-muted);
 }
 
-.politician-panel-links {
-  display: flex;
-  gap: .75rem;
-  flex-wrap: wrap;
-  font-size: .74rem;
-}
-
-.politician-panel-links a {
-  color: var(--c-accent);
-  text-decoration: none;
-}
-
-.politician-panel-links a:hover {
-  text-decoration: underline;
-}
-
 .politician-panel-empty {
   font-size: .82rem;
   color: var(--c-text-muted);
@@ -1760,6 +1721,13 @@ body {
   display: inline-flex;
   align-items: center;
   gap: .5rem;
+}
+
+.politician-panel-count-badge {
+  flex-shrink: 0;
+  margin: 0 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .search-count-badge strong {
@@ -1832,12 +1800,10 @@ body {
     gap: .75rem;
   }
 
-  .politician-panel-claims {
-    min-width: 0;
+  .politician-panel-count-badge {
+    margin-left: 0;
     width: 100%;
-    grid-template-columns: auto 1fr;
-    align-items: baseline;
-    text-align: left;
+    justify-content: flex-start;
   }
 
   .politician-panel-stats {

@@ -71,6 +71,9 @@ let politicianAutocompleteReady = false;
 let activeSearchIndex = -1;
 let searchClaimsCache = {};
 let searchSalaryCache = {};
+let searchPhotoCache = {};
+let allSalaries = null;
+let allSalariesPromise = null;
 let currentSearchClaims = [];
 let currentSearchSalary = null;
 let currentSearchPolitician = null;
@@ -229,6 +232,7 @@ function applySearchFilters() {
   renderSearchResults(filtered, document.getElementById('politician-search-input').value, {
     politician: currentSearchPolitician,
     salary: currentSearchSalary,
+    photoOverride: searchPhotoCache[currentSearchPolitician?.id] ?? '',
   });
 }
 
@@ -244,6 +248,7 @@ function activateTab(tabId, pushToHistory = true) {
     t.classList.toggle('active', t.dataset.tab === tabId));
   document.querySelectorAll('.view-container').forEach(v =>
     v.classList.toggle('active', v.id === tabId));
+  updateHeaderStats();
   if (tabId === 'view-estadisticas' && !window.statsLoaded) loadGlobalDashboard();
   if (tabId === 'view-busqueda' && !searchLoaded) loadPoliticians();
   if (pushToHistory) {
@@ -804,9 +809,14 @@ function updateClaimsCount(shown, total) {
   const el = document.getElementById('claims-count');
   if (el) el.hidden = true;
 
+  updateHeaderStats(shown, total);
+}
+
+function updateHeaderStats(shown = allClaims.length, total = allClaims.length) {
   const statsEl = document.getElementById('header-stats');
   if (!statsEl || !headerStatsBase) return;
-  if (!total) { statsEl.innerHTML = headerStatsBase; return; }
+  const sessionsActive = document.getElementById('view-sesiones')?.classList.contains('active');
+  if (!sessionsActive || !total) { statsEl.innerHTML = headerStatsBase; return; }
 
   const pleno = shown === total
     ? `<strong>${total.toLocaleString('es-ES')}</strong> en este pleno`
@@ -2028,13 +2038,16 @@ async function selectPolitician(politicianId, politicianName, { updateUrl = true
 
   if (searchClaimsCache[politicianId]) {
     currentSearchClaims = searchClaimsCache[politicianId];
-    currentSearchSalary = await fetchPoliticianSalary(politicianId);
+    const salaryCached = await fetchPoliticianSalary(politicianId, currentSearchPolitician?.nombre_completo);
+    currentSearchSalary = salaryCached;
+    const photoOverride = await resolvePhotoOverride(politicianId, salaryCached, currentSearchPolitician, politicianName);
     resetSearchFilters();
     document.getElementById('search-filters').hidden = false;
     populateSearchFilters(currentSearchClaims);
     renderSearchResults(currentSearchClaims, politicianName, {
       politician: currentSearchPolitician,
       salary: currentSearchSalary,
+      photoOverride,
     });
     if (scrollToResults) scrollToPoliticianResults();
     return;
@@ -2054,7 +2067,7 @@ async function selectPolitician(politicianId, politicianName, { updateUrl = true
       .eq('politician_id', politicianId)
       .not('verification', 'is', null)
       .order('session_id', { ascending: false }),
-    fetchPoliticianSalary(politicianId),
+    fetchPoliticianSalary(politicianId, currentSearchPolitician?.nombre_completo),
   ]);
   const { data, error } = claimsResp;
 
@@ -2070,9 +2083,11 @@ async function selectPolitician(politicianId, politicianName, { updateUrl = true
   resetSearchFilters();
   document.getElementById('search-filters').hidden = false;
   populateSearchFilters(claims);
+  const photoOverride = await resolvePhotoOverride(politicianId, salary, currentSearchPolitician, politicianName);
   renderSearchResults(claims, politicianName, {
     politician: currentSearchPolitician,
     salary: currentSearchSalary,
+    photoOverride,
   });
   if (scrollToResults) scrollToPoliticianResults();
 }
@@ -2084,11 +2099,11 @@ function scrollToPoliticianResults() {
   });
 }
 
-async function fetchPoliticianSalary(politicianId) {
+async function fetchPoliticianSalary(politicianId, politicianDbName = '') {
   if (!politicianId) return null;
-  if (Object.hasOwn(searchSalaryCache, politicianId)) return searchSalaryCache[politicianId];
+  if (searchSalaryCache[politicianId]) return searchSalaryCache[politicianId];
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from(SALARY_TABLE)
     .select('*')
     .eq('politician_id', politicianId)
@@ -2096,13 +2111,149 @@ async function fetchPoliticianSalary(politicianId) {
 
   if (error) {
     console.warn('[salary] fetch failed', error.message);
-    searchSalaryCache[politicianId] = null;
-    return null;
   }
 
-  const row = data?.[0] ?? null;
-  searchSalaryCache[politicianId] = row;
+  let row = error ? null : (data?.[0] ?? null);
+  if (!row) {
+    row = await fetchSalaryRest({ politician_id: politicianId });
+  }
+
+  for (const name of salaryNameCandidates(politicianDbName)) {
+    if (row) break;
+    const { data: byNameData, error: byNameError } = await supabase
+      .from(SALARY_TABLE)
+      .select('*')
+      .eq('nombre_completo', name)
+      .limit(1);
+
+    if (byNameError) {
+      console.warn('[salary] name fallback failed', byNameError.message);
+    } else {
+      row = byNameData?.[0] ?? null;
+    }
+
+    if (!row) {
+      row = await fetchSalaryRest({ nombre_completo: name });
+    }
+  }
+
+  if (!row) {
+    row = await findSalaryFromTable(politicianId, politicianDbName);
+  }
+
+  if (row) searchSalaryCache[politicianId] = row;
+  if (row?.politician_id) searchSalaryCache[row.politician_id] = row;
   return row;
+}
+
+async function fetchSalaryRest(filters = {}) {
+  const urlBase = typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : window.SUPABASE_URL;
+  const anonKey = typeof SUPABASE_ANON !== 'undefined' ? SUPABASE_ANON : window.SUPABASE_ANON;
+  if (!urlBase || !anonKey) return null;
+
+  const url = new URL(`${urlBase}/rest/v1/${SALARY_TABLE}`);
+  url.searchParams.set('select', '*');
+  url.searchParams.set('limit', '1');
+  for (const [key, value] of Object.entries(filters)) {
+    if (value) url.searchParams.set(key, `eq.${value}`);
+  }
+
+  try {
+    const resp = await fetch(url.toString(), {
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${anonKey}`,
+      },
+    });
+    if (!resp.ok) {
+      console.warn('[salary] rest fallback failed', resp.status);
+      return null;
+    }
+    const rows = await resp.json();
+    return rows?.[0] ?? null;
+  } catch (err) {
+    console.warn('[salary] rest fallback failed', err.message);
+    return null;
+  }
+}
+
+async function loadSalaryTable() {
+  if (allSalaries) return allSalaries;
+  if (!allSalariesPromise) {
+    allSalariesPromise = fetchFirstJson(['assets/politician_salary.json', '/assets/politician_salary.json'])
+      .then(localRows => {
+        if (Array.isArray(localRows) && localRows.length) return localRows;
+        return supabase
+          .from(SALARY_TABLE)
+          .select('*')
+          .then(({ data, error }) => {
+            if (error) {
+              console.warn('[salary] table fallback failed', error.message);
+              return [];
+            }
+            return data || [];
+          });
+      });
+  }
+  allSalaries = await allSalariesPromise;
+  return allSalaries;
+}
+
+async function fetchFirstJson(paths) {
+  for (const path of paths) {
+    try {
+      const resp = await fetch(path);
+      if (resp.ok) return await resp.json();
+    } catch {
+      // Try the next local path.
+    }
+  }
+  return null;
+}
+
+async function findSalaryFromTable(politicianId, politicianDbName = '') {
+  const salaries = await loadSalaryTable();
+  const byId = salaries.find(row => String(row.politician_id) === String(politicianId));
+  if (byId) return byId;
+
+  const names = salaryNameCandidates(politicianDbName).map(normalizeSearchText);
+  const byExactName = salaries.find(row => names.includes(normalizeSearchText(row.nombre_completo)));
+  if (byExactName) return byExactName;
+
+  const tokens = salarySearchTokens(politicianDbName);
+  if (!tokens.length) return null;
+  return salaries.find(row => {
+    const normalized = normalizeSearchText(row.nombre_completo);
+    return tokens.every(token => normalized.includes(token));
+  }) || null;
+}
+
+function salaryNameCandidates(name) {
+  const raw = String(name || '').trim();
+  if (!raw) return [];
+  const candidates = [raw];
+  if (!raw.includes(',')) {
+    const parts = raw.split(/\s+/).filter(Boolean);
+    if (parts.length > 2) {
+      candidates.push(`${parts.slice(1).join(' ')}, ${parts[0]}`);
+      candidates.push(`${parts.slice(2).join(' ')}, ${parts.slice(0, 2).join(' ')}`);
+    }
+  }
+  return [...new Set(candidates)];
+}
+
+function normalizeSearchText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function salarySearchTokens(name) {
+  return normalizeSearchText(name)
+    .replace(/,/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
 }
 
 function salaryValue(row, keys, fallbackIndex = null) {
@@ -2123,7 +2274,33 @@ function formatEur(value, { compact = false } = {}) {
   }).format(n);
 }
 
-function salaryPhotoSrc(row) {
+function slugifyForPhoto(s) {
+  return String(s || '')
+    .replace(/ª/g, 'a')
+    .replace(/º/g, 'o')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/,/g, ' ')
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-');
+}
+
+function photoFilenameByConvention({ party, fullName, code }) {
+  if (!party || !fullName || !code) return '';
+  const partySlug = slugifyForPhoto(party);
+  const nameSlug = slugifyForPhoto(fullName);
+  return `${nameSlug}_${code}_${partySlug}.jpg`;
+}
+
+async function resolvePhotoOverride(politicianId, salary, politician, politicianName) {
+  if (politicianId && searchPhotoCache[politicianId]) return searchPhotoCache[politicianId];
+  const src = salaryPhotoSrc(salary, politician, politicianName);
+  if (politicianId) searchPhotoCache[politicianId] = src;
+  return src;
+}
+
+function salaryPhotoSrc(row, politician = null, politicianName = '') {
   const raw = salaryValue(row, [
     'photo_path',
     'local_photo_path',
@@ -2131,11 +2308,27 @@ function salaryPhotoSrc(row) {
     'asset_path',
     'photo_asset_path',
   ], 23);
-  if (!raw) return '';
-  const path = String(raw);
-  if (/^https?:\/\//i.test(path)) return path;
-  const file = path.split('/').filter(Boolean).pop();
+  let file = '';
+  if (raw) {
+    const path = String(raw);
+    if (/^https?:\/\//i.test(path)) return '';
+    file = legacyPhotoFilenameToSuffix(path.split('/').filter(Boolean).pop());
+  }
+  if (!file) {
+    file = photoFilenameByConvention({
+      party: salaryValue(row, ['party', 'partido'], 7) || politician?.partido || '',
+      fullName: salaryValue(row, ['full_name', 'nombre_completo', 'name', 'politician_name'], 5) || politician?.nombre_completo || politicianName || '',
+      code: salaryValue(row, ['cod_parlamentario', 'congress_code', 'code']),
+    });
+  }
   return file ? `/assets/photos/${encodeURIComponent(file)}` : '';
+}
+
+function legacyPhotoFilenameToSuffix(file) {
+  const match = String(file || '').match(/^([^_]+)_(.+)_([0-9]+)(\.[^.]+)$/);
+  if (!match) return file;
+  const [, party, name, code, ext] = match;
+  return `${name}_${code}_${party}${ext}`;
 }
 
 function salaryBreakdown(row) {
@@ -2159,7 +2352,7 @@ const GOVERNMENT_ROLE_LABELS = {
   secretario_estado: 'Secretario/a de Estado',
 };
 
-function renderPoliticianPanel({ politician, politicianName, salary, claims }) {
+function renderPoliticianPanel({ politician, politicianName, salary, claims, photoOverride = '' }) {
   if (!politician && !salary) return '';
 
   const displayName = formatNombre(
@@ -2171,19 +2364,17 @@ function renderPoliticianPanel({ politician, politicianName, salary, claims }) {
   const group = salaryValue(salary, ['parliamentary_group', 'grupo_parlamentario', 'group'], 6)
     || politician?.grupo_parlamentario
     || '';
-  const province = salaryValue(salary, ['province', 'provincia', 'district'], 8);
-  const photoSrc = salaryPhotoSrc(salary);
+  const province = salaryValue(salary, ['province', 'provincia', 'district', 'circunscripcion'], 8);
+  const photoSrc = photoOverride || salaryPhotoSrc(salary);
   const base = formatEur(salaryValue(salary, ['base_monthly_eur', 'base_mensual_eur', 'base_monthly']));
   const indemnity = formatEur(salaryValue(salary, ['indemnizacion_monthly_eur', 'indemnity_monthly_eur', 'indemnizacion_mensual_eur']));
   const complements = formatEur(salaryValue(salary, ['complements_monthly_eur', 'complement_monthly_eur', 'complementos_mensuales_eur']));
   const monthly = formatEur(salaryValue(salary, ['total_monthly_eur', 'monthly_total_eur', 'salary_monthly_total_eur', 'monthly_with_indemnity_eur']));
   const annual = formatEur(salaryValue(salary, ['total_annual_eur', 'annual_total_eur', 'salary_annual_total_eur']), { compact: true });
-  const sourceUrl = salaryValue(salary, ['source_url', 'profile_url', 'congress_url']);
-  const salarySourceUrl = salaryValue(salary, ['salary_source_url', 'source_salary_url']);
   const role = salaryRoleLabel(salary);
   const govRoleRaw = salaryValue(salary, ['government_role']);
   const govRoleLabel = govRoleRaw ? (GOVERNMENT_ROLE_LABELS[govRoleRaw] ?? snakeToLabel(govRoleRaw)) : '';
-  const govSourceUrl = salaryBreakdown(salary)?.government?.source_url || '';
+  const provinceMeta = normalizeSearchText(province) === normalizeSearchText(group) ? '' : province;
 
   const stats = [
     monthly ? `<div class="politician-panel-stat politician-panel-stat--primary"><span>Mensual total</span><strong>${monthly}</strong></div>` : '',
@@ -2193,40 +2384,53 @@ function renderPoliticianPanel({ politician, politicianName, salary, claims }) {
     complements ? `<div class="politician-panel-stat"><span>Complementos</span><strong>${complements}</strong></div>` : '',
   ].filter(Boolean).join('');
 
-  const meta = [
-    party ? `<span>${escHtml(party)}</span>` : '',
-    province ? `<span>${escHtml(province)}</span>` : '',
-    group ? `<span>${escHtml(group)}</span>` : '',
-    govRoleLabel ? `<span class="politician-panel-meta-gov">${escHtml(govRoleLabel)}</span>` : '',
-  ].filter(Boolean).join('');
+  const metaItems = [];
+  const seenMeta = new Set();
+  [
+    [party, ''],
+    [provinceMeta, ''],
+    [group, ''],
+    [govRoleLabel, 'politician-panel-meta-gov'],
+  ].forEach(([label, className]) => {
+    const clean = String(label || '').trim();
+    const key = normalizeSearchText(clean);
+    if (!clean || seenMeta.has(key)) return;
+    seenMeta.add(key);
+    metaItems.push(`<span${className ? ` class="${className}"` : ''}>${escHtml(clean)}</span>`);
+  });
+  const meta = metaItems.join('');
 
-  const links = [
-    sourceUrl ? `<a href="${escHtml(sourceUrl)}" target="_blank" rel="noopener">Ficha del Congreso</a>` : '',
-    salarySourceUrl ? `<a href="${escHtml(salarySourceUrl)}" target="_blank" rel="noopener">Régimen económico</a>` : '',
-    govSourceUrl ? `<a href="${escHtml(govSourceUrl)}" target="_blank" rel="noopener">Retribuciones AGE</a>` : '',
-  ].filter(Boolean).join('');
+  const total = claims.length;
+  const falsos = claims.filter(c => c.verification?.[0]?.resultado === 'FALSO').length;
+  const pct = total > 0 ? Math.round((falsos / total) * 100) : 0;
+  const countBadge = `<div class="search-count-badge politician-panel-count-badge">
+    <span><strong>${total}</strong> afirmaci${total === 1 ? 'ón' : 'ones'}</span>
+    <span class="badge-sep">·</span>
+    <span><strong>${falsos}</strong> falsa${falsos === 1 ? '' : 's'}</span>
+    <span class="badge-sep">·</span>
+    <span><strong>${pct}%</strong> falsas</span>
+  </div>`;
 
   return `
     <section class="politician-panel${photoSrc ? '' : ' politician-panel--no-photo'}" aria-label="Resumen del representante">
-      ${photoSrc ? `<img class="politician-panel-photo" src="${photoSrc}" alt="${escHtml(displayName)}" loading="lazy">` : ''}
+      ${photoSrc ? `<img class="politician-panel-photo" src="${photoSrc}" alt="${escHtml(displayName)}" loading="lazy" onerror="this.closest('.politician-panel')?.classList.add('politician-panel--no-photo');this.remove()">` : ''}
       <div class="politician-panel-body">
         <div class="politician-panel-header">
           <div>
             <h2>${escHtml(displayName)}</h2>
             ${meta ? `<div class="politician-panel-meta">${meta}</div>` : ''}
           </div>
-          <div class="politician-panel-claims"><strong>${claims.length}</strong><span>afirmaci${claims.length === 1 ? 'ón' : 'ones'}</span></div>
+          ${countBadge}
         </div>
         ${stats ? `<div class="politician-panel-stats">${stats}</div>` : '<p class="politician-panel-empty">Sin datos salariales disponibles.</p>'}
         ${role ? `<p class="politician-panel-role">${escHtml(role)}</p>` : ''}
-        ${links ? `<div class="politician-panel-links">${links}</div>` : ''}
       </div>
     </section>`;
 }
 
-function renderSearchResults(claims, politicianName, { politician = null, salary = null } = {}) {
+function renderSearchResults(claims, politicianName, { politician = null, salary = null, photoOverride = '' } = {}) {
   const area = document.getElementById('search-results-area');
-  const panel = renderPoliticianPanel({ politician, politicianName, salary, claims });
+  const panel = renderPoliticianPanel({ politician, politicianName, salary, claims, photoOverride });
 
   if (!claims.length) {
     area.innerHTML = `${panel}<p class="empty">No se encontraron afirmaciones verificadas para <strong>${escHtml(politicianName)}</strong>.</p>`;
@@ -2239,17 +2443,6 @@ function renderSearchResults(claims, politicianName, { politician = null, salary
     if (!grouped.has(key)) grouped.set(key, { session: claim.session, claims: [] });
     grouped.get(key).claims.push(claim);
   }
-
-  const total = claims.length;
-  const falsos = claims.filter(c => c.verification?.[0]?.resultado === 'FALSO').length;
-  const pct = total > 0 ? Math.round((falsos / total) * 100) : 0;
-  const countBadge = `<div class="search-count-badge">
-    <span><strong>${total}</strong> afirmaci${total === 1 ? 'ón' : 'ones'}</span>
-    <span class="badge-sep">·</span>
-    <span><strong>${falsos}</strong> falsa${falsos === 1 ? '' : 's'}</span>
-    <span class="badge-sep">·</span>
-    <span><strong>${pct}%</strong> falsas</span>
-  </div>`;
 
   const groupsHtml = [...grouped.values()].map(({ session, claims: sessionClaims }) => {
     const fecha = session?.fecha
@@ -2265,5 +2458,5 @@ function renderSearchResults(claims, politicianName, { politician = null, salary
     </section>`;
   }).join('');
 
-  area.innerHTML = panel + countBadge + groupsHtml;
+  area.innerHTML = panel + groupsHtml;
 }
