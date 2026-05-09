@@ -1250,11 +1250,17 @@ def _render_politician_claim_card(claim_slug, claim):
         if claim.get("ambito_geografico") else "",
     ]))
 
-    pol_html = (
-        f'<span class="politician-name">{esc(format_nombre(pol.get("nombre_completo")))}'
-        f'{f'<span class="politician-partido">· {esc(pol.get("partido"))}</span>' if pol.get("partido") else ""}</span>'
-        if pol else '<span class="politician-name unknown">Político desconocido</span>'
-    )
+    if pol:
+        partido_html = (
+            f'<span class="politician-partido">· {esc(pol.get("partido"))}</span>'
+            if pol.get("partido") else ""
+        )
+        pol_html = (
+            f'<span class="politician-name">{esc(format_nombre(pol.get("nombre_completo")))}'
+            f'{partido_html}</span>'
+        )
+    else:
+        pol_html = '<span class="politician-name unknown">Político desconocido</span>'
     confidence_html = (
         f"""
         <div class="confidence-bar" title="Confianza del modelo: {score}%">
