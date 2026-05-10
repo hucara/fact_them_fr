@@ -51,6 +51,8 @@ POL_OUT_DIR   = Path(__file__).parent / "politician"
 SITEMAP_PATH  = Path(__file__).parent / "sitemap.xml"
 SALARY_DATA_PATH = Path(__file__).parent / "assets" / "salary-data.js"
 TODAY         = date.today().isoformat()
+CLAIMS_PAGE_SIZE = max(1, int(os.environ.get("CLAIMS_PAGE_SIZE", "100")))
+CLAIMS_MIN_PAGE_SIZE = max(1, int(os.environ.get("CLAIMS_MIN_PAGE_SIZE", "25")))
 
 # ── Label maps (mirror app.js) ────────────────────────────────────────────────
 TEMATICO_LABELS = {
@@ -761,19 +763,29 @@ def fetch_all_claims(supabase):
     """Paginate through all claims. Keep going until an empty batch."""
     total = supabase.from_("claim").select("id", count="exact", head=True).execute().count
     print(f"  DB reporta {total} afirmaciones en la tabla claim")
-    all_claims, page_size, offset = [], 1000, 0
+    all_claims, page_size, offset = [], CLAIMS_PAGE_SIZE, 0
     while True:
-        resp = (
-            supabase.from_("claim")
-            .select(SELECT_FIELDS)
-            .order("id")
-            .range(offset, offset + page_size - 1)
-            .execute()
-        )
+        try:
+            resp = (
+                supabase.from_("claim")
+                .select(SELECT_FIELDS)
+                .order("id")
+                .range(offset, offset + page_size - 1)
+                .execute()
+            )
+        except Exception as exc:
+            if getattr(exc, "code", None) != "57014" and "57014" not in str(exc):
+                raise
+            if page_size <= CLAIMS_MIN_PAGE_SIZE:
+                raise
+            page_size = max(CLAIMS_MIN_PAGE_SIZE, page_size // 2)
+            print(f"  timeout leyendo claims; reintentando con páginas de {page_size}")
+            continue
         batch = resp.data or []
         all_claims.extend(batch)
         if not batch:
             break
+        print(f"  {len(all_claims)} afirmaciones leídas…")
         offset += len(batch)
     return all_claims
 

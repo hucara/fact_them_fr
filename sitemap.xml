@@ -295,7 +295,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://facthem.es/politician/carlos-gil-santiago-no-determinado.html</loc>
+    <loc>https://facthem.es/politician/carlos-gil-santiago-pp.html</loc>
     <lastmod>2026-05-10T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -361,6 +361,18 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://facthem.es/politician/celso-luis-delgado-arce-pp.html</loc>
+    <lastmod>2026-05-10T00:00:00+00:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/politician/cesar-joaquin-ramos-esteban-psoe.html</loc>
+    <lastmod>2026-05-10T00:00:00+00:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/politician/cesar-sanchez-perez-pp.html</loc>
     <lastmod>2026-05-10T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
@@ -374,6 +386,12 @@
   </url>
   <url>
     <loc>https://facthem.es/politician/cristina-aguera-gago-pp.html</loc>
+    <lastmod>2026-05-10T00:00:00+00:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/politician/cristina-narbona-ruiz-psoe.html</loc>
     <lastmod>2026-05-10T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -733,6 +751,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://facthem.es/politician/joaquin-robles-lopez-vox.html</loc>
+    <lastmod>2026-05-10T00:00:00+00:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/politician/jon-inarritu-garcia-eh-bildu.html</loc>
     <lastmod>2026-05-10T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
@@ -757,7 +781,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://facthem.es/politician/jorge-pueyo-sanz-chunta-aragonesista.html</loc>
+    <loc>https://facthem.es/politician/jorge-pueyo-sanz-sumar.html</loc>
     <lastmod>2026-05-10T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -1513,6 +1537,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://facthem.es/politician/silvia-franco-gonzalez-pp.html</loc>
+    <lastmod>2026-05-10T00:00:00+00:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/politician/sira-abed-rego-sumar.html</loc>
     <lastmod>2026-05-10T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
@@ -1945,6 +1975,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/actualmente-existe-una-diferencia-del-60-entre-los-2a955384.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/actualmente-hay-126-examinadores-en-cataluna-9af53fac.html</loc>
     <lastmod>2025-10-08T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -2031,6 +2067,12 @@
   <url>
     <loc>https://facthem.es/claim/al-ministro-montoro-le-han-imputado-siete-delitos-684f33b2.html</loc>
     <lastmod>2025-11-19T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/alemania-ha-modificado-su-constitucion-sesenta-veces-para-c9ae364e.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -2211,6 +2253,12 @@
   <url>
     <loc>https://facthem.es/claim/aproximadamente-el-40-de-la-energia-total-anual-3e2c6ceb.html</loc>
     <lastmod>2026-03-26T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/aproximadamente-el-44-de-las-mujeres-espanolas-que-dba5d56f.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -3015,6 +3063,12 @@
   <url>
     <loc>https://facthem.es/claim/desde-el-22-de-marzo-decenas-de-miles-ecfdc561.html</loc>
     <lastmod>2026-04-28T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/desde-el-22-de-marzo-numerosos-autonomos-y-b60d1e17.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -3859,6 +3913,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/el-31-de-mayo-de-2026-se-cumplen-a1402f43.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/el-32-de-los-votantes-del-partido-popular-41a968ae.html</loc>
     <lastmod>2026-04-28T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -4093,6 +4153,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/el-50-de-la-recaudacion-publica-es-consecuencia-5fbf2cf9.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/el-50-de-la-red-ferroviaria-espanola-necesita-fa9012a5.html</loc>
     <lastmod>2026-02-17T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -4203,6 +4269,12 @@
   <url>
     <loc>https://facthem.es/claim/el-60-de-las-viviendas-en-alquiler-en-ad55b876.html</loc>
     <lastmod>2026-04-28T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/el-60-de-los-espanoles-considera-que-no-7c8e684a.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -4489,6 +4561,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/el-86-de-las-empresas-de-transporte-por-00c309b4.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/el-86-de-los-trenes-circulan-en-hora-b4813631.html</loc>
     <lastmod>2025-10-07T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -4573,6 +4651,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/el-95-del-transporte-interior-de-mercancias-en-25aabfea.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/el-97-de-las-empresas-espanolas-tienen-menos-7ec2add3.html</loc>
     <lastmod>2025-12-10T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -4581,6 +4665,12 @@
   <url>
     <loc>https://facthem.es/claim/el-97-de-las-profesionales-de-la-educacion-d99232f7.html</loc>
     <lastmod>2026-04-29T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/el-99-de-los-abortos-practicados-en-castilla-la-16dca32c.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -5335,6 +5425,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/el-combustible-representa-aproximadamente-el-40-de-los-f3fd5cc7.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/el-comercio-entre-espana-y-marruecos-asciende-a-662cf1c5.html</loc>
     <lastmod>2025-12-10T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -5553,6 +5649,18 @@
   <url>
     <loc>https://facthem.es/claim/el-corredor-atlantico-ha-estimado-el-coste-de-81bd97f4.html</loc>
     <lastmod>2025-11-12T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/el-corredor-ferroviario-central-transporta-la-mitad-de-17944fd9.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/el-corredor-mediterraneo-es-el-que-transporta-mas-c417afc4.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -5977,6 +6085,18 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/el-dictamen-del-consejo-de-estado-sobre-la-5aec2bb5.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/el-dictamen-del-consejo-de-estado-sobre-la-b8f43e9f.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/el-diputado-carazo-pregunto-al-ministro-marlaska-por-ecb2b3e0.html</loc>
     <lastmod>2026-03-25T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -6187,6 +6307,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/el-estrecho-de-ormuz-concentra-entre-el-20-4a783271.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/el-exdirector-gerente-del-fondo-monetario-internacional-rodrigo-b7fb0d8c.html</loc>
     <lastmod>2025-11-26T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -6283,8 +6409,20 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/el-gas-condiciona-actualmente-el-precio-de-la-17fc5792.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/el-gas-natural-determinaba-el-precio-marginal-de-86ceedf2.html</loc>
     <lastmod>2026-03-26T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/el-gasoleo-representa-entre-el-30-y-el-de49f81e.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -6723,6 +6861,12 @@
   <url>
     <loc>https://facthem.es/claim/el-gobierno-de-espana-defiende-en-los-foros-67fc7be1.html</loc>
     <lastmod>2026-02-11T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/el-gobierno-de-espana-desatiende-el-cumplimiento-de-e00c4c16.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -7257,6 +7401,12 @@
   <url>
     <loc>https://facthem.es/claim/el-gobierno-del-partido-popular-sometio-a-los-d7a47200.html</loc>
     <lastmod>2026-04-15T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/el-gobierno-desatiende-e-incumple-las-sentencias-del-7346f0c9.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -8209,6 +8359,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/el-grupo-parlamentario-popular-voto-en-contra-de-fce3c76e.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/el-grupo-parlamentario-vasco-padecio-en-2024-un-99a0da12.html</loc>
     <lastmod>2026-03-26T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -8451,6 +8607,12 @@
   <url>
     <loc>https://facthem.es/claim/el-iprem-indicador-publico-de-renta-de-efectos-757b4ea9.html</loc>
     <lastmod>2026-04-21T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/el-iprem-indicador-publico-de-renta-de-efectos-818c66f3.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -9385,6 +9547,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/el-partido-popular-recurrio-la-reforma-de-febrero-2ee228ad.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/el-partido-popular-redujo-la-inversion-en-trenes-0482974a.html</loc>
     <lastmod>2026-02-11T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -9907,6 +10075,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/el-precio-de-la-vivienda-en-espana-ha-18117adc.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/el-precio-de-la-vivienda-es-un-292-0f7f5e5a.html</loc>
     <lastmod>2026-03-26T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -10051,8 +10225,20 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/el-precio-del-combustible-para-transporte-ha-registrado-5bb2bfb7.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/el-precio-del-diesel-para-transportistas-es-un-72692cae.html</loc>
     <lastmod>2026-03-25T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/el-precio-del-gasoleo-ha-subido-mas-de-2fc89870.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -10369,6 +10555,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/el-procedimiento-de-reforma-constitucional-del-articulo-168-ecad9bd6.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/el-proces-independentista-catalan-comenzo-el-1-de-747db352.html</loc>
     <lastmod>2026-02-11T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -10413,6 +10605,12 @@
   <url>
     <loc>https://facthem.es/claim/el-proyecto-de-condonacion-de-la-deuda-aprobado-1dba8202.html</loc>
     <lastmod>2025-12-10T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/el-proyecto-de-desdoblamiento-de-la-linea-ferroviaria-24678838.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -10501,6 +10699,18 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/el-real-decreto-72026-anuncio-una-ayuda-de-dc1ce4f1.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/el-real-decreto-72026-suspendio-la-devolucion-del-b0387ff1.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/el-real-decreto-82026-establece-la-prohibicion-de-23db5da1.html</loc>
     <lastmod>2026-03-24T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -10509,6 +10719,18 @@
   <url>
     <loc>https://facthem.es/claim/el-real-decreto-82026-podria-tener-una-vigencia-3d370852.html</loc>
     <lastmod>2026-03-24T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/el-real-decreto-92026-articula-un-credito-de-9311647d.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/el-real-decreto-92026-introduce-una-revision-automatica-3ad39c65.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -10585,8 +10807,32 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/el-real-decreto-ley-72026-establecio-una-ayuda-1739152c.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/el-real-decreto-ley-72026-fue-aprobado-el-cbff66d2.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/el-real-decreto-ley-72026-ha-reactivado-la-3d884de6.html</loc>
     <lastmod>2026-03-24T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/el-real-decreto-ley-92026-contiene-cuatro-articulos-a3046f92.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/el-real-decreto-ley-92026-fue-aprobado-el-0189043f.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -10951,6 +11197,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/el-sector-del-transporte-depende-de-los-combustibles-30db9b48.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/el-sector-del-transporte-representa-el-31-de-e0b37448.html</loc>
     <lastmod>2025-10-08T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -11311,8 +11563,26 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/el-transporte-de-mercancias-por-carretera-representa-el-27757569.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/el-transporte-de-mercancias-por-ferrocarril-representa-actualmente-4fcaeb85.html</loc>
     <lastmod>2026-03-18T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/el-transporte-ferroviario-de-mercancias-representa-actualmente-el-6f764ce2.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/el-transporte-ferroviario-ha-perdido-cuota-de-mercado-fc9e9843.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -11347,8 +11617,26 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/el-tribunal-constitucional-ha-avalado-la-ley-organica-8191d288.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/el-tribunal-constitucional-ha-dictado-cuatro-sentencias-confirmando-9feeed8c.html</loc>
     <lastmod>2026-04-28T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/el-tribunal-constitucional-ha-elevado-el-derecho-al-daf92f30.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/el-tribunal-constitucional-ha-establecido-que-el-derecho-6102fffb.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -11359,8 +11647,20 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/el-tribunal-constitucional-reconocio-la-dimension-de-libertad-98918e0f.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/el-tribunal-constitucional-suspendio-el-tramite-legislativo-de-30c39e3f.html</loc>
     <lastmod>2026-03-26T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/el-tribunal-constitucional-tardo-trece-anos-en-dictar-a5843e39.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -11475,6 +11775,12 @@
   <url>
     <loc>https://facthem.es/claim/el-ultimo-atentado-de-eta-fue-en-2009-b8cdf458.html</loc>
     <lastmod>2026-03-17T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/el-ultimo-barometro-del-cis-no-incluia-la-ffeed84a.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -11767,6 +12073,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/en-2019-se-denunciaron-1400-casos-de-violacion-f1c76c39.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/en-2019-se-licitaron-395-millones-de-euros-1299e905.html</loc>
     <lastmod>2025-11-12T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -11893,6 +12205,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/en-2024-casi-el-80-de-las-interrupciones-0b20158d.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/en-2024-el-gobierno-ejecuto-solo-el-32-08a79067.html</loc>
     <lastmod>2025-11-11T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -11901,6 +12219,36 @@
   <url>
     <loc>https://facthem.es/claim/en-2024-el-nucleo-de-valencia-ejecuto-el-1edf7eca.html</loc>
     <lastmod>2026-02-25T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/en-2024-en-andalucia-se-practico-el-02-f1b8972f.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/en-2024-en-cataluna-se-practico-el-55-6e170ca9.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/en-2024-en-la-comunidad-de-madrid-se-04f83cbd.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/en-2024-en-las-comunidades-autonomas-de-cantabria-c6869a99.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/en-2024-en-once-comunidades-autonomas-y-en-c681929e.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -12129,6 +12477,12 @@
   <url>
     <loc>https://facthem.es/claim/en-alicante-existen-50000-ninos-y-ninas-que-c5e1e200.html</loc>
     <lastmod>2026-02-17T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/en-andalucia-de-casi-20000-interrupciones-voluntarias-del-959e04a7.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -12567,6 +12921,12 @@
   <url>
     <loc>https://facthem.es/claim/en-el-pais-vasco-con-un-14-de-d353720a.html</loc>
     <lastmod>2026-03-25T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/en-el-pais-vasco-existen-unas-8000-empresas-78160aa1.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -13105,6 +13465,18 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/en-la-comision-de-igualdad-esquerra-bildu-y-ed8411ce.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/en-la-comunidad-de-madrid-el-porcentaje-de-64b58e81.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/en-la-comunidad-de-madrid-el-tiempo-de-5f0c15d4.html</loc>
     <lastmod>2025-10-14T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -13615,6 +13987,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/en-seis-anos-de-gobiernos-de-coalicion-progresista-528f0ee1.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/en-septiembre-de-2025-la-comision-de-investigacion-76bfcf29.html</loc>
     <lastmod>2026-02-11T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -13959,6 +14337,12 @@
   <url>
     <loc>https://facthem.es/claim/espana-cuenta-con-22-millones-de-afiliados-a-b859a933.html</loc>
     <lastmod>2026-04-22T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/espana-cuenta-con-22-millones-de-afiliados-a-ee4acd73.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -14797,6 +15181,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/espana-ocupa-el-puesto-27-en-el-ranking-7166dc2b.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/espana-ocupa-la-cuarta-posicion-como-exportador-agroalimentario-0e539a78.html</loc>
     <lastmod>2026-02-17T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -15367,6 +15757,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/existen-25-millones-de-trabajadores-pobres-en-espana-322e6aee.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/existen-2634-viviendas-okupadas-que-son-propiedad-de-599e48be.html</loc>
     <lastmod>2025-10-15T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -15505,6 +15901,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/existen-casi-cien-mil-empresas-de-transporte-por-c80af534.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/existen-casi-un-millon-de-personas-precarias-y-3b47ef14.html</loc>
     <lastmod>2025-10-21T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -15555,6 +15957,12 @@
   <url>
     <loc>https://facthem.es/claim/existen-diecisiete-modelos-distintos-de-gestion-sanitaria-uno-cad26228.html</loc>
     <lastmod>2025-10-28T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/existen-empresas-cargadoras-en-el-sector-del-transporte-7960fcb2.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -15825,6 +16233,12 @@
   <url>
     <loc>https://facthem.es/claim/fueron-robados-1000-relojes-en-las-calles-de-3be3e953.html</loc>
     <lastmod>2026-03-26T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/fui-convocado-en-el-senado-la-misma-tarde-9edfda9a.html</loc>
+    <lastmod>2026-04-22T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -16567,6 +16981,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/he-dedicado-doce-horas-a-dar-explicaciones-en-8ec47b70.html</loc>
+    <lastmod>2026-04-22T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/historicamente-el-85-de-los-trabajadores-autonomos-ha-569d2f2c.html</loc>
     <lastmod>2025-12-10T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -16671,6 +17091,12 @@
   <url>
     <loc>https://facthem.es/claim/iran-tiene-mas-soldados-regulares-que-alemania-francia-c3645e3f.html</loc>
     <lastmod>2026-03-25T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/israel-ha-detenido-mas-de-veinte-embarcaciones-pertenecientes-a2523ffd.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -17029,6 +17455,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/la-brecha-salarial-de-genero-es-persistente-en-b983d89c.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/la-cabana-ganadera-espanola-ha-perdido-tres-millones-ecd78557.html</loc>
     <lastmod>2025-11-18T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -17113,6 +17545,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/la-cesta-de-la-compra-ha-aumentado-un-15f96a27.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/la-cesta-de-la-compra-se-ha-incrementado-4e0d807e.html</loc>
     <lastmod>2025-11-12T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -17193,6 +17631,12 @@
   <url>
     <loc>https://facthem.es/claim/la-comision-de-valoracion-del-real-decreto-ley-826d5985.html</loc>
     <lastmod>2026-03-26T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/la-comision-de-venecia-emitio-un-aval-favorable-da7c2b81.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -17349,6 +17793,18 @@
   <url>
     <loc>https://facthem.es/claim/la-constitucion-espanola-entro-en-vigor-el-29-6281c928.html</loc>
     <lastmod>2026-03-26T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/la-constitucion-espanola-ha-sido-modificada-solo-tres-301f1a42.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/la-constitucion-francesa-no-recoge-el-aborto-como-45ac10db.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -17563,6 +18019,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/la-dependencia-energetica-total-de-espana-respecto-al-c4f2d220.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/la-derecha-ha-recurrido-todas-y-cada-una-5685533e.html</loc>
     <lastmod>2026-02-18T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -17595,6 +18057,12 @@
   <url>
     <loc>https://facthem.es/claim/la-desigualdad-se-ha-reducido-en-espana-segun-27d95c67.html</loc>
     <lastmod>2026-04-29T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/la-despenalizacion-de-determinados-supuestos-de-interrupcion-voluntaria-06f1628e.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -17947,6 +18415,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/la-ejecucion-de-las-inversiones-ferroviarias-de-adif-7eb83866.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/la-ejecucion-de-los-fondos-europeos-por-el-6c98bcd9.html</loc>
     <lastmod>2026-02-11T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -17955,6 +18429,12 @@
   <url>
     <loc>https://facthem.es/claim/la-ejecucion-del-presupuesto-propio-del-ministerio-de-fc316b5a.html</loc>
     <lastmod>2026-02-11T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/la-ejecucion-media-de-las-inversiones-de-adif-b1578535.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -18063,6 +18543,12 @@
   <url>
     <loc>https://facthem.es/claim/la-excepcion-iberica-energetica-ha-ahorrado-5000-millones-6d720fdc.html</loc>
     <lastmod>2025-11-27T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/la-excepcion-iberica-ha-permitido-que-los-espanoles-2e980957.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -18595,6 +19081,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/la-interrupcion-voluntaria-del-embarazo-esta-garantizada-en-d4d31089.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/la-inversion-actual-en-conservacion-de-carreteras-1800-fe8f48ad.html</loc>
     <lastmod>2026-04-22T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -18889,6 +19381,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/la-jurisprudencia-del-tribunal-constitucional-situa-el-derecho-221ae45c.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/la-ley-22015-es-la-norma-vigente-de-2f2e18af.html</loc>
     <lastmod>2026-03-26T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -19033,6 +19531,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/la-ley-garantiza-que-se-pueda-abortar-farmacologica-868101b4.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/la-ley-general-de-sanidad-que-establece-la-d5132bd9.html</loc>
     <lastmod>2026-03-18T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -19053,6 +19557,12 @@
   <url>
     <loc>https://facthem.es/claim/la-ley-organica-de-proteccion-juridica-del-menor-8e8d3729.html</loc>
     <lastmod>2026-04-28T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/la-ley-organica-de-salud-sexual-y-reproductiva-8c716547.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -19855,6 +20365,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/la-presidenta-de-la-comision-europea-ursula-von-f91db52f.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/la-presidenta-del-congreso-tiene-bloqueadas-en-el-a12a0a3d.html</loc>
     <lastmod>2025-10-21T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -20413,6 +20929,18 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/la-reforma-de-2023-de-la-ley-organica-4288e044.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/la-reforma-de-2023-elimino-los-plazos-de-b190ce3d.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/la-reforma-de-la-ley-de-dependencia-incluye-7fdc68f7.html</loc>
     <lastmod>2025-12-10T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -20421,6 +20949,18 @@
   <url>
     <loc>https://facthem.es/claim/la-reforma-de-la-ley-sobre-trafico-implica-d6e42794.html</loc>
     <lastmod>2026-03-18T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/la-reforma-del-articulo-43-de-la-constitucion-7343090e.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/la-reforma-del-articulo-43-de-la-constitucion-d24fe6c9.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -20457,6 +20997,12 @@
   <url>
     <loc>https://facthem.es/claim/la-reforma-laboral-ha-reducido-los-contratos-basura-b9aa97e6.html</loc>
     <lastmod>2026-02-17T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/la-reforma-propuesta-situa-el-derecho-al-aborto-b9e7a64c.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -20707,6 +21253,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/la-sentencia-del-tribunal-constitucional-que-garantiza-el-8c4676e8.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/la-sentencia-del-tribunal-europeo-de-derechos-humanos-dec17bec.html</loc>
     <lastmod>2026-04-14T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -20787,6 +21339,12 @@
   <url>
     <loc>https://facthem.es/claim/la-supresion-de-paradas-ferroviarias-afectaba-a-veintitres-e0499568.html</loc>
     <lastmod>2025-10-08T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/la-suspension-de-la-devolucion-del-gasoleo-profesional-9ae07b9b.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -21291,6 +21849,12 @@
   <url>
     <loc>https://facthem.es/claim/la-ultima-campana-de-cereales-ha-sido-una-219c0f19.html</loc>
     <lastmod>2026-03-24T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/la-ultima-crisis-del-servicio-de-rodalies-en-dfa003dc.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -23533,6 +24097,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/los-principios-rectores-de-la-politica-social-y-3c5458e8.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/los-productos-sin-gluten-cuestan-entre-tres-y-cbb8ce23.html</loc>
     <lastmod>2025-10-21T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -23775,6 +24345,12 @@
   <url>
     <loc>https://facthem.es/claim/los-tres-jovenes-del-caso-almeria-fueron-detenidos-e63a099d.html</loc>
     <lastmod>2026-03-26T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/los-tribunales-establecen-que-un-derecho-incluido-en-b6a0fd06.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -24153,6 +24729,12 @@
   <url>
     <loc>https://facthem.es/claim/mas-de-la-mitad-del-electorado-afirma-que-00513dd1.html</loc>
     <lastmod>2026-04-28T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/mas-de-siete-mil-ancianos-murieron-encerrados-en-7d5d350a.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -24591,18 +25173,6 @@
   <url>
     <loc>https://facthem.es/claim/ortega-smith-afirmo-que-vox-dejo-el-grupo-9b4b1988.html</loc>
     <lastmod>2026-04-15T00:00:00+00:00</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://facthem.es/claim/oscar-puente-fue-convocado-en-el-senado-la-9edfda9a.html</loc>
-    <lastmod>2026-04-22T00:00:00+00:00</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://facthem.es/claim/oscar-puente-ha-dedicado-doce-horas-a-dar-8ec47b70.html</loc>
-    <lastmod>2026-04-22T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -25267,6 +25837,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/se-han-perdido-rutas-aereas-operativas-en-espana-1d1eb689.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/se-han-presentado-750-enmiendas-de-todos-los-4a88623a.html</loc>
     <lastmod>2025-10-08T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -25491,6 +26067,12 @@
   <url>
     <loc>https://facthem.es/claim/se-registraron-8-casos-de-mutilacion-genital-femenina-42e0b676.html</loc>
     <lastmod>2026-02-11T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/se-requieren-tres-quintas-partes-de-los-votos-e3a9553f.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -25861,6 +26443,18 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://facthem.es/claim/solo-el-20-de-las-interrupciones-voluntarias-del-c3d385ba.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/solo-el-20-de-las-mujeres-que-practican-7e9d553c.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://facthem.es/claim/solo-el-3-de-los-teletrabajadores-en-espana-bdd140d3.html</loc>
     <lastmod>2025-10-21T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
@@ -25929,6 +26523,12 @@
   <url>
     <loc>https://facthem.es/claim/sumar-ha-perdido-trece-partidos-por-el-camino-5264a9f8.html</loc>
     <lastmod>2026-02-24T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://facthem.es/claim/sumar-planteo-hace-dos-anos-que-el-derecho-0cd64baa.html</loc>
+    <lastmod>2026-04-30T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
