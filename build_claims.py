@@ -763,15 +763,19 @@ def fetch_all_claims(supabase):
     """Paginate through all claims. Keep going until an empty batch."""
     total = supabase.from_("claim").select("id", count="exact", head=True).execute().count
     print(f"  DB reporta {total} afirmaciones en la tabla claim")
-    all_claims, page_size, offset = [], CLAIMS_PAGE_SIZE, 0
+    all_claims, page_size, last_id = [], CLAIMS_PAGE_SIZE, None
     while True:
         try:
-            resp = (
+            query = (
                 supabase.from_("claim")
                 .select(SELECT_FIELDS)
                 .order("id")
-                .range(offset, offset + page_size - 1)
-                .execute()
+                .limit(page_size)
+            )
+            if last_id is not None:
+                query = query.gt("id", last_id)
+            resp = (
+                query.execute()
             )
         except Exception as exc:
             if getattr(exc, "code", None) != "57014" and "57014" not in str(exc):
@@ -785,8 +789,10 @@ def fetch_all_claims(supabase):
         all_claims.extend(batch)
         if not batch:
             break
+        last_id = batch[-1].get("id")
         print(f"  {len(all_claims)} afirmaciones leídas…")
-        offset += len(batch)
+        if len(batch) < page_size:
+            break
     return all_claims
 
 
