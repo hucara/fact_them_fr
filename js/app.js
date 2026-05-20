@@ -5,14 +5,17 @@ const TEMATICO_LABELS = {
   defensa: 'Defensa',
   'economía': 'Economía',
   educacion: 'Educación',
+  'educación': 'Educación',
   igualdad: 'Igualdad',
   industria_y_trabajo: 'Industria y Trabajo',
   'inmigración': 'Inmigración',
   interior: 'Interior',
   justicia_y_corrupcion: 'Justicia y Corrupción',
+  'justicia_y_corrupción': 'Justicia y Corrupción',
   medio_ambiente: 'Medio Ambiente',
   otros: 'Otros',
   politica_social: 'Política Social',
+  'política_social': 'Política Social',
   relaciones_internacionales: 'Relaciones Internacionales',
   sanidad: 'Sanidad',
   vivienda: 'Vivienda',
@@ -1616,6 +1619,26 @@ function escHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+function formatNumberES(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n.toLocaleString('es-ES') : '0';
+}
+
+function formatDecimalES(value, digits = 1) {
+  const n = Number(value);
+  return Number.isFinite(n)
+    ? n.toLocaleString('es-ES', { minimumFractionDigits: digits, maximumFractionDigits: digits })
+    : '0';
+}
+
+function formatPctOf(count, total) {
+  const n = Number(count);
+  const denom = Number(total);
+  const pct = Number.isFinite(n) && denom > 0 ? (n / denom) * 100 : 0;
+  const digits = pct > 0 && pct < 1 ? 1 : 0;
+  return pct.toLocaleString('es-ES', { maximumFractionDigits: digits });
+}
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 async function loadGlobalDashboard() {
   window.statsLoaded = true;
@@ -1644,33 +1667,60 @@ function renderDashboard(s) {
   const grid = document.getElementById('dashboard-grid');
 
   const total = s.total_claims || 0;
+  const totalVerificados = s.total_verificados || total;
+  const totalSessions = s.total_sessions || 0;
+  const avgClaims = typeof s.avg_claims_per_session === 'number'
+    ? s.avg_claims_per_session
+    : (totalSessions ? total / totalSessions : 0);
   const totalFalsos = s.total_falsos || 0;
   const totalSobre = s.total_sobreestimados || 0;
   const totalSubest = s.total_subestimados || 0;
   const totalIncorrectos = s.total_incorrectos || (totalFalsos + totalSobre + totalSubest);
   const totalConfirm = s.total_confirmados || 0;
-  const pct = (rate, count) => {
+  const pct = (rate, count, denom = totalVerificados || total) => {
     if (typeof rate === 'number') return Math.round(rate * 100);
-    return total > 0 ? Math.round((count / total) * 100) : 0;
+    return denom > 0 ? Math.round((count / denom) * 100) : 0;
   };
   const porcIncorrectos = pct(s.incorrecto_rate_global, totalIncorrectos);
   const porcFalsos = pct(s.falso_rate_global, totalFalsos);
   const porcSobre = pct(s.sobreestimado_rate_global, totalSobre);
   const porcSubest = pct(s.subestimado_rate_global, totalSubest);
-  const porcConfirmados = total > 0 ? Math.round((totalConfirm / total) * 100) : 0;
+  const porcConfirmados = pct(s.confirmado_rate_global, totalConfirm);
 
   const d = (field) => s[field] || {};
+  const pick = (...fields) => fields.map(field => d(field)).find(o => Object.keys(o).length) || {};
+  const polLabelObj = (o) => (
+    o.name ? `${formatNombre(o.name)}${o.partido ? ` · ${o.partido}` : ''}` : '-'
+  );
   const polLabel = (f) => {
     const o = d(f);
-    return o.name ? `${formatNombre(o.name)}${o.partido ? ` · ${o.partido}` : ''}` : '-';
+    return polLabelObj(o);
   };
 
   const cb = s.combo_breaker || {};
   const bc = s.bocachancla || {};
-  const cbLabel = cb.politico ? `${formatNombre(cb.politico)} · ${cb.partido}` : '-';
-  const bcLabel = bc.politico ? `${formatNombre(bc.politico)} · ${bc.partido}` : '-';
-  const cbSub = cb.fecha ? `${cb.count} confirmados en el pleno del ${new Date(cb.fecha).toLocaleDateString('es-ES')}` : '-';
-  const bcSub = bc.fecha ? `${bc.count} falsedades en el pleno del ${new Date(bc.fecha).toLocaleDateString('es-ES')}` : '-';
+  const formatDate = fecha => new Date(`${fecha}T00:00:00`).toLocaleDateString('es-ES');
+  const eventLabel = event => event?.politico
+    ? `${formatNombre(event.politico)}${event.partido ? ` · ${event.partido}` : ''}`
+    : '-';
+  const eventSub = (event, noun) => event?.fecha
+    ? `${formatNumberES(event.count || 0)} ${noun} en el pleno del ${formatDate(event.fecha)}`
+    : '-';
+  const eventRow = (label, event, noun) => event?.politico
+    ? { label, value: eventLabel(event), sub: eventSub(event, noun) }
+    : null;
+  const cbLabel = eventLabel(cb);
+  const bcLabel = eventLabel(bc);
+  const cbSub = eventSub(cb, 'confirmados');
+  const bcSub = eventSub(bc, 'falsedades');
+  const comboRows = [
+    eventRow('Último mes', s.combo_breaker_last_month, 'confirmados'),
+    eventRow('Última semana', s.combo_breaker_last_week, 'confirmados'),
+  ].filter(Boolean);
+  const bocachanclaRows = [
+    eventRow('Último mes', s.bocachancla_last_month, 'falsedades'),
+    eventRow('Última semana', s.bocachancla_last_week, 'falsedades'),
+  ].filter(Boolean);
 
   const temaLabel = (f) => {
     const name = d(f).name;
@@ -1679,6 +1729,24 @@ function renderDashboard(s) {
 
   const tfrRate = s.top_tema_falso_rate || {};
   const tfrLabel = tfrRate.name ? (TEMATICO_LABELS[tfrRate.name] ?? snakeToLabel(tfrRate.name)) : '-';
+
+  const resultadoDist = s.resultado_distribution || {};
+  const resultadoRows = [
+    'CONFIRMADO',
+    'CONFIRMADO_CON_MATIZ',
+    'FALSO',
+    'SOBREESTIMADO',
+    'SUBESTIMADO',
+    'NO_VERIFICABLE',
+    'IMPRECISO',
+    'DESCONTEXTUALIZADO',
+  ]
+    .filter(key => resultadoDist[key] > 0)
+    .map(key => ({
+      label: RESULTADO_LABELS[key] ?? snakeToLabel(key),
+      count: resultadoDist[key],
+      pct: formatPctOf(resultadoDist[key], totalVerificados),
+    }));
 
   const topTemas = (s.temas_por_volumen || []).map(t => ({
     tema: TEMATICO_LABELS[t.tema] ?? snakeToLabel(t.tema),
@@ -1690,57 +1758,70 @@ function renderDashboard(s) {
     .filter(p => p.count >= 40)
     .map(p => ({
       tema: p.partido,
-      partido: p.count.toString(),
+      partido: formatNumberES(p.count),
     }));
 
+  const topInexactoVol = pick('top_politico_inexacto_volumen', 'top_politico_impreciso_volumen');
+  const topInexactoTasa = pick('top_politico_inexacto_tasa', 'top_politico_impreciso_tasa');
+  const topPartidoInexacto = pick('top_partido_inexacto', 'top_partido_impreciso');
+  const partidoInexactoCard = topPartidoInexacto.name
+    ? statCard('Partido más inexacto', topPartidoInexacto.name, `${formatNumberES(topPartidoInexacto.count || 0)} inexactitudes`, false, 'El partido que más veces acumula afirmaciones con datos o enfoques inexactos.')
+    : '';
+  const resultadoDistributionCard = resultadoRows.length
+    ? statCardBreakdown('Distribución de resultados', formatNumberES(totalVerificados), 'afirmaciones verificadas por resultado', resultadoRows, 'Reparte todas las verificaciones por su veredicto final.', false)
+    : '';
+
   grid.innerHTML = `
-    ${statCard('Partido con más claims', d('top_partido_claims').name || '-', `${d('top_partido_claims').count || 0} claims totales`, false, 'El partido que más afirmaciones ha realizado en total.')}
-    ${statCard('Político con más claims', polLabel('top_politico_claims'), `${d('top_politico_claims').count || 0} claims totales`, false, 'El diputado que más afirmaciones ha realizado en total.')}
-    ${statCard('Temática más frecuente', temaLabel('top_tema'), `${d('top_tema').count || 0} menciones`, false, 'El ámbito sobre el que más afirmaciones se han hecho.')}
+    ${statCard('Afirmaciones analizadas', formatNumberES(total), `${formatNumberES(totalSessions)} sesiones · ${formatDecimalES(avgClaims, 1)} claims por sesión`, false, `${formatNumberES(totalVerificados)} afirmaciones verificadas en total.`)}
+    ${statCard('Partido con más claims', d('top_partido_claims').name || '-', `${formatNumberES(d('top_partido_claims').count || 0)} claims totales`, false, 'El partido que más afirmaciones ha realizado en total.')}
+    ${statCard('Político con más claims', polLabel('top_politico_claims'), `${formatNumberES(d('top_politico_claims').count || 0)} claims totales`, false, 'El diputado que más afirmaciones ha realizado en total.')}
+    ${statCard('Temática más frecuente', temaLabel('top_tema'), `${formatNumberES(d('top_tema').count || 0)} menciones`, false, 'El ámbito sobre el que más afirmaciones se han hecho.')}
     ${statCardDual('Político con más falsos',
-        polLabel('top_politico_falso_volumen'), `${d('top_politico_falso_volumen').count || 0} falsos/engañosos`,
+        polLabel('top_politico_falso_volumen'), `${formatNumberES(d('top_politico_falso_volumen').count || 0)} falsos/engañosos`,
         polLabel('top_politico_falso_tasa'), d('top_politico_falso_tasa').count || 0, d('top_politico_falso_tasa').total || 0, d('top_politico_falso_tasa').rate || 0,
         true, 'falsedad', 'El diputado con más afirmaciones verificadas como falsas o engañosas.')}
-    ${statCard('Partido con más falsos', d('top_partido_falso').name || '-', `${d('top_partido_falso').count || 0} falsos/engañosos`, true, 'El partido con más afirmaciones verificadas como falsas o engañosas.')}
-    ${statCardBreakdown('Tasa de falsedad', `${porcIncorrectos}%`, `${totalIncorrectos} de ${total} afirmaciones incorrectas`, [
+    ${statCard('Partido con más falsos', d('top_partido_falso').name || '-', `${formatNumberES(d('top_partido_falso').count || 0)} falsos/engañosos`, true, 'El partido con más afirmaciones verificadas como falsas o engañosas.')}
+    ${statCardBreakdown('Tasa de falsedad', `${porcIncorrectos}%`, `${formatNumberES(totalIncorrectos)} de ${formatNumberES(totalVerificados)} afirmaciones incorrectas`, [
       { label: 'Falsos', count: totalFalsos, pct: porcFalsos },
       { label: 'Sobreestimados', count: totalSobre, pct: porcSobre },
       { label: 'Subestimados', count: totalSubest, pct: porcSubest },
     ], 'Combina afirmaciones falsas, sobreestimadas y subestimadas sobre el total verificado.')}
-    ${statCard('Temática más conflictiva', temaLabel('top_tema_falso'), `${d('top_tema_falso').count || 0} afirmaciones falsas`, true, 'El ámbito temático donde más afirmaciones falsas se han detectado.')}
+    ${statCard('Temática más conflictiva', temaLabel('top_tema_falso'), `${formatNumberES(d('top_tema_falso').count || 0)} afirmaciones falsas`, true, 'El ámbito temático donde más afirmaciones falsas se han detectado.')}
     ${statCardDual('El Maestro del Escaqueo',
-        polLabel('top_politico_nv_volumen'), `${d('top_politico_nv_volumen').count || 0} afirmaciones no verificables`,
+        polLabel('top_politico_nv_volumen'), `${formatNumberES(d('top_politico_nv_volumen').count || 0)} afirmaciones no verificables`,
         polLabel('top_politico_nv_tasa'), d('top_politico_nv_tasa').count || 0, d('top_politico_nv_tasa').total || 0, d('top_politico_nv_tasa').rate || 0,
         false, 'no verificables', 'El político que más afirmaciones hace que no pueden verificarse por falta de datos concretos.')}
-    ${statCard('Tasa de veracidad', `${porcConfirmados}%`, `${totalConfirm} de ${total} afirmaciones`, false, 'Porcentaje de afirmaciones verificadas como completamente ciertas.')}
-    ${statCard('Partido más escurridizo', d('top_partido_nv').name || '-', `${d('top_partido_nv').count || 0} afirmaciones no verificables`, false, 'El partido que más afirmaciones hace que no pueden verificarse.')}
+    ${statCard('Tasa de veracidad', `${porcConfirmados}%`, `${formatNumberES(totalConfirm)} de ${formatNumberES(totalVerificados)} afirmaciones`, false, 'Porcentaje de afirmaciones verificadas como completamente ciertas.')}
+    ${statCard('Partido más confirmado', d('top_partido_confirmado').name || '-', `${formatNumberES(d('top_partido_confirmado').count || 0)} confirmadas`, false, 'El partido con más afirmaciones verificadas como completamente ciertas.')}
+    ${resultadoDistributionCard}
+    ${statCard('Partido más escurridizo', d('top_partido_nv').name || '-', `${formatNumberES(d('top_partido_nv').count || 0)} afirmaciones no verificables`, false, 'El partido que más afirmaciones hace que no pueden verificarse.')}
     ${statCard('La Madre de todos los Bulos', tfrLabel, `${Math.round((tfrRate.rate || 0) * 100)}% de falsedades`, true, 'El ámbito temático donde los políticos mienten con más descaro en proporción.')}
     ${statCardDual('El Gran Matizador',
-        polLabel('top_politico_matiz_volumen'), `${d('top_politico_matiz_volumen').count || 0} confirmados con matiz`,
+        polLabel('top_politico_matiz_volumen'), `${formatNumberES(d('top_politico_matiz_volumen').count || 0)} confirmados con matiz`,
         polLabel('top_politico_matiz_tasa'), d('top_politico_matiz_tasa').count || 0, d('top_politico_matiz_tasa').total || 0, d('top_politico_matiz_tasa').rate || 0,
         false, 'confirmados con matiz', 'El político que más veces dice algo cierto… pero con algún pero importante.')}
-    ${statCard('Partido del "sí, pero..."', d('top_partido_matiz').name || '-', `${d('top_partido_matiz').count || 0} confirmados con matiz`, false, 'El partido que más verdades a medias acumula.')}
-    ${statCard('Combo Breaker', cbLabel, cbSub, false, 'El político que más afirmaciones confirmadas acumuló en un solo pleno.')}
-    ${statCard('Bocachancla', bcLabel, bcSub, true, 'El político que más afirmaciones falsas encadenó en un solo pleno.')}
+    ${statCard('Partido del "sí, pero..."', d('top_partido_matiz').name || '-', `${formatNumberES(d('top_partido_matiz').count || 0)} confirmados con matiz`, false, 'El partido que más verdades a medias acumula.')}
+    ${statCardTimeline('Combo Breaker', cbLabel, cbSub, comboRows, false, 'El político que más afirmaciones confirmadas acumuló en un solo pleno.')}
+    ${statCardTimeline('Bocachancla', bcLabel, bcSub, bocachanclaRows, true, 'El político que más afirmaciones falsas encadenó en un solo pleno.')}
     ${statCardDual('El Exagerador Mayor',
-        polLabel('top_politico_sobre_volumen'), `${d('top_politico_sobre_volumen').count || 0} cifras sobreestimadas`,
+        polLabel('top_politico_sobre_volumen'), `${formatNumberES(d('top_politico_sobre_volumen').count || 0)} cifras sobreestimadas`,
         polLabel('top_politico_sobre_tasa'), d('top_politico_sobre_tasa').count || 0, d('top_politico_sobre_tasa').total || 0, d('top_politico_sobre_tasa').rate || 0,
         true, 'sobreestimación', 'El político que más veces ha inflado cifras reales para que suenen más impactantes.')}
-    ${statCard('Partido de las Cifras Infladas', d('top_partido_sobre').name || '-', `${d('top_partido_sobre').count || 0} sobreestimaciones`, true, 'El partido que más veces ha sobreestimado datos que en realidad son menores.')}
-    ${statCard('Partido de las Cifras Maquilladas', d('top_partido_subest').name || '-', `${d('top_partido_subest').count || 0} subestimaciones`, true, 'El partido que más veces ha minimizado datos reales.')}
-    ${statCard('El Cuñado Nacional', polLabel('top_politico_cunado'), `${d('top_politico_cunado').count || 0} temáticas · ${Math.round((d('top_politico_cunado').rate || 0) * 100)}% del total`, false, 'El diputado que opina sobre absolutamente todo, como el cuñado en Navidad.')}
+    ${statCard('Partido de las Cifras Infladas', d('top_partido_sobre').name || '-', `${formatNumberES(d('top_partido_sobre').count || 0)} sobreestimaciones`, true, 'El partido que más veces ha sobreestimado datos que en realidad son menores.')}
+    ${statCard('Partido de las Cifras Maquilladas', d('top_partido_subest').name || '-', `${formatNumberES(d('top_partido_subest').count || 0)} subestimaciones`, true, 'El partido que más veces ha minimizado datos reales.')}
+    ${statCard('El Cuñado Nacional', polLabel('top_politico_cunado'), `${formatNumberES(d('top_politico_cunado').count || 0)} temáticas · ${Math.round((d('top_politico_cunado').rate || 0) * 100)}% del total`, false, 'El diputado que opina sobre absolutamente todo, como el cuñado en Navidad.')}
     ${statCardDual('El Minimizador',
-        polLabel('top_politico_subest_volumen'), `${d('top_politico_subest_volumen').count || 0} cifras subestimadas`,
+        polLabel('top_politico_subest_volumen'), `${formatNumberES(d('top_politico_subest_volumen').count || 0)} cifras subestimadas`,
         polLabel('top_politico_subest_tasa'), d('top_politico_subest_tasa').count || 0, d('top_politico_subest_tasa').total || 0, d('top_politico_subest_tasa').rate || 0,
         true, 'subestimación', 'El político que más veces ha reducido cifras reales para que suenen menos graves.')}
-    ${statCard('Partido de las Verdades de Perogrullo', d('top_partido_impreciso').name || '-', `${d('top_partido_impreciso').count || 0} imprecisiones`, false, 'El partido que más veces ha dicho algo tan ambiguo que ni ellos mismos saben si es cierto.')}
-    ${statCard('El Partido del Bulo Selectivo', d('top_partido_descont').name || '-', `${d('top_partido_descont').count || 0} descontextualizaciones`, true, 'El partido que más veces usa datos reales arrancados de su contexto para cambiar su significado.')}
+    ${partidoInexactoCard}
+    ${statCard('El Partido del Bulo Selectivo', d('top_partido_descont').name || '-', `${formatNumberES(d('top_partido_descont').count || 0)} descontextualizaciones`, true, 'El partido que más veces usa datos reales arrancados de su contexto para cambiar su significado.')}
     ${statCardDual('El Maestro del Bla Bla',
-        polLabel('top_politico_impreciso_volumen'), `${d('top_politico_impreciso_volumen').count || 0} afirmaciones imprecisas`,
-        polLabel('top_politico_impreciso_tasa'), d('top_politico_impreciso_tasa').count || 0, d('top_politico_impreciso_tasa').total || 0, d('top_politico_impreciso_tasa').rate || 0,
-        false, 'imprecisión', 'El político que más veces ha soltado una afirmación tan vaga que no hay manera de verificarla.')}
+        polLabelObj(topInexactoVol), `${formatNumberES(topInexactoVol.count || 0)} afirmaciones inexactas`,
+        polLabelObj(topInexactoTasa), topInexactoTasa.count || 0, topInexactoTasa.total || 0, topInexactoTasa.rate || 0,
+        false, 'inexactitud', 'El político que más veces ha acumulado afirmaciones con datos o enfoques inexactos.')}
     ${statCardDual('El Sacador de Contexto',
-        polLabel('top_politico_descont_volumen'), `${d('top_politico_descont_volumen').count || 0} descontextualizaciones`,
+        polLabel('top_politico_descont_volumen'), `${formatNumberES(d('top_politico_descont_volumen').count || 0)} descontextualizaciones`,
         polLabel('top_politico_descont_tasa'), d('top_politico_descont_tasa').count || 0, d('top_politico_descont_tasa').total || 0, d('top_politico_descont_tasa').rate || 0,
         true, 'descontextualización', 'El político que más veces ha usado datos reales arrancándolos de su contexto para cambiar su significado.')}
     ${statCardListTemas('Partidos por temática', topTemas)}
@@ -1759,26 +1840,28 @@ function statCard(title, value, subtitle, isFalsoSubtitle = false, description =
     </div>`;
 }
 
-function statCardBreakdown(title, value, subtitle, rows, description = '') {
+function statCardBreakdown(title, value, subtitle, rows, description = '', isFalsoSubtitle = true) {
+  const subClass = isFalsoSubtitle ? 'stat-subtitle falso-subtitle' : 'stat-subtitle';
+  const toneClass = isFalsoSubtitle ? ' stat-breakdown--danger' : '';
   const items = rows.map(r => `
     <div class="stat-breakdown-row">
-      <span class="stat-breakdown-label">${r.label}</span>
-      <span class="stat-breakdown-count">${r.count}</span>
-      <span class="stat-breakdown-pct">${r.pct}%</span>
+      <span class="stat-breakdown-label">${escHtml(r.label)}</span>
+      <span class="stat-breakdown-count">${formatNumberES(r.count)}</span>
+      <span class="stat-breakdown-pct">${escHtml(r.pct)}%</span>
     </div>`).join('');
   return `
     <div class="stat-card">
       <div class="stat-title">${title}</div>
       <div class="stat-value">${value}</div>
-      <div class="stat-subtitle falso-subtitle">${subtitle}</div>
-      <div class="stat-breakdown">${items}</div>
+      <div class="${subClass}">${subtitle}</div>
+      <div class="stat-breakdown${toneClass}">${items}</div>
       ${description ? `<div class="stat-desc">${description}</div>` : ''}
     </div>`;
 }
 
 function statCardDual(title, volLabel, volSub, tasaLabel, tasaCount, tasaTotal, tasaRate, isFalso, tasaKeyword, description = '') {
   const subClass = isFalso ? 'stat-subtitle falso-subtitle' : 'stat-subtitle';
-  const tasaSub = `${Math.round(tasaRate * 100)}% de ${tasaKeyword} · ${tasaCount} de ${tasaTotal} afirmaciones`;
+  const tasaSub = `${Math.round(tasaRate * 100)}% de ${tasaKeyword} · ${formatNumberES(tasaCount)} de ${formatNumberES(tasaTotal)} afirmaciones`;
   return `
     <div class="stat-card stat-card--dual">
       <div class="stat-title">${title}</div>
@@ -1794,6 +1877,24 @@ function statCardDual(title, volLabel, volSub, tasaLabel, tasaCount, tasaTotal, 
           <div class="${subClass}">${tasaSub}</div>
         </div>
       </div>
+      ${description ? `<div class="stat-desc">${description}</div>` : ''}
+    </div>`;
+}
+
+function statCardTimeline(title, value, subtitle, rows, isFalsoSubtitle = false, description = '') {
+  const subClass = isFalsoSubtitle ? 'stat-subtitle falso-subtitle' : 'stat-subtitle';
+  const items = rows.map(r => `
+    <div class="stat-event-row">
+      <div class="stat-event-label">${escHtml(r.label)}</div>
+      <div class="stat-event-value">${escHtml(r.value)}</div>
+      <div class="${subClass}">${escHtml(r.sub)}</div>
+    </div>`).join('');
+  return `
+    <div class="stat-card">
+      <div class="stat-title">${title}</div>
+      <div class="stat-value">${value}</div>
+      <div class="${subClass}">${subtitle}</div>
+      ${items ? `<div class="stat-event-list">${items}</div>` : ''}
       ${description ? `<div class="stat-desc">${description}</div>` : ''}
     </div>`;
 }
