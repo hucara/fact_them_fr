@@ -1624,21 +1624,6 @@ function formatNumberES(value) {
   return Number.isFinite(n) ? n.toLocaleString('es-ES') : '0';
 }
 
-function formatDecimalES(value, digits = 1) {
-  const n = Number(value);
-  return Number.isFinite(n)
-    ? n.toLocaleString('es-ES', { minimumFractionDigits: digits, maximumFractionDigits: digits })
-    : '0';
-}
-
-function formatPctOf(count, total) {
-  const n = Number(count);
-  const denom = Number(total);
-  const pct = Number.isFinite(n) && denom > 0 ? (n / denom) * 100 : 0;
-  const digits = pct > 0 && pct < 1 ? 1 : 0;
-  return pct.toLocaleString('es-ES', { maximumFractionDigits: digits });
-}
-
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 async function loadGlobalDashboard() {
   window.statsLoaded = true;
@@ -1668,10 +1653,6 @@ function renderDashboard(s) {
 
   const total = s.total_claims || 0;
   const totalVerificados = s.total_verificados || total;
-  const totalSessions = s.total_sessions || 0;
-  const avgClaims = typeof s.avg_claims_per_session === 'number'
-    ? s.avg_claims_per_session
-    : (totalSessions ? total / totalSessions : 0);
   const totalFalsos = s.total_falsos || 0;
   const totalSobre = s.total_sobreestimados || 0;
   const totalSubest = s.total_subestimados || 0;
@@ -1730,24 +1711,6 @@ function renderDashboard(s) {
   const tfrRate = s.top_tema_falso_rate || {};
   const tfrLabel = tfrRate.name ? (TEMATICO_LABELS[tfrRate.name] ?? snakeToLabel(tfrRate.name)) : '-';
 
-  const resultadoDist = s.resultado_distribution || {};
-  const resultadoRows = [
-    'CONFIRMADO',
-    'CONFIRMADO_CON_MATIZ',
-    'FALSO',
-    'SOBREESTIMADO',
-    'SUBESTIMADO',
-    'NO_VERIFICABLE',
-    'IMPRECISO',
-    'DESCONTEXTUALIZADO',
-  ]
-    .filter(key => resultadoDist[key] > 0)
-    .map(key => ({
-      label: RESULTADO_LABELS[key] ?? snakeToLabel(key),
-      count: resultadoDist[key],
-      pct: formatPctOf(resultadoDist[key], totalVerificados),
-    }));
-
   const topTemas = (s.temas_por_volumen || []).map(t => ({
     tema: TEMATICO_LABELS[t.tema] ?? snakeToLabel(t.tema),
     dominante: t.partido_dominante || '—',
@@ -1767,12 +1730,8 @@ function renderDashboard(s) {
   const partidoInexactoCard = topPartidoInexacto.name
     ? statCard('Partido más inexacto', topPartidoInexacto.name, `${formatNumberES(topPartidoInexacto.count || 0)} inexactitudes`, false, 'El partido que más veces acumula afirmaciones con datos o enfoques inexactos.')
     : '';
-  const resultadoDistributionCard = resultadoRows.length
-    ? statCardBreakdown('Distribución de resultados', formatNumberES(totalVerificados), 'afirmaciones verificadas por resultado', resultadoRows, 'Reparte todas las verificaciones por su veredicto final.', false)
-    : '';
 
   grid.innerHTML = `
-    ${statCard('Afirmaciones analizadas', formatNumberES(total), `${formatNumberES(totalSessions)} sesiones · ${formatDecimalES(avgClaims, 1)} claims por sesión`, false, `${formatNumberES(totalVerificados)} afirmaciones verificadas en total.`)}
     ${statCard('Partido con más claims', d('top_partido_claims').name || '-', `${formatNumberES(d('top_partido_claims').count || 0)} claims totales`, false, 'El partido que más afirmaciones ha realizado en total.')}
     ${statCard('Político con más claims', polLabel('top_politico_claims'), `${formatNumberES(d('top_politico_claims').count || 0)} claims totales`, false, 'El diputado que más afirmaciones ha realizado en total.')}
     ${statCard('Temática más frecuente', temaLabel('top_tema'), `${formatNumberES(d('top_tema').count || 0)} menciones`, false, 'El ámbito sobre el que más afirmaciones se han hecho.')}
@@ -1793,7 +1752,6 @@ function renderDashboard(s) {
         false, 'no verificables', 'El político que más afirmaciones hace que no pueden verificarse por falta de datos concretos.')}
     ${statCard('Tasa de veracidad', `${porcConfirmados}%`, `${formatNumberES(totalConfirm)} de ${formatNumberES(totalVerificados)} afirmaciones`, false, 'Porcentaje de afirmaciones verificadas como completamente ciertas.')}
     ${statCard('Partido más confirmado', d('top_partido_confirmado').name || '-', `${formatNumberES(d('top_partido_confirmado').count || 0)} confirmadas`, false, 'El partido con más afirmaciones verificadas como completamente ciertas.')}
-    ${resultadoDistributionCard}
     ${statCard('Partido más escurridizo', d('top_partido_nv').name || '-', `${formatNumberES(d('top_partido_nv').count || 0)} afirmaciones no verificables`, false, 'El partido que más afirmaciones hace que no pueden verificarse.')}
     ${statCard('La Madre de todos los Bulos', tfrLabel, `${Math.round((tfrRate.rate || 0) * 100)}% de falsedades`, true, 'El ámbito temático donde los políticos mienten con más descaro en proporción.')}
     ${statCardDual('El Gran Matizador',
