@@ -51,8 +51,6 @@ POL_OUT_DIR   = Path(__file__).parent / "politician"
 SITEMAP_PATH  = Path(__file__).parent / "sitemap.xml"
 SALARY_DATA_PATH = Path(__file__).parent / "assets" / "salary-data.js"
 TODAY         = date.today().isoformat()
-CLAIMS_PAGE_SIZE = max(1, int(os.environ.get("CLAIMS_PAGE_SIZE", "100")))
-CLAIMS_MIN_PAGE_SIZE = max(1, int(os.environ.get("CLAIMS_MIN_PAGE_SIZE", "25")))
 
 # ── Label maps (mirror app.js) ────────────────────────────────────────────────
 TEMATICO_LABELS = {
@@ -679,13 +677,13 @@ def render_page(claim, slug, session_date):
 
 # ── Supabase fetch ────────────────────────────────────────────────────────────
 
-SELECT_FIELDS = """
-  id, session_id, texto_normalizado, texto_original,
-  ambito_geografico, ambito_tematico,
-  politician:politician_id (id, nombre_completo, partido, grupo_parlamentario),
-  session:session_id (id, fecha, organo, legislatura, tipo, numero),
-  verification (resultado, confidence_score, omisiones, errores, fuentes)
-"""
+CLAIM_FIELDS = (
+    "id, session_id, politician_id, texto_normalizado, texto_original, "
+    "ambito_geografico, ambito_tematico"
+)
+POLITICIAN_FIELDS = "id, nombre_completo, partido, grupo_parlamentario"
+SESSION_FIELDS = "id, fecha, organo, legislatura, tipo, numero"
+VERIFICATION_FIELDS = "claim_id, resultado, confidence_score, omisiones, errores, fuentes"
 
 SALARY_TABLE = "politician_salary"
 
@@ -759,41 +757,91 @@ def fetch_session_dates_sqlite():
     return {r["id"]: (r["fecha"] or "")[:10] for r in rows}
 
 
-def fetch_all_claims(supabase):
-    """Paginate through all claims. Keep going until an empty batch."""
-    total = supabase.from_("claim").select("id", count="exact", head=True).execute().count
-    print(f"  DB reporta {total} afirmaciones en la tabla claim")
-    all_claims, page_size, last_id = [], CLAIMS_PAGE_SIZE, None
+def _paginate_table(supabase, table, fields, label, page_size=1000):
+    """Keyset-paginate a table by id with no joins."""
+    rows, last_id = [], None
     while True:
-        try:
-            query = (
-                supabase.from_("claim")
-                .select(SELECT_FIELDS)
-                .order("id")
-                .limit(page_size)
-            )
-            if last_id is not None:
-                query = query.gt("id", last_id)
-            resp = (
-                query.execute()
-            )
-        except Exception as exc:
-            if getattr(exc, "code", None) != "57014" and "57014" not in str(exc):
-                raise
-            if page_size <= CLAIMS_MIN_PAGE_SIZE:
-                raise
-            page_size = max(CLAIMS_MIN_PAGE_SIZE, page_size // 2)
-            print(f"  timeout leyendo claims; reintentando con páginas de {page_size}")
-            continue
-        batch = resp.data or []
-        all_claims.extend(batch)
+        query = (
+            supabase.from_(table)
+            .select(fields)
+            .order("id")
+            .limit(page_size)
+        )
+        if last_id is not None:
+            query = query.gt("id", last_id)
+        batch = (query.execute().data) or []
+        rows.extend(batch)
         if not batch:
             break
         last_id = batch[-1].get("id")
-        print(f"  {len(all_claims)} afirmaciones leídas…")
+        print(f"  {len(rows)} {label} leídas…")
         if len(batch) < page_size:
             break
-    return all_claims
+    return rows
+
+
+def _paginate_verifications(supabase, page_size=1000):
+    """Verification rows are keyed by claim_id, not id."""
+    rows, last_claim = [], None
+    while True:
+        query = (
+            supabase.from_("verification")
+            .select(VERIFICATION_FIELDS)
+            .order("claim_id")
+            .limit(page_size)
+        )
+        if last_claim is not None:
+            query = query.gt("claim_id", last_claim)
+        batch = (query.execute().data) or []
+        rows.extend(batch)
+        if not batch:
+            break
+        last_claim = batch[-1].get("claim_id")
+        print(f"  {len(rows)} verificaciones leídas…")
+        if len(batch) < page_size:
+            break
+    return rows
+
+
+def fetch_all_claims(supabase):
+    """Fetch claims, politicians, sessions, verifications separately and join in memory.
+
+    Why: embedding politician/session/verification in a single PostgREST select
+    triggers statement-timeout (57014) on Supabase for the full claim table.
+    """
+    total = supabase.from_("claim").select("id", count="exact", head=True).execute().count
+    print(f"  DB reporta {total} afirmaciones en la tabla claim")
+
+    politicians = {
+        p["id"]: p
+        for p in _paginate_table(supabase, "politician", POLITICIAN_FIELDS, "políticos", page_size=1000)
+    }
+    sessions = {
+        s["id"]: s
+        for s in _paginate_table(supabase, "session", SESSION_FIELDS, "sesiones", page_size=1000)
+    }
+    verifications = {}
+    for v in _paginate_verifications(supabase):
+        verifications.setdefault(v["claim_id"], []).append({
+            k: v.get(k) for k in ("resultado", "confidence_score", "omisiones", "errores", "fuentes")
+        })
+
+    raw_claims = _paginate_table(supabase, "claim", CLAIM_FIELDS, "afirmaciones", page_size=500)
+
+    claims = []
+    for c in raw_claims:
+        claims.append({
+            "id": c["id"],
+            "session_id": c.get("session_id"),
+            "texto_normalizado": c.get("texto_normalizado"),
+            "texto_original": c.get("texto_original"),
+            "ambito_geografico": c.get("ambito_geografico"),
+            "ambito_tematico": c.get("ambito_tematico"),
+            "politician": politicians.get(c.get("politician_id")),
+            "session": sessions.get(c.get("session_id")),
+            "verification": verifications.get(c["id"], []),
+        })
+    return claims
 
 
 def fetch_session_dates(supabase):
