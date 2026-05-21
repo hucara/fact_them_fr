@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Facthem — Verificador de afirmaciones parlamentarias</title>
-  <meta name="description" content="Verificamos lo que dicen los parlamentarios españoles. Consulta las afirmaciones verificadas por sesión." />
+  <title>Facthem — salarios y verificaciones de políticos del Congreso</title>
+  <meta name="description" content="Consulta afirmaciones verificadas y salarios públicos de políticos del Congreso: sueldo mensual, salario anual, complementos e indemnizaciones de diputados y representantes." />
 
   <!-- Canonical -->
   <link rel="canonical" href="https://facthem.es/" />
@@ -12,8 +12,8 @@
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://facthem.es/" />
-  <meta property="og:title" content="Facthem — Verificador de afirmaciones parlamentarias" />
-  <meta property="og:description" content="Verificamos lo que dicen los parlamentarios españoles. Cada afirmación, contrastada con fuentes." />
+  <meta property="og:title" content="Facthem — salarios y verificaciones de políticos del Congreso" />
+  <meta property="og:description" content="Afirmaciones verificadas y salarios públicos de políticos del Congreso: sueldo mensual, salario anual, complementos e indemnizaciones." />
   <meta property="og:image" content="https://facthem.es/assets/portada_opt.png" />
   <meta property="og:locale" content="es_ES" />
   <meta property="og:site_name" content="Facthem" />
@@ -21,8 +21,8 @@
   <!-- Twitter/X Card -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:site" content="@facthem_ES" />
-  <meta name="twitter:title" content="Facthem — Verificador parlamentario" />
-  <meta name="twitter:description" content="Verificamos lo que dicen los parlamentarios españoles. Cada afirmación, contrastada con fuentes." />
+  <meta name="twitter:title" content="Facthem — salarios y verificaciones del Congreso" />
+  <meta name="twitter:description" content="Consulta afirmaciones verificadas y salarios públicos de políticos del Congreso." />
   <meta name="twitter:image" content="https://facthem.es/assets/portada_opt.png" />
 
   <!-- Favicon -->
@@ -42,7 +42,7 @@
     "@type": "WebSite",
     "name": "Facthem",
     "url": "https://facthem.es",
-    "description": "Verificador de afirmaciones de parlamentarios españoles",
+    "description": "Verificador de afirmaciones y salarios públicos de parlamentarios españoles",
     "inLanguage": "es",
     "publisher": {
       "@type": "Organization",
@@ -60,6 +60,36 @@
     }
   }
   </script>
+  <script type="application/ld+json" id="salary-dataset-ld">
+  {
+    "@context": "https://schema.org",
+    "@type": "Dataset",
+    "name": "Salarios de políticos del Congreso de los Diputados",
+    "description": "Datos consultables de sueldo mensual, salario anual, salario base, complementos e indemnizaciones de políticos del Congreso y representantes incluidos en Facthem.",
+    "url": "https://facthem.es/?tab=parlamentarios",
+    "inLanguage": "es",
+    "keywords": [
+      "salario políticos Congreso",
+      "sueldo diputados",
+      "salario anual políticos",
+      "retribuciones Congreso",
+      "complementos diputados",
+      "indemnizaciones parlamentarias"
+    ],
+    "publisher": {
+      "@type": "Organization",
+      "name": "Facthem",
+      "url": "https://facthem.es"
+    },
+    "variableMeasured": [
+      "sueldo mensual total",
+      "salario anual",
+      "salario base mensual",
+      "complementos",
+      "indemnización"
+    ]
+  }
+  </script>
 
   <!-- Supabase config — safe to expose (anon key, RLS enforced) -->
   <script>
@@ -75,7 +105,7 @@
   <link rel="preload" as="image" href="/assets/portada.webp" fetchpriority="high" />
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'" />
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" /></noscript>
-  <link rel="stylesheet" href="css/style.css?v=20260520-dashboard-stats" />
+  <link rel="stylesheet" href="css/style.css?v=20260521-salary-seo" />
   <!-- Google Tag Manager — deferred to avoid render-blocking -->
   <script>
     window.addEventListener('load', function() {
@@ -215,6 +245,7 @@
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
           <p>Busca un político para ver todas sus afirmaciones verificadas.</p>
+          <p class="search-welcome-secondary">Incluye datos públicos de retribución cuando están disponibles.</p>
         </div>
       </div>
     </div>
@@ -264,7 +295,7 @@
   </div>
 
   <script src="assets/salary-data.js?v=20260510"></script>
-  <script type="module" src="js/app.js?v=20260520-dashboard-stats"></script>
+  <script type="module" src="js/app.js?v=20260521-salary-seo"></script>
   <script>
     window.addEventListener('error', function(e) {
       if (e.filename && e.filename.includes('supabase')) {

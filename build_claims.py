@@ -901,6 +901,7 @@ def generate_salary_data(salaries):
 
 STATIC_URLS = [
     ("https://facthem.es/",                  "2026-03-11T00:00:00+00:00", "weekly",  "1.0"),
+    ("https://facthem.es/?tab=parlamentarios", "2026-05-21T00:00:00+00:00", "weekly",  "0.8"),
     ("https://facthem.es/aviso.html",        "2026-03-11T00:00:00+00:00", "yearly",  "0.3"),
     ("https://facthem.es/metodologia.html",  "2026-05-05T00:00:00+00:00", "yearly",  "0.4"),
     ("https://facthem.es/acerca.html",       "2026-05-05T00:00:00+00:00", "yearly",  "0.4"),
@@ -1140,6 +1141,69 @@ def _format_eur(value, compact=False):
     return f"{int_part.replace(',', '.')},{dec} €"
 
 
+def _salary_amount(row, keys):
+    try:
+        n = float(_salary_value(row, keys) or 0)
+    except (TypeError, ValueError):
+        return 0
+    if n != n or n <= 0:
+        return 0
+    return n
+
+
+def _salary_seo_note(salary, nombre):
+    if not salary:
+        return ""
+    fields = [
+        ("sueldo mensual total", ["total_monthly_eur", "monthly_total_eur", "salary_monthly_total_eur", "monthly_with_indemnity_eur"], False),
+        ("salario anual", ["total_annual_eur", "annual_total_eur", "salary_annual_total_eur"], True),
+        ("salario base mensual", ["base_monthly_eur", "base_mensual_eur", "base_monthly"], False),
+        ("indemnización", ["indemnizacion_monthly_eur", "indemnity_monthly_eur", "indemnizacion_mensual_eur"], False),
+        ("complementos", ["complements_monthly_eur", "complement_monthly_eur", "complementos_mensuales_eur"], False),
+    ]
+    parts = []
+    for label, keys, compact in fields:
+        amount = _salary_amount(salary, keys)
+        if not amount:
+            continue
+        formatted = _format_eur(amount, compact=compact)
+        if formatted:
+            parts.append(f"{label} {formatted}")
+    if not parts:
+        return ""
+    return f"Datos públicos de retribución de {nombre}: {', '.join(parts)}."
+
+
+def _salary_seo_description(salary, nombre, total, grupo):
+    if not salary:
+        return f"Afirmaciones verificadas de {nombre} en Facthem. Busca representantes y políticos del Congreso por nombre, partido y sesión parlamentaria."
+    monthly_raw = _salary_amount(salary, ["total_monthly_eur", "monthly_total_eur", "salary_monthly_total_eur", "monthly_with_indemnity_eur"])
+    annual_raw = _salary_amount(salary, ["total_annual_eur", "annual_total_eur", "salary_annual_total_eur"])
+    monthly = _format_eur(monthly_raw) if monthly_raw else None
+    annual = _format_eur(annual_raw, compact=True) if annual_raw else None
+    scope = "salario público" if grupo == "Cargo de Gobierno" or _salary_value(salary, ["government_role"]) else "salario en el Congreso"
+    claim_text = f" {total} afirmaciones verificadas por Facthem." if total else ""
+    if monthly and annual:
+        return f"{scope[0].upper()}{scope[1:]} de {nombre}: sueldo mensual total {monthly} y salario anual {annual}.{claim_text}"
+    return f"{scope[0].upper()}{scope[1:]} de {nombre} y afirmaciones verificadas por Facthem."
+
+
+def _salary_measurements(salary):
+    fields = [
+        ("sueldo mensual total", ["total_monthly_eur", "monthly_total_eur", "salary_monthly_total_eur", "monthly_with_indemnity_eur"]),
+        ("salario anual", ["total_annual_eur", "annual_total_eur", "salary_annual_total_eur"]),
+        ("salario base mensual", ["base_monthly_eur", "base_mensual_eur", "base_monthly"]),
+        ("indemnización mensual", ["indemnizacion_monthly_eur", "indemnity_monthly_eur", "indemnizacion_mensual_eur"]),
+        ("complementos mensuales", ["complements_monthly_eur", "complement_monthly_eur", "complementos_mensuales_eur"]),
+    ]
+    out = []
+    for name, keys in fields:
+        value = _salary_amount(salary, keys)
+        if value:
+            out.append({"@type": "PropertyValue", "name": name, "value": round(value, 2), "unitText": "EUR"})
+    return out
+
+
 def _salary_breakdown(row):
     raw = _salary_value(row, ["breakdown", "salary_breakdown", "calculation_breakdown"])
     if not raw:
@@ -1254,6 +1318,7 @@ def render_politician_panel(salary, nombre, partido, grupo, claim_count, falsos=
         class_attr = f' class="{class_name}"' if class_name else ""
         meta_items.append(f"<span{class_attr}>{esc(label)}</span>")
     meta = "".join(meta_items)
+    seo_note = _salary_seo_note(salary, nombre)
 
     count_badge = f"""
           <div class="search-count-badge politician-panel-count-badge">
@@ -1282,6 +1347,7 @@ def render_politician_panel(salary, nombre, partido, grupo, claim_count, falsos=
 {count_badge}
         </div>
         {f'<div class="politician-panel-stats">{stats}</div>' if stats else '<p class="politician-panel-empty">Sin datos salariales disponibles.</p>'}
+        {f'<p class="politician-panel-seo-note">{esc(seo_note)}</p>' if seo_note else ''}
         {f'<p class="politician-panel-role">{esc(role)}</p>' if role else ''}
       </div>
     </section>"""
@@ -1430,27 +1496,23 @@ def _write_politician_page(pol_slug, info):
     falsos = counts.get("FALSO", 0)
     pct_falsos = round((falsos / total) * 100) if total else 0
 
-    title = f"{nombre} — Afirmaciones verificadas | Facthem"
+    title = f"{nombre} — salario y afirmaciones verificadas | Facthem"
     desc_who = f"{nombre} ({partido})" if partido else nombre
-    if total:
-        desc = f"{total} afirmaciones de {desc_who} verificadas por Facthem"
-        if falsos:
-            desc += f" — {falsos} falsa{'s' if falsos != 1 else ''}."
-        else:
-            desc += "."
-    else:
-        desc = f"Afirmaciones de {desc_who} verificadas por Facthem."
+    desc = _salary_seo_description(salary, desc_who, total, grupo)
+    if total and falsos:
+        desc += f" {falsos} falsa{'s' if falsos != 1 else ''}."
 
     panel_html, photo_url, congress_url = render_politician_panel(
         salary, nombre, partido, grupo, total, falsos, pct_falsos
     )
 
     person_ld = {
-        "@context": "https://schema.org",
         "@type": "Person",
+        "@id": f"{pol_url}#person",
         "name": nombre,
         "url": pol_url,
         "jobTitle": "Diputado/a",
+        "description": desc,
     }
     if partido:
         person_ld["affiliation"] = {"@type": "Organization", "name": partido}
@@ -1458,7 +1520,40 @@ def _write_politician_page(pol_slug, info):
         person_ld["image"] = photo_url if photo_url.startswith("http") else f"{BASE_URL}{photo_url}"
     if congress_url:
         person_ld["sameAs"] = [congress_url]
-    person_ld_json = json.dumps(person_ld, ensure_ascii=False)
+    graph = [
+        {
+            "@type": "WebPage",
+            "@id": f"{pol_url}#webpage",
+            "url": pol_url,
+            "name": title,
+            "description": desc,
+            "isPartOf": {"@type": "WebSite", "name": "Facthem", "url": BASE_URL},
+            "about": {"@id": f"{pol_url}#person"},
+        },
+        person_ld,
+    ]
+    if salary:
+        salary_ld = {
+            "@type": "Dataset",
+            "@id": f"{pol_url}#salary",
+            "name": f"Salario de {nombre}",
+            "description": desc,
+            "url": pol_url,
+            "inLanguage": "es",
+            "keywords": [
+                "salario político",
+                "sueldo diputado",
+                "retribuciones Congreso",
+                nombre,
+                partido,
+            ],
+            "about": {"@id": f"{pol_url}#person"},
+            "variableMeasured": _salary_measurements(salary),
+        }
+        salary_ld["keywords"] = [k for k in salary_ld["keywords"] if k]
+        person_ld["subjectOf"] = {"@id": f"{pol_url}#salary"}
+        graph.append(salary_ld)
+    person_ld_json = json.dumps({"@context": "https://schema.org", "@graph": graph}, ensure_ascii=False)
 
     if photo_url:
         og_image = photo_url if photo_url.startswith("http") else f"{BASE_URL}{photo_url}"

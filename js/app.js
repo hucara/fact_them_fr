@@ -90,6 +90,27 @@ let msSearchResultado = null, msSearchTematico = null;
 let claimCount = 0;
 let headerStatsBase = '';
 
+const FACTHEM_BASE_URL = 'https://facthem.es';
+const DEFAULT_SEO = {
+  title: 'Facthem — salarios y verificaciones de políticos del Congreso',
+  description: 'Consulta afirmaciones verificadas y salarios públicos de políticos del Congreso: sueldo mensual, salario anual, complementos e indemnizaciones de diputados y representantes.',
+  url: `${FACTHEM_BASE_URL}/`,
+};
+
+const TAB_SEO = {
+  'view-sesiones': DEFAULT_SEO,
+  'view-busqueda': {
+    title: 'Representantes — salarios y afirmaciones verificadas | Facthem',
+    description: 'Busca políticos del Congreso y consulta sus afirmaciones verificadas junto con datos públicos de sueldo mensual, salario anual, complementos e indemnizaciones.',
+    url: `${FACTHEM_BASE_URL}/?tab=parlamentarios`,
+  },
+  'view-estadisticas': {
+    title: 'Estadísticas parlamentarias | Facthem',
+    description: 'Estadísticas globales de afirmaciones verificadas por Facthem sobre políticos y partidos del Congreso.',
+    url: `${FACTHEM_BASE_URL}/?tab=estadisticas`,
+  },
+};
+
 const TAB_TO_SLUG = {
   'view-sesiones': 'sesiones',
   'view-busqueda': 'parlamentarios',
@@ -253,6 +274,11 @@ function activateTab(tabId, pushToHistory = true) {
   document.querySelectorAll('.view-container').forEach(v =>
     v.classList.toggle('active', v.id === tabId));
   updateHeaderStats();
+  if (tabId === 'view-busqueda' && currentSearchPolitician) {
+    updatePoliticianSeo(currentSearchPolitician, currentSearchSalary, currentSearchClaims);
+  } else {
+    updateSeoForTab(tabId);
+  }
   if (tabId === 'view-estadisticas' && !window.statsLoaded) loadGlobalDashboard();
   if (tabId === 'view-busqueda' && !searchLoaded) loadPoliticians();
   if (pushToHistory) {
@@ -1270,6 +1296,144 @@ function setMeta(attr, value, content) {
   if (el) el.setAttribute('content', content);
 }
 
+function setCanonical(url) {
+  const el = document.querySelector('link[rel="canonical"]');
+  if (el) el.setAttribute('href', url);
+}
+
+function setJsonLd(id, data) {
+  let el = document.getElementById(id);
+  if (!el) {
+    el = document.createElement('script');
+    el.type = 'application/ld+json';
+    el.id = id;
+    document.head.appendChild(el);
+  }
+  el.textContent = JSON.stringify(data);
+}
+
+function removeJsonLd(id) {
+  document.getElementById(id)?.remove();
+}
+
+function applySeo({ title, description, url }) {
+  document.title = title;
+  setMeta('name', 'description', description);
+  setMeta('property', 'og:title', title);
+  setMeta('property', 'og:description', description);
+  setMeta('property', 'og:url', url);
+  setMeta('name', 'twitter:title', title);
+  setMeta('name', 'twitter:description', description);
+  setCanonical(url);
+}
+
+function updateSeoForTab(tabId) {
+  applySeo(TAB_SEO[tabId] || DEFAULT_SEO);
+  removeJsonLd('politician-salary-ld');
+}
+
+function salarySeoNote(salary, displayName) {
+  if (!salary) return '';
+  const pieces = [
+    ['sueldo mensual total', ['total_monthly_eur', 'monthly_total_eur', 'salary_monthly_total_eur', 'monthly_with_indemnity_eur']],
+    ['salario anual', ['total_annual_eur', 'annual_total_eur', 'salary_annual_total_eur'], { compact: true }],
+    ['salario base mensual', ['base_monthly_eur', 'base_mensual_eur', 'base_monthly']],
+    ['indemnización', ['indemnizacion_monthly_eur', 'indemnity_monthly_eur', 'indemnizacion_mensual_eur']],
+    ['complementos', ['complements_monthly_eur', 'complement_monthly_eur', 'complementos_mensuales_eur']],
+  ].map(([label, keys, options]) => {
+    const formatted = formatEur(salaryValue(salary, keys), options || {});
+    return formatted ? `${label} ${formatted}` : '';
+  }).filter(Boolean);
+  if (!pieces.length) return '';
+  return `Datos públicos de retribución de ${displayName}: ${pieces.join(', ')}.`;
+}
+
+function salarySeoDescription(salary, displayName, politician, claims = []) {
+  if (!salary) {
+    return `Afirmaciones verificadas de ${displayName} en Facthem. Busca representantes y políticos del Congreso por nombre, partido y sesión parlamentaria.`;
+  }
+  const monthly = formatEur(salaryValue(salary, ['total_monthly_eur', 'monthly_total_eur', 'salary_monthly_total_eur', 'monthly_with_indemnity_eur']));
+  const annual = formatEur(salaryValue(salary, ['total_annual_eur', 'annual_total_eur', 'salary_annual_total_eur']), { compact: true });
+  const scope = isGovernmentSalary(salary, politician) ? 'salario público' : 'salario en el Congreso';
+  const claimText = claims.length ? ` ${claims.length} afirmaciones verificadas por Facthem.` : '';
+  if (monthly && annual) {
+    return `${scope[0].toUpperCase()}${scope.slice(1)} de ${displayName}: sueldo mensual total ${monthly} y salario anual ${annual}.${claimText}`;
+  }
+  return `${scope[0].toUpperCase()}${scope.slice(1)} de ${displayName} y afirmaciones verificadas por Facthem.`;
+}
+
+function salaryMeasurements(salary) {
+  return [
+    ['sueldo mensual total', ['total_monthly_eur', 'monthly_total_eur', 'salary_monthly_total_eur', 'monthly_with_indemnity_eur']],
+    ['salario anual', ['total_annual_eur', 'annual_total_eur', 'salary_annual_total_eur']],
+    ['salario base mensual', ['base_monthly_eur', 'base_mensual_eur', 'base_monthly']],
+    ['indemnización mensual', ['indemnizacion_monthly_eur', 'indemnity_monthly_eur', 'indemnizacion_mensual_eur']],
+    ['complementos mensuales', ['complements_monthly_eur', 'complement_monthly_eur', 'complementos_mensuales_eur']],
+  ].map(([name, keys]) => {
+    const value = Number(salaryValue(salary, keys));
+    if (!Number.isFinite(value) || value <= 0) return null;
+    return { '@type': 'PropertyValue', name, value: Number(value.toFixed(2)), unitText: 'EUR' };
+  }).filter(Boolean);
+}
+
+function updatePoliticianSeo(politician, salary, claims = []) {
+  if (!politician && !salary) return;
+  const displayName = formatNombre(
+    salaryValue(salary, ['full_name', 'nombre_completo', 'name', 'politician_name'], 5)
+      || politician?.nombre_completo
+      || document.getElementById('politician-search-input')?.value
+      || 'Representante'
+  );
+  const party = salaryValue(salary, ['party', 'partido'], 7) || politician?.partido || '';
+  const slug = currentPoliticianSlug || slugifyPolitician(displayName, party);
+  const url = claims.length
+    ? `${FACTHEM_BASE_URL}/politician/${slug}.html`
+    : `${FACTHEM_BASE_URL}/?tab=parlamentarios&politician=${encodeURIComponent(slug)}`;
+  const title = `${displayName} — salario y afirmaciones verificadas | Facthem`;
+  const description = salarySeoDescription(salary, displayName, politician, claims);
+
+  applySeo({ title, description, url });
+
+  if (!salary) {
+    removeJsonLd('politician-salary-ld');
+    return;
+  }
+
+  const photo = salaryPhotoSrc(salary, politician, displayName);
+  setJsonLd('politician-salary-ld', {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'WebPage',
+        '@id': `${url}#webpage`,
+        url,
+        name: title,
+        description,
+        isPartOf: { '@type': 'WebSite', name: 'Facthem', url: FACTHEM_BASE_URL },
+      },
+      {
+        '@type': 'Person',
+        '@id': `${url}#person`,
+        name: displayName,
+        description,
+        affiliation: party ? { '@type': 'Organization', name: party } : undefined,
+        image: photo ? `${FACTHEM_BASE_URL}${photo}` : undefined,
+      },
+      {
+        '@type': 'Dataset',
+        '@id': `${url}#salary`,
+        name: `Salario de ${displayName}`,
+        description,
+        url,
+        inLanguage: 'es',
+        keywords: ['salario político', 'sueldo diputado', 'retribuciones Congreso', displayName, party].filter(Boolean),
+        about: { '@id': `${url}#person` },
+        variableMeasured: salaryMeasurements(salary),
+      },
+    ],
+  });
+}
+
 // ─── Share image (Canvas) ──────────────────────────────────────────────────────
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
@@ -2077,7 +2241,9 @@ function resetPoliticianSearchView({ focus = false } = {}) {
       <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
     </svg>
     <p>Busca un político para ver todas sus afirmaciones verificadas.</p>
+    <p class="search-welcome-secondary">Incluye datos públicos de retribución cuando están disponibles.</p>
   </div>`;
+  updateSeoForTab('view-busqueda');
   if (focus) input.focus();
 }
 
@@ -2109,6 +2275,7 @@ async function selectPolitician(politicianId, politicianName, { updateUrl = true
       salary: currentSearchSalary,
       photoOverride,
     });
+    updatePoliticianSeo(currentSearchPolitician, currentSearchSalary, currentSearchClaims);
     if (scrollToResults) scrollToPoliticianResults();
     return;
   }
@@ -2149,6 +2316,7 @@ async function selectPolitician(politicianId, politicianName, { updateUrl = true
     salary: currentSearchSalary,
     photoOverride,
   });
+  updatePoliticianSeo(currentSearchPolitician, currentSearchSalary, claims);
   if (scrollToResults) scrollToPoliticianResults();
 }
 
@@ -2482,6 +2650,7 @@ function renderPoliticianPanel({ politician, politicianName, salary, claims, pho
     metaItems.push(`<span${className ? ` class="${className}"` : ''}>${escHtml(clean)}</span>`);
   });
   const meta = metaItems.join('');
+  const seoNote = salarySeoNote(salary, displayName);
 
   const total = claims.length;
   const falsos = claims.filter(c => c.verification?.[0]?.resultado === 'FALSO').length;
@@ -2506,6 +2675,7 @@ function renderPoliticianPanel({ politician, politicianName, salary, claims, pho
           ${countBadge}
         </div>
         ${stats ? `<div class="politician-panel-stats">${stats}</div>` : '<p class="politician-panel-empty">Sin datos salariales disponibles.</p>'}
+        ${seoNote ? `<p class="politician-panel-seo-note">${escHtml(seoNote)}</p>` : ''}
         ${role ? `<p class="politician-panel-role">${escHtml(role)}</p>` : ''}
       </div>
     </section>`;

@@ -1719,6 +1719,15 @@ body {
   color: var(--c-text-muted);
 }
 
+.politician-panel-seo-note {
+  margin: -.25rem 0 0;
+  max-width: 58rem;
+  font-size: .76rem;
+  line-height: 1.5;
+  color: var(--c-text-muted);
+  opacity: .72;
+}
+
 .politician-panel-empty {
   font-size: .82rem;
   color: var(--c-text-muted);
@@ -1742,6 +1751,11 @@ body {
   max-width: 280px;
   font-size: .9rem;
   line-height: 1.7;
+}
+
+.search-welcome-secondary {
+  margin-top: -.9rem;
+  opacity: .68;
 }
 
 .search-count-badge {
