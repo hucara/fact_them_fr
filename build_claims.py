@@ -578,9 +578,9 @@ def render_page(claim, slug, session_date):
         <span class="resultado-badge resultado-{resultado_class}">{esc(resultado_label)}</span>
       </header>
 
-      <blockquote class="claim-text modal-claim-text" title="{esc(texto_orig)}">
+      <h1 class="claim-text modal-claim-text" title="{esc(texto_orig)}">
         {esc(texto_norm)}
-      </blockquote>
+      </h1>
 
       {confidence_html}
 
@@ -1341,7 +1341,7 @@ def render_politician_panel(salary, nombre, partido, grupo, claim_count, falsos=
       <div class="politician-panel-body">
         <div class="politician-panel-header">
           <div>
-            <h2>{esc(nombre)}</h2>
+            <h1>{esc(nombre)}</h1>
             {f'<div class="politician-panel-meta">{meta}</div>' if meta else ''}
           </div>
 {count_badge}

@@ -625,6 +625,14 @@ body {
   position: relative;
 }
 
+h1.claim-text {
+  font-weight: inherit;
+  letter-spacing: normal;
+  background: none;
+  -webkit-text-fill-color: initial;
+  margin: 0;
+}
+
 .claim-text::before {
   content: '\201C';
   position: absolute;
@@ -1627,11 +1635,15 @@ body {
   gap: 1rem;
 }
 
-.politician-panel h2 {
+.politician-panel h1 {
   font-size: 1.15rem;
   line-height: 1.25;
   font-weight: 800;
   color: var(--c-text);
+  letter-spacing: normal;
+  background: none;
+  -webkit-text-fill-color: initial;
+  margin: 0;
 }
 
 .politician-panel-meta {
