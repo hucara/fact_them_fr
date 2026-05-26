@@ -1860,11 +1860,9 @@ function renderDashboard(s) {
   const bcSub = eventSub(bc, 'falsedades');
   const comboRows = [
     eventRow('Último mes', s.combo_breaker_last_month, 'confirmados'),
-    eventRow('Última semana', s.combo_breaker_last_week, 'confirmados'),
   ].filter(Boolean);
   const bocachanclaRows = [
     eventRow('Último mes', s.bocachancla_last_month, 'falsedades'),
-    eventRow('Última semana', s.bocachancla_last_week, 'falsedades'),
   ].filter(Boolean);
 
   const temaLabel = (f) => {
