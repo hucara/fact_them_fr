@@ -1194,7 +1194,8 @@ h1.claim-text {
   margin-bottom: .2rem;
 }
 
-.stat-card--dual .stat-value {
+.stat-card--dual .stat-value,
+.stat-card--timeline .stat-value {
   font-size: 1.15rem;
   line-height: 1.3;
 }
@@ -1731,14 +1732,21 @@ h1.claim-text {
   color: var(--c-text-muted);
 }
 
-.politician-panel-seo-note {
-  margin: -.25rem 0 0;
-  max-width: 58rem;
-  font-size: .76rem;
-  line-height: 1.5;
+.politician-panel-source {
+  margin: .15rem 0 0;
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .02em;
+  text-transform: uppercase;
   color: var(--c-text-muted);
-  opacity: .72;
+  opacity: .65;
 }
+.politician-panel-source-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.politician-panel-source-link:hover { opacity: .85; }
 
 .politician-panel-empty {
   font-size: .82rem;
