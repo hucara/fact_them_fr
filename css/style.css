@@ -403,9 +403,26 @@ body {
   padding: 1.5rem 1.75rem;
 }
 
+/* Scroll interno sin barra visible (mantiene el desplazamiento) */
+#claims-area,
+#sidebar,
+.search-view.active,
+.dashboard-view.active {
+  scrollbar-width: none;          /* Firefox */
+  -ms-overflow-style: none;       /* IE/Edge antiguo */
+}
+
+#claims-area::-webkit-scrollbar,
+#sidebar::-webkit-scrollbar,
+.search-view.active::-webkit-scrollbar,
+.dashboard-view.active::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
 #claims-container {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 1.25rem;
   align-content: start;
 }
@@ -1834,7 +1851,7 @@ h1.claim-text {
 
 .search-claims-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 1.25rem;
 }
 
@@ -1880,6 +1897,12 @@ h1.claim-text {
 }
 
 /* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 1400px) {
+  #claims-container {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 @media (max-width: 1100px) {
   #claims-container {
     grid-template-columns: repeat(2, 1fr);

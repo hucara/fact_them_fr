@@ -1436,14 +1436,19 @@ def _render_politician_claim_card(claim_slug, claim):
 
 def _render_politician_claim_groups(claims):
     grouped = {}
-    ordered = []
     for claim_slug, claim in claims:
         session = claim.get("session") or {}
         key = session.get("id") or claim.get("session_id") or "unknown"
         if key not in grouped:
             grouped[key] = {"session": session, "claims": []}
-            ordered.append(key)
         grouped[key]["claims"].append((claim_slug, claim))
+
+    # Sesiones de más reciente a más antigua (por fecha de sesión).
+    ordered = sorted(
+        grouped,
+        key=lambda k: (grouped[k]["session"] or {}).get("fecha") or "",
+        reverse=True,
+    )
 
     groups = []
     for key in ordered:
