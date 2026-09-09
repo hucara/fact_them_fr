@@ -217,7 +217,8 @@ details[open] summary.panel-title::after { content: '▴'; }
 
 /* ── Player ───────────────────────────────────────────────────────────────── */
 .player-wrap { position: relative; background: #000; }
-video, #yt-player { width: 100%; display: block; background: #000; aspect-ratio: 16/9; }
+/* height:auto beats the iframe's own height="360" attribute, so the box follows 16:9. */
+video, #yt-player { width: 100%; height: auto; display: block; background: #000; aspect-ratio: 16/9; }
 #yt-player iframe { width: 100%; height: 100%; display: block; }
 video[hidden], #yt-player[hidden] { display: none; }
 
@@ -944,6 +945,10 @@ body.admin .claim-card.future::before { content: 'en verificación · sale en ' 
   .site-header { padding: 0 .9rem; gap: .6rem; min-height: 48px; }
   .site-header .session-title { flex-basis: 100%; order: 5; font-size: .74rem; padding-bottom: .4rem; }
   .layout { display: flex; flex-direction: column; align-items: stretch; gap: .75rem; padding: 0 0 2rem; }
+  /* Video and speaker stay on screen while the claims scroll underneath. */
+  .site-header { position: static; }
+  body:not(.admin) .col { position: sticky; top: 0; z-index: 5; }
+  body:not(.admin) .col > .panel { overflow: visible; }
   .col, .feed-panel { gap: 0; width: 100%; min-width: 0; max-width: 100%; }
   .col > .panel { border-radius: 0; border-left: 0; border-right: 0; box-shadow: none; }
 
@@ -965,6 +970,7 @@ body.admin .claim-card.future::before { content: 'en verificación · sale en ' 
   .feed > .claim-card { order: 0; }
   .feed > .claim-card[data-resultado="nv"] { order: 1; }
   .feed > .feed-empty { order: 2; }
+  .feed > .feed-divider { display: flex; order: 1; }
 
   .claim-card { padding: .85rem .9rem; }
   .claim-header { gap: .45rem; }
@@ -977,3 +983,25 @@ body.admin .claim-card.future::before { content: 'en verificación · sale en ' 
 
   .site-footer { padding: .9rem; font-size: .68rem; }
 }
+
+/* ── Public desktop: the video takes the height the screen offers ──────────
+   The left column is sized from the viewport height (video + speaker +
+   rail + transcript ≈ 23rem of chrome), so the picture is as big as fits
+   and nothing is left empty under the transcript. Admin keeps the split it
+   has, its controls need the room. */
+@media (min-width: 1001px) {
+  body:not(.admin) .layout {
+    grid-template-columns: minmax(0, calc((100vh - 23rem) * 16 / 9)) minmax(380px, 1fr);
+  }
+}
+
+/* ── "Sin datos" divider: where the unverifiable group starts (mobile) ──── */
+.feed-divider {
+  display: none; align-items: center; gap: .5rem;
+  margin-top: 1rem; padding: .7rem 0 .3rem;
+  border-top: 1px solid var(--c-border);
+  font-size: .68rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--c-text-muted);
+}
+.feed-divider[hidden] { display: none !important; }
+.feed > .feed-divider ~ .claim-card[data-resultado="nv"] { opacity: .8; }

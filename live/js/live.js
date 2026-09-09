@@ -824,12 +824,16 @@ function applyVerdict(ev) {
   const { el } = entry;
   const cls = resultadoToClass(verdict.resultado);
   el.dataset.state = 'done';
-  el.dataset.resultado = cls;
+  // On a phone the unverifiable claims live in their own section at the end
+  // (CSS `order` on data-resultado). Setting it at once would make the card
+  // jump there; instead it fades out where it is and reopens down there.
+  const relocate = weak && isMobile() && motion();
+  if (!relocate) el.dataset.resultado = cls;
 
   const badge = el.querySelector('.resultado-badge');
   badge.className = `resultado-badge resultado-${cls}`;
   badge.textContent = RESULTADO_LABELS[verdict.resultado] || verdict.resultado;
-  if (motion()) el.classList.add('reveal');
+  if (motion() && !relocate) el.classList.add('reveal');
 
   // Sources: tier, name, the specific figure it gives — one row each, the
   // tier badge a fixed width so the names line up.
@@ -878,6 +882,32 @@ function applyVerdict(ev) {
 
   countVerdict(verdict.resultado);
   growBox(box);
+  if (relocate) setTimeout(() => relocateCard(el, () => { el.dataset.resultado = cls; }), 2500);
+}
+
+const isMobile = () => !!(window.matchMedia && matchMedia('(max-width: 760px)').matches);
+
+/* Fade out in place, close the space, move (the callback), reopen. */
+function relocateCard(el, move) {
+  const h = el.getBoundingClientRect().height;
+  el.style.overflow = 'hidden';
+  const fold = el.animate(
+    [{ opacity: 1, height: `${h}px`, easing: 'ease-out' },
+     { opacity: 0, height: `${h}px`, offset: .42, easing: 'linear' },
+     { opacity: 0, height: `${h}px`, offset: .55, easing: 'cubic-bezier(.4, 0, .2, 1)' },
+     { opacity: 0, ...closedBox }],
+    { duration: 1400, fill: 'forwards' });
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    fold.cancel();
+    el.style.overflow = '';
+    move();
+    growIn(el);
+  };
+  fold.onfinish = finish;
+  setTimeout(finish, 1550);
 }
 
 /* ── verdict breakdown (left column) ────────────────────────────────────── */
@@ -893,6 +923,7 @@ const verdictCounts = {};
 function countVerdict(resultado) {
   const cls = resultadoToClass(resultado);
   verdictCounts[cls] = (verdictCounts[cls] || 0) + 1;
+  if (cls === 'nv') { $('nv-divider').hidden = false; $('nv-count').textContent = verdictCounts.nv; }   // mobile section header (CSS)
   renderBreakdown();
 }
 
