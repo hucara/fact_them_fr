@@ -277,11 +277,13 @@ function showIdle() {
     const el = document.querySelector(sel);
     if (el) el.hidden = true;
   }
-  $('feed').innerHTML = '';
-  $('feed').appendChild($('feed-empty'));
-  $('feed-empty').classList.add('idle');
-  $('feed-empty').innerHTML = IDLE_HTML;
-  $('feed-empty').hidden = false;
+  // Grab the placeholder before emptying the feed: once removed from the
+  // document it is no longer reachable by id.
+  const empty = $('feed-empty');
+  $('feed').replaceChildren(empty);
+  empty.classList.add('idle');
+  empty.innerHTML = IDLE_HTML;
+  empty.hidden = false;
 }
 
 async function bootBuckets() {
