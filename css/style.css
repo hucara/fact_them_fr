@@ -2543,13 +2543,3 @@ h1.claim-text {
     text-align: center;
   }
 }
-
-/* ── "En directo" link in the header, only while the live runner publishes ── */
-.live-banner {
-  display: inline-flex; align-items: center; gap: .4rem; margin-left: auto;
-  padding: .3rem .7rem; border-radius: 999px; font-size: .78rem; font-weight: 700;
-  color: #fff; background: #c43e5e; text-decoration: none; white-space: nowrap;
-}
-.live-banner:hover { background: #d84f70; }
-.live-dot { width: .5rem; height: .5rem; border-radius: 50%; background: #fff; animation: live-pulse 1.4s ease-in-out infinite; }
-@keyframes live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
