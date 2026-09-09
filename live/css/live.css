@@ -1011,3 +1011,11 @@ body.admin .claim-card.future::before { content: 'en verificación · sale en ' 
 .feed .feed-empty.idle { display: block; padding: 3.5rem 1.5rem; text-align: center; font-size: 1.05rem; line-height: 1.7; color: var(--c-text); max-width: none; margin: 0 auto; }
 .feed-empty.idle a { color: var(--c-accent); font-weight: 600; text-decoration: none; }
 .feed-empty.idle a:hover { text-decoration: underline; }
+.feed-empty.idle .idle-archive { margin: 1.4rem 0 0; color: var(--c-text-muted); font-size: .95rem; }
+.feed-empty.idle .idle-donate { margin: 1.6rem 0 0; font-size: .95rem; color: var(--c-text-muted); }
+.feed-empty.idle .donate-btn {
+  display: inline-block; margin-left: .35rem; padding: .25rem .7rem; font-size: .9rem; font-weight: 600;
+  border-radius: 999px; border: 1px solid var(--c-accent); color: var(--c-accent); text-decoration: none;
+  transition: background .15s, color .15s;
+}
+.feed-empty.idle .donate-btn:hover { background: var(--c-accent); color: #fff; text-decoration: none; }
