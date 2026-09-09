@@ -16,6 +16,54 @@
 const _stubs = {};
 const $ = (id) => document.getElementById(id) || (_stubs[id] ||= document.createElement('div'));
 
+/* ── motion helpers ──────────────────────────────────────────────────────
+   Motion is a signal ("this just changed"), never decoration: one-shot,
+   short, and gone under prefers-reduced-motion. */
+const reducedMotion = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+// Nothing moves while the page is (re)building from history: a reload replays
+// the whole session in one go, and eighty cards animating at once is noise,
+// not information. Motion starts once the replay has settled.
+let settled = false;
+document.body.classList.add('settling');
+function markSettled() {
+  if (settled) return;
+  settled = true;
+  document.body.classList.remove('settling');
+}
+const motion = () => settled && !reducedMotion;
+
+// Re-trigger a one-shot CSS animation class on an element.
+function pulseClass(el, cls, ms = 1000) {
+  if (!el || !motion()) return;
+  el.classList.remove(cls);
+  void el.offsetWidth;
+  el.classList.add(cls);
+  clearTimeout(el._pulseT?.[cls]);
+  (el._pulseT ||= {})[cls] = setTimeout(() => el.classList.remove(cls), ms);
+}
+const bumpEl = (el) => pulseClass(el, 'bump', 450);
+
+// FLIP: children of `container` matched by `keyOf` glide from where they were
+// to where `run()` puts them, so a list reorder or an insert at the top reads
+// as movement rather than a jump. New children get `flip-new`.
+function flipChildren(container, selector, keyOf, run) {
+  if (!motion() || !Element.prototype.animate) { run(); return; }
+  const before = new Map();
+  for (const el of container.querySelectorAll(selector)) { const k = keyOf(el); if (k) before.set(k, el.getBoundingClientRect()); }
+  run();
+  for (const el of container.querySelectorAll(selector)) {
+    const k = keyOf(el);
+    const b = k && before.get(k);
+    if (!b) { if (before.size) { el.classList.add('flip-new'); setTimeout(() => el.classList.remove('flip-new'), 400); } continue; }
+    const a = el.getBoundingClientRect();
+    const dx = b.left - a.left, dy = b.top - a.top;
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue;
+    el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }],
+      { duration: 340, easing: 'cubic-bezier(.2,.8,.2,1)' });
+  }
+}
+
 /* ── verdict vocabulary (shared with the rest of Facthem) ───────────────── */
 const RESULTADO_LABELS = {
   CONFIRMADO: 'Confirmado',
@@ -241,9 +289,11 @@ async function bootBuckets() {
     await pollBuckets(true);
     clock = pipelineTime + 1;
     flushPending();
+    setTimeout(markSettled, 1500);
     return;
   }
   await pollBuckets(false);
+  setTimeout(markSettled, 1500);
   setInterval(() => pollBuckets(false), 1000);
 }
 
@@ -365,11 +415,16 @@ function renderRail() {
     rail.innerHTML = (session.roster || []).map((r) => personHTML(r, 'en el plató')).join('');
     return;
   }
-  rail.innerHTML = railKeys
-    .map((k) => rosterByKey.get(k))
-    .filter(Boolean)
-    .map((r, i) => personHTML(r, i === 0 ? 'en el uso de la palabra' : 'ha intervenido'))
-    .join('');
+  const sig = railKeys.join('|');
+  if (rail.dataset.keys === sig && rail.childElementCount) { fitRail(); return; }
+  rail.dataset.keys = sig;
+  flipChildren(rail, '.person', (el) => el.dataset.key, () => {
+    rail.innerHTML = railKeys
+      .map((k) => rosterByKey.get(k))
+      .filter(Boolean)
+      .map((r, i) => personHTML(r, i === 0 ? 'en el uso de la palabra' : 'ha intervenido'))
+      .join('');
+  });
   fitRail();
 }
 /* One line, always: the newest speakers are on the left, so drop chips from
@@ -382,7 +437,7 @@ function fitRail() {
     rail.lastElementChild.remove();
   }
 }
-if (window.ResizeObserver) new ResizeObserver(() => renderRail()).observe(document.querySelector('.col') || document.body);
+if (window.ResizeObserver) new ResizeObserver(() => { $('rail').dataset.keys = ''; renderRail(); }).observe(document.querySelector('.col') || document.body);
 
 function noteSpeakerInRail(sp) {
   if (railIsStatic() || !sp?.politician_id || !rosterByKey.has(sp.politician_id)) return;
@@ -406,6 +461,7 @@ function connect() {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${proto}://${location.host}/debates/${session.session_id}/stream`);
   ws.onmessage = (e) => onEvent(JSON.parse(e.data));
+  setTimeout(markSettled, 1500);
   ws.onclose = () => setTimeout(connect, 2000);
 }
 
@@ -491,23 +547,49 @@ function applyTimed(ev) {
 
 /* ── now speaking + captions ────────────────────────────────────────────── */
 let captionParts = [];
+const captionWords = (t) =>
+  esc(t).split(/\s+/).filter(Boolean).map((w, i) => `<span class="w" style="--i:${Math.min(i, 36)}">${w}</span>`).join(' ');
 function showCaption(text) {
   if (switchActive === false) return;
   captionParts = [...captionParts, text].slice(-4);
+  // The newest chunk arrives word by word; the one before it settles from
+  // bright to muted; anything older is just text.
+  const last = captionParts.length - 1;
   $('caption').innerHTML = captionParts
-    .map((t, i) => (i === captionParts.length - 1 ? `<b>${esc(t)}</b>` : esc(t)))
+    .map((t, i) => {
+      if (i === last) return `<b class="fresh">${captionWords(t)}</b>`;
+      if (i === last - 1) return `<span class="settling">${esc(t)}</span>`;
+      return esc(t);
+    })
     .join(' ');
 }
 
 let shownSpeakerKey = null;
 function showSpeaker(sp) {
-  if (!sp) return;
+  if (!sp) {
+    // Nobody to show (the presiding officer has the floor): blank panel, the
+    // transcript box starts over, the rail keeps the last real speakers.
+    if (shownSpeakerKey !== null) {
+      shownSpeakerKey = null;
+      if (switchActive !== false) { captionParts = []; $('caption').textContent = ''; }
+      $('now-name').textContent = '—';
+      $('now-name').title = '';
+      $('now-name').classList.remove('unknown');
+      $('now-how').textContent = '';
+      $('now-avatar').src = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+      $('now-avatar').classList.remove('live');
+      document.querySelectorAll('.person').forEach((el) => el.classList.remove('active'));
+    }
+    return;
+  }
   const key = sp.politician_id || sp.name || 'unknown';
-  if (key !== shownSpeakerKey) {
+  const changed = key !== shownSpeakerKey;
+  if (changed) {
     // New speaker: the transcript box starts over, so what is on screen is
     // this person's words only.
     shownSpeakerKey = key;
     if (switchActive !== false) { captionParts = []; $('caption').textContent = ''; }
+    pulseClass(document.querySelector('.now'), 'swap', 700);
   }
   noteSpeakerInRail(sp);
   $('now-name').innerHTML = `${esc(sp.name ? shortName(sp) : 'Orador no identificado')} ${partyChip(partyFor(sp))}`;
@@ -521,6 +603,7 @@ function showSpeaker(sp) {
   document.querySelectorAll('.person').forEach((el) =>
     el.classList.toggle('active', el.dataset.key === (sp.politician_id || ''))
   );
+  if (changed) pulseClass(document.querySelector('.person.active'), 'just', 900);
 }
 
 /* ── claim cards ────────────────────────────────────────────────────────── */
@@ -586,21 +669,97 @@ function makeCard(payload, state) {
   const feed = $('feed');
   const t = payload.t_end ?? payload.t_start ?? 0;
   el.dataset.t = t;
+  el.dataset.flip = payload.claim_id || `x${Math.random()}`;
   const before = [...feed.querySelectorAll('.claim-card')].find((c) => +c.dataset.t < t);
   if (before) feed.insertBefore(el, before); else feed.appendChild(el);
+  growIn(el);
   $('feed-empty').hidden = true;
+  if (settled && el === feed.querySelector('.claim-card') && feed.scrollTop > 60) noteNewAbove();
   return el;
 }
+
+/* A new card opens up from zero height to its own, so the cards around it
+   are pushed aside continuously instead of jumping; the fade (CSS `enter`)
+   runs over it. Collapsing is the same motion in reverse. */
+const SHRINK = { duration: 900, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'forwards' };
+const closedBox = { height: '0px', paddingTop: '0px', paddingBottom: '0px', borderTopWidth: '0px', borderBottomWidth: '0px', marginBottom: '-0.75rem' };
+/* Two phases in one animation, never overlapping: first the space opens (the
+   card, still invisible, grows and pushes the others down), then the card
+   fades in where the space is. One animation and no inline styles, so there
+   is no state to clean up and nothing can be left half-shown. */
+function growIn(el) {
+  if (!motion() || !el.animate) return;
+  const h = el.getBoundingClientRect().height;
+  el.animate(
+    [{ ...closedBox, opacity: 0, transform: 'translateY(6px)', easing: 'cubic-bezier(.25, .1, .25, 1)' },
+     { height: `${h}px`, opacity: 0, transform: 'translateY(6px)', offset: .58, easing: 'cubic-bezier(.2, .7, .2, 1)' },
+     { height: `${h}px`, opacity: 1, transform: 'none' }],
+    { duration: 1050 });
+}
+
+/* A block that appears inside a card or above the list opens its space first
+   and shows its content second, so nothing around it jumps. */
+function growBox(el) {
+  el.hidden = false;
+  if (!motion() || !el.animate) return;
+  const h = el.getBoundingClientRect().height;
+  el.animate(
+    [{ height: '0px', marginTop: '0px', opacity: 0, easing: 'cubic-bezier(.25, .1, .25, 1)' },
+     { height: `${h}px`, opacity: 0, offset: .6, easing: 'ease-out' },
+     { height: `${h}px`, opacity: 1 }],
+    { duration: 600 });
+}
+
+/* A card that lands at the top while the reader is further down would go
+   unseen: count it in a sticky pill that scrolls back up on click. */
+let newAbove = 0;
+function noteNewAbove() {
+  newAbove += 1;
+  const pill = $('feed-new');
+  pill.querySelector('b').textContent = newAbove;
+  pill.querySelector('.n').textContent = newAbove === 1 ? 'nueva afirmación' : 'nuevas afirmaciones';
+  if (pill.hidden) pill.hidden = false; else bumpEl(pill.querySelector('b'));
+}
+$('feed-new').addEventListener('click', () => {
+  newAbove = 0;
+  $('feed-new').hidden = true;
+  // Own tween rather than behavior:'smooth': it is honoured everywhere and
+  // is not cancelled by the scroll anchoring a landing card triggers.
+  const feed = $('feed');
+  const from = feed.scrollTop;
+  if (reducedMotion || from < 2) { feed.scrollTop = 0; return; }
+  const t0 = performance.now();
+  const step = (now) => {
+    const k = Math.min(1, (now - t0) / 380);
+    feed.scrollTop = from * (1 - (1 - Math.pow(1 - k, 3)));
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+});
+$('feed').addEventListener('scroll', () => {
+  if ($('feed').scrollTop < 30 && newAbove) { newAbove = 0; $('feed-new').hidden = true; }
+}, { passive: true });
 
 function addClaim(ev) {
   const { claim_id, claim } = ev.payload;
   const el = makeCard(ev.payload, 'pending');
-  claims.set(claim_id, { el, claim, startedAt: Date.now(), t: ev.payload.t_end ?? ev.t ?? null });
+  claims.set(claim_id, { el, claim, startedAt: Date.now(), t: ev.t ?? ev.payload.t_end ?? null });
   markPending(claim_id);
   $('claim-count').textContent = claims.size;
+  bumpEl($('claim-count'));
 
+  // A verdict that arrived before the card was revealed (the viewer delay
+  // covers the whole verification) is not landed now: the viewer would never
+  // see the claim being checked. It lands when the viewer clock reaches the
+  // moment the verifier actually answered — claim time plus its latency.
   const held = heldVerdicts.get(claim_id);
-  if (held) { heldVerdicts.delete(claim_id); applyVerdict(held); }
+  if (held) {
+    heldVerdicts.delete(claim_id);
+    const entry = claims.get(claim_id);
+    const lat = Math.min(25, Math.max(3, held.payload.latency_seconds ?? 6));
+    entry.held = held;
+    entry.verdictAt = (entry.t ?? clock) + lat;
+  }
 }
 
 function markPending(claimId) {
@@ -615,8 +774,10 @@ function markPending(claimId) {
    seconds; without this the UI is indistinguishable from one that has hung. */
 function tickPending() {
   const now = Date.now();
-  for (const { el, startedAt, done } of claims.values()) {
+  for (const entry of claims.values()) {
+    const { el, startedAt, done } = entry;
     if (done) continue;
+    if (entry.held && clock >= entry.verdictAt) { const h = entry.held; entry.held = null; applyVerdict(h); continue; }
     const badge = el.querySelector('.resultado-badge');
     if (badge?.classList.contains('resultado-pending')) {
       badge.textContent = `Verificando ${Math.round((now - startedAt) / 1000)}s`;
@@ -653,6 +814,7 @@ function applyVerdict(ev) {
   const badge = el.querySelector('.resultado-badge');
   badge.className = `resultado-badge resultado-${cls}`;
   badge.textContent = RESULTADO_LABELS[verdict.resultado] || verdict.resultado;
+  if (motion()) el.classList.add('reveal');
 
   // Sources: tier, name, the specific figure it gives — one row each, the
   // tier badge a fixed width so the names line up.
@@ -679,13 +841,12 @@ function applyVerdict(ev) {
   const period = c.periodo_temporal && foldKey(c.periodo_temporal) !== 'no especificado' ? c.periodo_temporal : '';
 
   const box = el.querySelector('.verdict');
-  box.hidden = false;
   box.innerHTML = `
     <div class="claim-actions">
       <button class="detail-toggle" aria-expanded="false">Ver verificación completa</button>
       ${shareButton(el, verdict)}
     </div>
-    <div class="verdict-detail" hidden>
+    <div class="verdict-detail"><div class="vd-inner"><div class="vd-pad">
       ${headline ? `<section class="vd"><h4>Lo que dicen los datos${period ? ` <span class="vd-period">${esc(period)}</span>` : ''}</h4><p class="verdict-headline">${esc(headline)}</p></section>` : ''}
       ${notes.length ? `<section class="vd"><h4>Matices</h4><ul>${notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul></section>` : ''}
       ${sources ? `<section class="vd"><h4>Fuentes</h4><div class="sources">${sources}</div></section>` : ''}
@@ -694,19 +855,67 @@ function applyVerdict(ev) {
         ${latency_seconds != null ? `<span>verificado en ${Math.round(latency_seconds)} s</span>` : ''}
         ${cache_hit ? '<span>⚡ caché</span>' : ''}
       </div>
-    </div>`;
+    </div></div></div>`;
 
   if (weak) demote(el);
   else countVerdict(verdict.resultado);
+  growBox(box);
 }
 
 /* Park a card in the collapsed drawer under the feed. The claim was still
-   made, so it is never dropped — just kept out of the way until asked for. */
+   made, so it is never dropped — just kept out of the way until asked for.
+   It used to jump there the instant the verdict landed, which read as the
+   card vanishing: now the verdict shows in place, a note says where the card
+   is going, and after a hold it folds away while the drawer count bumps. */
+const DEMOTE_HOLD_MS = 5000;
 function demote(el) {
-  const drawer = $('weak-drawer');
+  if (el.dataset.demoting) return;
+  el.dataset.demoting = '1';
+  const box = el.querySelector('.verdict');
+  if (box && !box.querySelector('.nv-note')) {
+    box.insertAdjacentHTML('afterbegin',
+      '<p class="nv-note">Sin datos suficientes para verificarla · se guarda abajo, en «Sin datos suficientes» ↓</p>');
+  }
+  if (!settled) { parkInDrawer(el); return; }
+  if (reducedMotion) { setTimeout(() => { parkInDrawer(el); drawerCatch(); }, 1200); return; }
+  setTimeout(() => fallToDrawer(el), DEMOTE_HOLD_MS);
+}
+
+/* Fold the card away: it fades first, then closes so the cards below move
+   up continuously; the drawer glows and bumps its count once it is inside.
+   The hand-off runs on a timer as well as on `finish`, so a throttled tab
+   can never leave a collapsed, invisible card in the feed. */
+function fallToDrawer(el) {
+  const h = el.getBoundingClientRect().height;
+  el.style.overflow = 'hidden';
+  const collapse = el.animate(
+    [{ opacity: 1, height: `${h}px` },
+     { opacity: 0, height: `${h}px`, offset: .45 },
+     { opacity: 0, ...closedBox }],
+    SHRINK);
+  let handed = false;
+  const handOff = () => {
+    if (handed) return;
+    handed = true;
+    parkInDrawer(el);
+    collapse.cancel();
+    el.style.overflow = '';
+    drawerCatch();
+  };
+  collapse.onfinish = handOff;
+  setTimeout(handOff, SHRINK.duration + 150);
+}
+function parkInDrawer(el) {
+  el.querySelector('.nv-note')?.remove();
+  el.classList.remove('reveal');
   $('weak-list').appendChild(el);
-  drawer.hidden = false;
+  $('weak-drawer').hidden = false;
   $('weak-count').textContent = $('weak-list').childElementCount;
+  delete el.dataset.demoting;
+}
+function drawerCatch() {
+  bumpEl($('weak-count'));
+  pulseClass($('weak-drawer'), 'received', 2200);
 }
 
 /* ── verdict breakdown (left column) ────────────────────────────────────── */
@@ -750,23 +959,30 @@ function renderBreakdown() {
   const total = Object.values(verdictCounts).reduce((a, b) => a + b, 0);
   const bar = $('summary-bar');
   if (!total) { bar.hidden = true; return; }
-  bar.hidden = false;
+  const firstShow = bar.hidden;
 
-  const present = VB_ORDER.filter(([cls]) => verdictCounts[cls]);
-  bar.innerHTML = `
+  // Built once, then updated in place: the segments' flex values tween and
+  // a changed count bumps, instead of the whole bar being rebuilt.
+  if (!bar.firstElementChild) {
+    bar.innerHTML = `
     <div class="sb-track">
-      ${present
-        .map(([cls]) => `<span class="sb-seg sb-${cls}" style="flex:${verdictCounts[cls]}"></span>`)
-        .join('')}
+      ${VB_ORDER.map(([cls]) => `<span class="sb-seg sb-${cls} empty" data-cls="${cls}" style="flex:0"></span>`).join('')}
     </div>
     <div class="sb-legend">
-      ${present
-        .map(
-          ([cls, label]) =>
-            `<span class="sb-key"><span class="dot sb-${cls}"></span>${label} <b>${verdictCounts[cls]}</b></span>`
-        )
-        .join('')}
+      ${VB_ORDER.map(([cls, label]) => `<span class="sb-key" data-cls="${cls}" hidden><span class="dot sb-${cls}"></span>${label} <b>0</b></span>`).join('')}
     </div>`;
+  }
+  for (const [cls] of VB_ORDER) {
+    const n = verdictCounts[cls] || 0;
+    const seg = bar.querySelector(`.sb-seg[data-cls="${cls}"]`);
+    seg.style.flex = String(n);
+    seg.classList.toggle('empty', !n);
+    const key = bar.querySelector(`.sb-key[data-cls="${cls}"]`);
+    key.hidden = !n;
+    const b = key.querySelector('b');
+    if (b.textContent !== String(n)) { b.textContent = n; bumpEl(b); }
+  }
+  if (firstShow) growBox(bar);
 }
 
 
@@ -828,8 +1044,8 @@ document.addEventListener('click', (e) => {
   const toggle = e.target.closest('.detail-toggle');
   if (toggle) {
     const panel = toggle.closest('.verdict').querySelector('.verdict-detail');
-    const open = panel.hidden;
-    panel.hidden = !open;
+    const open = !panel.classList.contains('open');
+    panel.classList.toggle('open', open);
     toggle.setAttribute('aria-expanded', String(open));
     toggle.textContent = open ? 'Ocultar verificación' : 'Ver verificación completa';
     return;
@@ -914,7 +1130,7 @@ function debugNote(ev) {
    showing what goes to the model, the diagnostics panel (stages, stats,
    cost, text processing, event trace). */
 function applyDebug() {
-  // Operator controls only: a viewer of facthem.es/directo/ sees the player, the
+  // Operator controls only: a viewer of facthem.es/live/ sees the player, the
   // speaker, the rail, the captions and the cards. Nothing else, ever.
   if (!adminOn) debugOn = false;
   $('controls').hidden = !adminOn;
@@ -1320,6 +1536,8 @@ async function setupAdmin() {
     applyLiveMode();
   });
   canSeekRunner = !!st.can_seek;
+  $('btn-simulate').hidden = false;
+  $('btn-simulate').addEventListener('click', simulateClaim);
   renderSwitch(st.active);
   applyDebug();
   applyLiveMode(false);
@@ -1342,6 +1560,52 @@ async function setupAdmin() {
       $('btn-switch').disabled = false;
     }
   });
+}
+
+/* ── admin: one synthetic claim, end to end ──────────────────────────────
+   Plays the whole sequence the page animates — speaker change, caption,
+   card arrival, verification in flight, verdict — without waiting for the
+   pipeline. Fake data, admin page only; nothing is published. */
+const SIM_CLAIMS = [
+  ['El paro juvenil ha bajado del 40 % al 27 % desde 2018.', 'economía', 'CONFIRMADO_CON_MATIZ'],
+  ['España es el país de la UE que más ha reducido la deuda pública.', 'economía', 'FALSO'],
+  ['Hay 20 millones de afiliados a la Seguridad Social.', 'empleo', 'SOBREESTIMADO'],
+  ['El gasto en sanidad supera el 7 % del PIB.', 'sanidad', 'CONFIRMADO'],
+  ['La inflación cerró 2023 en el 3,1 %.', 'economía', 'CONFIRMADO'],
+  ['Nunca antes se había subido tanto el salario mínimo.', 'empleo', 'IMPRECISO'],
+  ['Las listas de espera han crecido un 50 % en dos años.', 'sanidad', 'NO_VERIFICABLE'],
+];
+let simN = 0;
+function simulateClaim() {
+  simN += 1;
+  const roster = (session.roster || []).filter((r) => r.politician_id);
+  const other = roster.filter((r) => r.politician_id !== shownSpeakerKey);
+  const who = (other.length ? other : roster)[simN % Math.max(1, (other.length ? other : roster).length)];
+  const sp = who
+    ? { politician_id: who.politician_id, name: who.name, party: who.party, photo_url: who.photo_url, source: 'face_sticky', confidence: .91 }
+    : { politician_id: null, name: null, source: 'stub' };
+  showSpeaker(sp);
+  const [text, ambito, resultado] = SIM_CLAIMS[simN % SIM_CLAIMS.length];
+  showCaption('Señorías, los datos son claros y quiero recordarlos aquí:');
+  setTimeout(() => showCaption(text), 700);
+  const claim_id = `sim-${Date.now()}`;
+  const t = clock;
+  setTimeout(() => {
+    addClaim({ t, payload: { claim_id, t_start: t, t_end: t, speaker: sp,
+      claim: { texto_normalizado: text, ambito_tematico: ambito, ambito_geografico: 'España', periodo_temporal: '2023' } } });
+    bump('claims');
+  }, 1400);
+  setTimeout(() => applyVerdict({ t, payload: { claim_id, latency_seconds: 3.2, cache_hit: false, verdict: {
+    resultado,
+    afirmacion_correcta: resultado === 'NO_VERIFICABLE' ? '' : 'Según la fuente oficial, la cifra correcta para el periodo citado difiere ligeramente de la enunciada.',
+    errores: resultado === 'CONFIRMADO' ? [] : ['La cifra corresponde a otro periodo del que se cita.'],
+    omisiones: ['No se menciona el cambio metodológico de 2021.'],
+    confidence_score: .78,
+    fuentes: [
+      { url: 'https://www.ine.es/', nombre: 'INE — EPA', tipo: 'primaria', dato_especifico: 'Tasa de paro 4T 2023: 11,76 %' },
+      { url: 'https://www.bde.es/', nombre: 'Banco de España', tipo: 'primaria', dato_especifico: 'Deuda pública 2023: 107,7 % del PIB' },
+    ],
+  } } }), 4600);
 }
 
 /* ── controls ───────────────────────────────────────────────────────────── */
