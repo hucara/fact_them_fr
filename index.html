@@ -153,8 +153,12 @@
     // manifest is the one mutable object of the live data plane; it says
     // whether a session is live and its title. Polled once a minute.
     (function () {
+      // Kill switch: the live page is unannounced while it is being tested.
+      // Flip to true to let the banner follow the manifest again.
+      var LIVE_BANNER_ENABLED = false;
       var base = 'https://pub-4b0592b162234f079cbe05777d9aa1f2.r2.dev/';  // r2.dev until live-data.facthem.es exists
       var el = document.getElementById('live-banner');
+      if (!LIVE_BANNER_ENABLED) { el.hidden = true; return; }
       function check() {
         fetch(base + 'sessions/current.json', { cache: 'no-store' })
           .then(function (r) { return r.ok ? r.json() : null; })
