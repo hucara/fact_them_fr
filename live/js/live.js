@@ -26,6 +26,7 @@ const reducedMotion = !!(window.matchMedia && matchMedia('(prefers-reduced-motio
 // not information. Motion starts once the replay has settled.
 let settled = false;
 document.body.classList.add('settling');
+if (window.LIVE_ADMIN) document.body.classList.add('admin');
 function markSettled() {
   if (settled) return;
   settled = true;
@@ -504,6 +505,16 @@ function onEvent(ev) {
       if ('extraction_active' in ev.payload) renderSwitch(ev.payload.extraction_active);
       return;
   }
+  // Operator view only: a claim card exists from the moment the pipeline
+  // finds it, dimmed with a countdown until the viewer clock reaches it —
+  // so "what is being verified right now" is visible, and survives a
+  // reload. The public page keeps queueing: a viewer must not see a claim
+  // before the delayed picture reaches the words.
+  if (window.LIVE_ADMIN && ev.type === 'claim.detected' && (ev.t || 0) > clock) {
+    applyTimed(ev);
+    updateFuture();
+    return;
+  }
   if ((ev.t || 0) <= clock) {
     // Already behind the viewer clock on arrival: the delay did not cover the
     // pipeline lag, so this shows after the viewer heard it. Count it and say
@@ -681,7 +692,7 @@ function makeCard(payload, state) {
 /* A new card opens up from zero height to its own, so the cards around it
    are pushed aside continuously instead of jumping; the fade (CSS `enter`)
    runs over it. Collapsing is the same motion in reverse. */
-const SHRINK = { duration: 900, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'forwards' };
+const SHRINK = { duration: 1400, fill: 'forwards' };
 const closedBox = { height: '0px', paddingTop: '0px', paddingBottom: '0px', borderTopWidth: '0px', borderBottomWidth: '0px', marginBottom: '-0.75rem' };
 /* Two phases in one animation, never overlapping: first the space opens (the
    card, still invisible, grows and pushes the others down), then the card
@@ -753,13 +764,7 @@ function addClaim(ev) {
   // see the claim being checked. It lands when the viewer clock reaches the
   // moment the verifier actually answered — claim time plus its latency.
   const held = heldVerdicts.get(claim_id);
-  if (held) {
-    heldVerdicts.delete(claim_id);
-    const entry = claims.get(claim_id);
-    const lat = Math.min(25, Math.max(3, held.payload.latency_seconds ?? 6));
-    entry.held = held;
-    entry.verdictAt = (entry.t ?? clock) + lat;
-  }
+  if (held) { heldVerdicts.delete(claim_id); applyVerdict(held); }
 }
 
 function markPending(claimId) {
@@ -790,6 +795,16 @@ function applyVerdict(ev) {
   const { claim_id, verdict, cache_hit, latency_seconds } = ev.payload;
   const entry = claims.get(claim_id);
   if (!entry) { heldVerdicts.set(claim_id, ev); return; }
+  // A verdict ahead of the viewer clock (the delay covers the verification,
+  // or the card was shown early on the admin page) is not landed yet: it
+  // lands when the clock reaches the moment the verifier actually answered —
+  // claim time plus its latency — so the claim is seen being checked.
+  if (!entry.done) {
+    const lat = Math.min(25, Math.max(3, ev.payload.latency_seconds ?? 6));
+    const at = (entry.t ?? clock) + lat;
+    if (clock < at) { entry.held = ev; entry.verdictAt = at; return; }
+  }
+  entry.held = null;
   entry.done = true;
 
   // NO_VERIFICABLE is never a finding about the world — only about the
@@ -818,8 +833,14 @@ function applyVerdict(ev) {
 
   // Sources: tier, name, the specific figure it gives — one row each, the
   // tier badge a fixed width so the names line up.
+  // Primary sources first, then academic, then the rest — in the order the
+  // verifier gave them within each tier.
+  const tierRank = (f) => ({ primaria: 0, academica: 1, secundaria: 2, terciaria: 3 }[foldKey(f.tipo || '')] ?? 4);
   const sources = (verdict.fuentes || [])
     .filter((f) => f.url)
+    .map((f, i) => [f, i])
+    .sort((a, b) => tierRank(a[0]) - tierRank(b[0]) || a[1] - b[1])
+    .map(([f]) => f)
     .slice(0, 4)
     .map((f) => {
       const tier = f.tipo || '';
@@ -837,8 +858,6 @@ function applyVerdict(ev) {
   // Expanded, three labelled blocks: the correct statement, the nuances, the
   // sources — and one footer line with confidence and timing.
   const headline = verdict.afirmacion_correcta || '';
-  const c = entry.claim || {};
-  const period = c.periodo_temporal && foldKey(c.periodo_temporal) !== 'no especificado' ? c.periodo_temporal : '';
 
   const box = el.querySelector('.verdict');
   box.innerHTML = `
@@ -847,7 +866,7 @@ function applyVerdict(ev) {
       ${shareButton(el, verdict)}
     </div>
     <div class="verdict-detail"><div class="vd-inner"><div class="vd-pad">
-      ${headline ? `<section class="vd"><h4>Lo que dicen los datos${period ? ` <span class="vd-period">${esc(period)}</span>` : ''}</h4><p class="verdict-headline">${esc(headline)}</p></section>` : ''}
+      ${headline ? `<section class="vd"><h4>Lo que dicen los datos</h4><p class="verdict-headline">${esc(headline)}</p></section>` : ''}
       ${notes.length ? `<section class="vd"><h4>Matices</h4><ul>${notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul></section>` : ''}
       ${sources ? `<section class="vd"><h4>Fuentes</h4><div class="sources">${sources}</div></section>` : ''}
       <div class="claim-foot">
@@ -857,65 +876,8 @@ function applyVerdict(ev) {
       </div>
     </div></div></div>`;
 
-  if (weak) demote(el);
-  else countVerdict(verdict.resultado);
+  countVerdict(verdict.resultado);
   growBox(box);
-}
-
-/* Park a card in the collapsed drawer under the feed. The claim was still
-   made, so it is never dropped — just kept out of the way until asked for.
-   It used to jump there the instant the verdict landed, which read as the
-   card vanishing: now the verdict shows in place, a note says where the card
-   is going, and after a hold it folds away while the drawer count bumps. */
-const DEMOTE_HOLD_MS = 5000;
-function demote(el) {
-  if (el.dataset.demoting) return;
-  el.dataset.demoting = '1';
-  const box = el.querySelector('.verdict');
-  if (box && !box.querySelector('.nv-note')) {
-    box.insertAdjacentHTML('afterbegin',
-      '<p class="nv-note">Sin datos suficientes para verificarla · se guarda abajo, en «Sin datos suficientes» ↓</p>');
-  }
-  if (!settled) { parkInDrawer(el); return; }
-  if (reducedMotion) { setTimeout(() => { parkInDrawer(el); drawerCatch(); }, 1200); return; }
-  setTimeout(() => fallToDrawer(el), DEMOTE_HOLD_MS);
-}
-
-/* Fold the card away: it fades first, then closes so the cards below move
-   up continuously; the drawer glows and bumps its count once it is inside.
-   The hand-off runs on a timer as well as on `finish`, so a throttled tab
-   can never leave a collapsed, invisible card in the feed. */
-function fallToDrawer(el) {
-  const h = el.getBoundingClientRect().height;
-  el.style.overflow = 'hidden';
-  const collapse = el.animate(
-    [{ opacity: 1, height: `${h}px` },
-     { opacity: 0, height: `${h}px`, offset: .45 },
-     { opacity: 0, ...closedBox }],
-    SHRINK);
-  let handed = false;
-  const handOff = () => {
-    if (handed) return;
-    handed = true;
-    parkInDrawer(el);
-    collapse.cancel();
-    el.style.overflow = '';
-    drawerCatch();
-  };
-  collapse.onfinish = handOff;
-  setTimeout(handOff, SHRINK.duration + 150);
-}
-function parkInDrawer(el) {
-  el.querySelector('.nv-note')?.remove();
-  el.classList.remove('reveal');
-  $('weak-list').appendChild(el);
-  $('weak-drawer').hidden = false;
-  $('weak-count').textContent = $('weak-list').childElementCount;
-  delete el.dataset.demoting;
-}
-function drawerCatch() {
-  bumpEl($('weak-count'));
-  pulseClass($('weak-drawer'), 'received', 2200);
 }
 
 /* ── verdict breakdown (left column) ────────────────────────────────────── */
@@ -924,6 +886,7 @@ const VB_ORDER = [
   ['parcial', 'Con matiz'],
   ['enganoso', 'Sobre/subestimado'],
   ['falso', 'Falso'],
+  ['nv', 'Sin datos'],
 ];
 const verdictCounts = {};
 
@@ -1219,6 +1182,8 @@ function tickClock() {
   $('clock-emision').textContent = fmtTime(clock);
   const lag = Math.round(Math.max(0, pipelineTime - clock));
   $('clock-lag').textContent = sessionEnded ? 'emisión finalizada' : `verificación +${lag}s`;
+  // The lag is an operator number; a viewer only needs to know when it ended.
+  $('clock-lag').hidden = !window.LIVE_ADMIN && !sessionEnded;
 }
 
 /* Keep the picture on the viewer clock — but never by seeking *backwards*.
@@ -1664,7 +1629,9 @@ function rewindState() {
 function updateFuture() {
   for (const { el, t } of claims.values()) {
     if (t == null) continue;
-    el.classList.toggle('future', t > clock + 0.5);
+    const future = t > clock + 0.5;
+    el.classList.toggle('future', future);
+    if (future) el.dataset.eta = `${Math.ceil(t - clock)} s`;
   }
 }
 

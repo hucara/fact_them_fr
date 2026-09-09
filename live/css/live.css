@@ -931,3 +931,8 @@ button.btn:active, .detail-toggle:active, .claim-at:active, .share-btn:active, .
 /* While the page rebuilds from history nothing animates or transitions;
    `settling` is removed by the script once the replay has landed. */
 body.settling *, body.settling *::before, body.settling *::after { animation: none !important; transition: none !important; }
+
+/* Admin: claims the pipeline has found but the viewer clock has not reached
+   yet — visible, quiet, with the time until they surface. */
+body.admin .claim-card.future { opacity: .55; }
+body.admin .claim-card.future::before { content: 'en verificación · sale en ' attr(data-eta); }
