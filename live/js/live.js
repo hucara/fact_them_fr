@@ -220,8 +220,8 @@ async function boot() {
   let debates = [];
   try { debates = await fetchJSON('/debates'); } catch { debates = []; }
   if (!debates.length) {
-    $('session-title').textContent = 'sin sesión activa';
-    return;
+    showIdle();
+    return setupAdmin();
   }
   session = debates[debates.length - 1];
   applySession();
@@ -257,7 +257,36 @@ function closedBucket() {
   return Math.floor((Date.now() / 1000 - grace) / bs) - 1;
 }
 
+/* No sitting being verified right now: nothing of the last session is shown
+   (its claims are archived in the parliament DB), just where to find us.
+   `?replay` (or `?s=<session>`) still opens the archive view of a session. */
+const IDLE_HTML =
+  'Ahora mismo no estamos verificando ningún pleno en directo.<br />' +
+  'Vuelve otro día y síguenos en ' +
+  '<a href="https://www.youtube.com/@facthem_es" target="_blank" rel="noopener">YouTube</a>, ' +
+  '<a href="https://www.tiktok.com/@facthem_es" target="_blank" rel="noopener">TikTok</a> y ' +
+  '<a href="https://x.com/facthem_es" target="_blank" rel="noopener">X</a>: ' +
+  '<b>@facthem_es</b> y <b>@facthem_eu</b>.';
+function showIdle() {
+  sessionEnded = true;
+  $('session-title').textContent = 'sin emisión';
+  document.title = 'Facthem directo';
+  $('onair').hidden = true;
+  document.querySelector('.layout')?.classList.add('idle');
+  for (const sel of ['.layout > .col', '#summary-bar', '#weak-drawer', '#claim-count', '#debug-current']) {
+    const el = document.querySelector(sel);
+    if (el) el.hidden = true;
+  }
+  $('feed').innerHTML = '';
+  $('feed').appendChild($('feed-empty'));
+  $('feed-empty').classList.add('idle');
+  $('feed-empty').innerHTML = IDLE_HTML;
+  $('feed-empty').hidden = false;
+}
+
 async function bootBuckets() {
+  const replay = new URLSearchParams(location.search).has('replay') || new URLSearchParams(location.search).has('s');
+  if (bucketCfg.status === 'ended' && !replay) { showIdle(); return; }
   session = {
     session_id: bucketCfg.session_id,
     title: bucketCfg.title,

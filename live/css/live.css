@@ -1006,3 +1006,8 @@ body.admin .claim-card.future::before { content: 'en verificación · sale en ' 
   body:not(.admin) .weak-list { max-height: 32vh; }
 }
 
+/* ── idle: no sitting being verified ────────────────────────────────────── */
+.layout.idle { display: block; max-width: 720px; margin: 2rem auto; }
+.feed-empty.idle { padding: 3.5rem 1.5rem; text-align: center; font-size: 1.05rem; line-height: 1.7; color: var(--c-text); }
+.feed-empty.idle a { color: var(--c-accent); font-weight: 600; text-decoration: none; }
+.feed-empty.idle a:hover { text-decoration: underline; }
