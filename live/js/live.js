@@ -266,7 +266,12 @@ const IDLE_HTML =
   '<a href="https://www.youtube.com/@facthem_es" target="_blank" rel="noopener">YouTube</a>, ' +
   '<a href="https://www.tiktok.com/@facthem_es" target="_blank" rel="noopener">TikTok</a> y ' +
   '<a href="https://x.com/facthem_es" target="_blank" rel="noopener">X</a>: ' +
-  '<b>@facthem_es</b> y <b>@facthem_eu</b>.';
+  '<b>@facthem_es</b> y <b>@facthem_eu</b>.' +
+  '<p class="idle-archive">Si buscas una sesión anterior, puedes verla en ' +
+  '<a href="https://facthem.es/">facthem.es</a>.</p>' +
+  '<p class="idle-donate">♥ Apóyanos: ' +
+  '<a href="https://paypal.me/hcasero" class="donate-btn" target="_blank" rel="noopener">PayPal</a> ' +
+  '<a href="https://ko-fi.com/hugocasero" class="donate-btn" target="_blank" rel="noopener">Ko-fi</a></p>';
 function showIdle() {
   sessionEnded = true;
   $('session-title').textContent = 'sin emisión';
