@@ -983,16 +983,22 @@ let lastCost = null;
 function renderCost(cost) {
   if (!cost) return;
   lastCost = cost;
-  const usd = cost.usd || 0;
+  // Session total across restarts: model + searches + audio. Older runners
+  // send the model figure only; the rest defaults to zero.
+  const usd = cost.total_usd ?? cost.usd ?? 0;
   const perClaim = claims.size ? usd / claims.size : 0;
   // A 10-minute demo costs cents, so cents is the unit that reads.
-  const money = usd < 1 ? `${(usd * 100).toFixed(2)}¢` : `$${usd.toFixed(2)}`;
-  $('cost-total').textContent = money;
+  const money = (v) => (v < 1 ? `${(v * 100).toFixed(2)}¢` : `$${v.toFixed(2)}`);
+  $('cost-total').textContent = money(usd);
+  const searches = Object.entries(cost.searches || {}).map(([p, n]) => `${p} ${n}`).join(', ');
   $('cost-detail').innerHTML = `
-    <span>${cost.calls} llamadas</span>
+    <span>modelo ${money(cost.usd || 0)} · ${cost.calls} llamadas</span>
+    ${cost.search_count ? `<span>búsquedas ${money(cost.search_usd || 0)} · ${cost.search_count} (${searches})</span>` : ''}
+    ${cost.asr_seconds ? `<span>audio ${money(cost.asr_usd || 0)} · ${(cost.asr_seconds / 3600).toFixed(2)} h</span>` : ''}
     <span>${((cost.prompt_tokens || 0) / 1000).toFixed(1)}k tokens entrada</span>
     <span>${((cost.completion_tokens || 0) / 1000).toFixed(1)}k salida</span>
     ${cost.cached_tokens ? `<span>${((cost.cached_tokens || 0) / 1000).toFixed(1)}k en caché</span>` : ''}
+    ${cost.runs > 1 ? `<span>${cost.runs} arranques</span>` : ''}
     ${claims.size ? `<span>${(perClaim * 100).toFixed(2)}¢ por afirmación</span>` : ''}
     ${(usd && pipelineTime) ? `<span>≈$${((usd / pipelineTime) * 3600).toFixed(2)}/hora de debate</span>` : ''}`;
 }
