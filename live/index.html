@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Facthem — verificación en directo</title>
+  <meta name="description" content="Verificación de afirmaciones en directo durante un debate: quién habla, qué afirma y si es cierto, con fuentes." />
+  <link rel="canonical" href="https://facthem.es/live/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://facthem.es/live/" />
+  <meta property="og:title" content="Facthem en directo — verificación de afirmaciones del Congreso" />
+  <meta property="og:description" content="Quién habla, qué afirma y si es cierto, con fuentes, mientras se emite la sesión." />
+  <meta property="og:image" content="https://facthem.es/assets/portada_opt.png" />
+  <meta property="og:locale" content="es_ES" />
+  <meta property="og:site_name" content="Facthem" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@facthem_ES" />
+  <meta name="twitter:title" content="Facthem en directo" />
+  <meta name="twitter:description" content="Verificación de afirmaciones mientras se emite la sesión del Congreso." />
+  <meta name="twitter:image" content="https://facthem.es/assets/portada_opt.png" />
+  <link rel="icon" href="https://facthem.es/assets/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="https://facthem.es/assets/favicon-32x32.png" />
+  <link rel="apple-touch-icon" href="https://facthem.es/assets/apple-touch-icon.png" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#0d0d0d" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" />
+  <link rel="stylesheet" href="css/live.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="brand" href="https://facthem.es/">Facthem</a>
+    <span class="brand-tag">directo</span>
+    <span class="session-title" id="session-title">cargando…</span>
+    <span class="onair" id="onair" hidden>en directo</span>
+  </header>
+
+  <main class="layout">
+    <div class="col">
+
+      <section class="panel">
+        <div class="player-wrap">
+          <video id="player" controls playsinline preload="auto" muted hidden></video>
+          <div id="yt-player" hidden></div>
+          <button id="play-overlay" hidden>▶ Empezar emisión</button>
+        </div>
+
+        <div class="now">
+          <img class="now-avatar" id="now-avatar" alt="" />
+          <div>
+            <div class="now-name" id="now-name">—</div>
+            <div class="now-how" id="now-how">esperando atribución de orador</div>
+          </div>
+          <div class="clocks">
+            emisión <strong id="clock-emision">00:00</strong><br />
+            <span id="clock-lag">en directo</span>
+          </div>
+        </div>
+
+        <div class="rail" id="rail"></div>
+        <div class="caption" id="caption"></div>
+
+      </section>
+
+
+    </div>
+
+    <section class="panel feed-panel">
+      <h2 class="panel-title">
+        Afirmaciones verificadas
+        <span class="count" id="claim-count">0</span>
+      </h2>
+      <div class="summary-bar" id="summary-bar" hidden></div>
+      <div class="feed" id="feed">
+        <p class="feed-empty" id="feed-empty">
+          Escuchando el debate. Las afirmaciones aparecerán en cuanto se pronuncien.
+        </p>
+      </div>
+
+      <!-- Claims the verifier could neither check nor rule out. Kept, because
+           they were still said, but out of the way of the resolved ones. -->
+      <details class="weak-drawer" id="weak-drawer" hidden>
+        <summary>
+          Sin datos suficientes para verificar
+          <span class="weak-count" id="weak-count">0</span>
+        </summary>
+        <div class="feed weak-list" id="weak-list"></div>
+      </details>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    Las verificaciones se generan en directo mediante un proceso automatizado con IA y pueden contener
+    inexactitudes. El archivo definitivo se reverifica después con el pipeline completo.
+  </footer>
+
+  <!-- Data plane. Empty = same origin (local API, or nginx/cloudflared on aton).
+       Set to the R2 custom domain (e.g. https://live-data.facthem.es/) when the
+       page is hosted elsewhere. `?data=` on the URL overrides it. -->
+  <script>window.LIVE_DATA_BASE = window.LIVE_DATA_BASE || 'https://live-data.facthem.es/';</script>
+  <script src="js/live.js"></script>
+</body>
+</html>

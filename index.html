@@ -144,7 +144,32 @@
       <button class="tab-button" data-tab="view-estadisticas">Estadísticas</button>
     </nav>
     <span id="header-stats" aria-live="polite"></span>
+    <a class="live-banner" id="live-banner" href="/live/" hidden>
+      <span class="live-dot"></span> En directo: <span id="live-banner-title"></span>
+    </a>
   </header>
+  <script>
+    // Show the "En directo" link while the live runner is publishing. The
+    // manifest is the one mutable object of the live data plane; it says
+    // whether a session is live and its title. Polled once a minute.
+    (function () {
+      var base = 'https://live-data.facthem.es/';
+      var el = document.getElementById('live-banner');
+      function check() {
+        fetch(base + 'sessions/current.json', { cache: 'no-store' })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (m) {
+            // listed:false = a rehearsal on a real stream; the page works, the banner stays off
+            var live = m && m.status === 'live' && m.listed !== false;
+            el.hidden = !live;
+            if (live) document.getElementById('live-banner-title').textContent = m.title || 'sesión del Congreso';
+          })
+          .catch(function () { el.hidden = true; });
+      }
+      check();
+      setInterval(check, 60000);
+    })();
+  </script>
 
   <!-- ── App Views ─────────────────────────────────────────────────────────── -->
   <div class="view-container active" id="view-sesiones">
