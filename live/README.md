@@ -1,4 +1,4 @@
-# /directo — live fact-checking page (https://facthem.es/directo/)
+# /live — live fact-checking page (https://facthem.es/live/)
 
 Built by `python -m fact_them_be.live.frontend.build` from
 `fact_them_be/src/fact_them_be/live/frontend/`. Do not edit here — change the
