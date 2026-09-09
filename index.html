@@ -144,7 +144,7 @@
       <button class="tab-button" data-tab="view-estadisticas">Estadísticas</button>
     </nav>
     <span id="header-stats" aria-live="polite"></span>
-    <a class="live-banner" id="live-banner" href="/live/" hidden>
+    <a class="live-banner" id="live-banner" href="/directo/" hidden>
       <span class="live-dot"></span> En directo: <span id="live-banner-title"></span>
     </a>
   </header>
@@ -153,7 +153,7 @@
     // manifest is the one mutable object of the live data plane; it says
     // whether a session is live and its title. Polled once a minute.
     (function () {
-      var base = 'https://live-data.facthem.es/';
+      var base = 'https://pub-4b0592b162234f079cbe05777d9aa1f2.r2.dev/';  // r2.dev until live-data.facthem.es exists
       var el = document.getElementById('live-banner');
       function check() {
         fetch(base + 'sessions/current.json', { cache: 'no-store' })

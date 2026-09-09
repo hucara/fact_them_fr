@@ -914,7 +914,7 @@ function debugNote(ev) {
    showing what goes to the model, the diagnostics panel (stages, stats,
    cost, text processing, event trace). */
 function applyDebug() {
-  // Operator controls only: a viewer of facthem.es/live/ sees the player, the
+  // Operator controls only: a viewer of facthem.es/directo/ sees the player, the
   // speaker, the rail, the captions and the cards. Nothing else, ever.
   if (!adminOn) debugOn = false;
   $('controls').hidden = !adminOn;
