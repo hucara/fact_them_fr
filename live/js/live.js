@@ -150,7 +150,9 @@ let seeking = false;
 /* ── helpers ────────────────────────────────────────────────────────────── */
 const fmtTime = (s) => {
   s = Math.max(0, Math.floor(s || 0));
-  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  const mmss = `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  return h ? `${h}:${mmss}` : mmss;
 };
 const esc = (s) =>
   String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -886,12 +888,17 @@ function applyVerdict(ev) {
     </div></div></div>`;
 
   countVerdict(verdict.resultado);
-  growBox(box);
   if (toDrawer) {
-    if (!motion()) parkInDrawer(el);
-    else setTimeout(() => relocateCard(el, () => parkInDrawer(el)), 2500);
+    // The actions row is not opened here: the card is about to leave, and a
+    // box that grows only to fold a moment later is the jitter that reads as
+    // clunky. It shows once the card is in the drawer.
+    if (!motion()) { box.hidden = false; parkInDrawer(el); }
+    else setTimeout(() => relocateCard(el, () => { box.hidden = false; parkInDrawer(el); }), DEMOTE_HOLD_MS);
+    return;
   }
+  growBox(box);
 }
+const DEMOTE_HOLD_MS = 4000;
 
 function parkInDrawer(el) {
   const drawer = $('weak-drawer');
@@ -944,12 +951,14 @@ const mobileLive = () => isMobile() && !window.LIVE_ADMIN;
 function relocateCard(el, move) {
   const h = el.getBoundingClientRect().height;
   el.style.overflow = 'hidden';
+  // Fade (700 ms, eased both ends), a beat of empty space, then the space
+  // closes (750 ms, ease-in-out). Nothing moves while the card can be seen.
   const fold = el.animate(
-    [{ opacity: 1, height: `${h}px`, easing: 'ease-out' },
-     { opacity: 0, height: `${h}px`, offset: .42, easing: 'linear' },
-     { opacity: 0, height: `${h}px`, offset: .55, easing: 'cubic-bezier(.4, 0, .2, 1)' },
+    [{ opacity: 1, height: `${h}px`, easing: 'cubic-bezier(.45, 0, .55, 1)' },
+     { opacity: 0, height: `${h}px`, offset: .43, easing: 'linear' },
+     { opacity: 0, height: `${h}px`, offset: .54, easing: 'cubic-bezier(.65, 0, .35, 1)' },
      { opacity: 0, ...closedBox }],
-    { duration: 1400, fill: 'forwards' });
+    { duration: 1650, fill: 'forwards' });
   let done = false;
   const finish = () => {
     if (done) return;
@@ -960,7 +969,7 @@ function relocateCard(el, move) {
     growIn(el);
   };
   fold.onfinish = finish;
-  setTimeout(finish, 1550);
+  setTimeout(finish, 1800);
 }
 
 /* ── verdict breakdown (left column) ────────────────────────────────────── */
