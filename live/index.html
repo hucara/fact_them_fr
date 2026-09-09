@@ -74,12 +74,21 @@
       <div class="summary-bar" id="summary-bar" hidden></div>
       <div class="feed" id="feed">
         <button class="feed-new" id="feed-new" hidden>↑ <b>1</b> <span class="n">nueva afirmación</span></button>
-        <div class="feed-divider" id="nv-divider" hidden>Sin datos suficientes para verificar <span class="weak-count" id="nv-count">0</span></div>
         <p class="feed-empty" id="feed-empty">
           Escuchando el debate. Las afirmaciones aparecerán en cuanto se pronuncien.
         </p>
       </div>
 
+
+      <!-- Desktop: claims the verifier could neither check nor rule out are kept,
+           because they were still said, but folded away under the resolved ones. -->
+      <details class="weak-drawer" id="weak-drawer" hidden>
+        <summary>
+          Sin datos suficientes para verificar
+          <span class="weak-count" id="weak-count">0</span>
+        </summary>
+        <div class="feed weak-list" id="weak-list"></div>
+      </details>
     </section>
   </main>
 

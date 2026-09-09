@@ -264,6 +264,9 @@ async function bootBuckets() {
   };
   applySession();
   delaySeconds = bucketCfg.delay_recommended ?? delaySeconds;
+  // A phone plays the stream where YouTube puts it — the live edge — and the
+  // claims show as the pipeline emits them. No delay, no seeking the embed.
+  if (mobileLive()) delaySeconds = 0;
   $('delay').value = delaySeconds;
   $('delay-val').textContent = delaySeconds;
   const ended = bucketCfg.status === 'ended';
@@ -824,16 +827,15 @@ function applyVerdict(ev) {
   const { el } = entry;
   const cls = resultadoToClass(verdict.resultado);
   el.dataset.state = 'done';
-  // On a phone the unverifiable claims live in their own section at the end
-  // (CSS `order` on data-resultado). Setting it at once would make the card
-  // jump there; instead it fades out where it is and reopens down there.
-  const relocate = weak && isMobile() && motion();
-  if (!relocate) el.dataset.resultado = cls;
+  // Unverifiable claims go to the folded drawer under the list: verdict
+  // shown, a hold, a fade, and the drawer lights up as it takes the card.
+  const toDrawer = weak;
+  el.dataset.resultado = cls;
 
   const badge = el.querySelector('.resultado-badge');
   badge.className = `resultado-badge resultado-${cls}`;
   badge.textContent = RESULTADO_LABELS[verdict.resultado] || verdict.resultado;
-  if (motion() && !relocate) el.classList.add('reveal');
+  if (motion() && !toDrawer) el.classList.add('reveal');
 
   // Sources: tier, name, the specific figure it gives — one row each, the
   // tier badge a fixed width so the names line up.
@@ -882,10 +884,23 @@ function applyVerdict(ev) {
 
   countVerdict(verdict.resultado);
   growBox(box);
-  if (relocate) setTimeout(() => relocateCard(el, () => { el.dataset.resultado = cls; }), 2500);
+  if (toDrawer) {
+    if (!motion()) parkInDrawer(el);
+    else setTimeout(() => relocateCard(el, () => parkInDrawer(el)), 2500);
+  }
+}
+
+function parkInDrawer(el) {
+  const drawer = $('weak-drawer');
+  $('weak-list').appendChild(el);
+  drawer.hidden = false;
+  $('weak-count').textContent = $('weak-list').childElementCount;
+  bumpEl($('weak-count'));
+  pulseClass(drawer, 'received', 2200);
 }
 
 const isMobile = () => !!(window.matchMedia && matchMedia('(max-width: 760px)').matches);
+const mobileLive = () => isMobile() && !window.LIVE_ADMIN;
 
 /* Fade out in place, close the space, move (the callback), reopen. */
 function relocateCard(el, move) {
@@ -923,7 +938,6 @@ const verdictCounts = {};
 function countVerdict(resultado) {
   const cls = resultadoToClass(resultado);
   verdictCounts[cls] = (verdictCounts[cls] || 0) + 1;
-  if (cls === 'nv') { $('nv-divider').hidden = false; $('nv-count').textContent = verdictCounts.nv; }   // mobile section header (CSS)
   renderBreakdown();
 }
 
@@ -1287,7 +1301,7 @@ function syncLog(what, extra = {}) {
 }
 
 function requestYtSeek(playerTime, why) {
-  if (!yt || !ytReady) return;
+  if (!yt || !ytReady || mobileLive()) return;
   const target = Math.max(0, playerTime);
   ytSeekTarget = target;
   ytSeekAt = Date.now();
