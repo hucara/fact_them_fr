@@ -273,7 +273,7 @@ function showIdle() {
   document.title = 'Facthem directo';
   $('onair').hidden = true;
   document.querySelector('.layout')?.classList.add('idle');
-  for (const sel of ['.layout > .col', '#summary-bar', '#weak-drawer', '#claim-count', '#debug-current']) {
+  for (const sel of ['.layout > .col', '.feed-panel > .panel-title', '#summary-bar', '#weak-drawer', '#debug-current']) {
     const el = document.querySelector(sel);
     if (el) el.hidden = true;
   }
