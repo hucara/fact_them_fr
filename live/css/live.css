@@ -984,8 +984,25 @@ body.admin .claim-card.future::before { content: 'en verificación · sale en ' 
    and nothing is left empty under the transcript. Admin keeps the split it
    has, its controls need the room. */
 @media (min-width: 1001px) {
+  /* The page itself never scrolls: header, one screen of layout, footer.
+     The claims column is exactly as tall as the video column and scrolls
+     inside; the video column width is set by the script (fitDesktop) from
+     the height that is actually left once speaker, rail and transcript are
+     accounted for. */
+  body:not(.admin) { height: 100vh; overflow: hidden; }
   body:not(.admin) .layout {
-    grid-template-columns: minmax(0, calc((100vh - 23rem) * 16 / 9)) minmax(380px, 1fr);
+    flex: 1; min-height: 0; align-items: stretch;
+    grid-template-columns: minmax(0, var(--video-col, calc((100vh - 23rem) * 16 / 9))) minmax(380px, 1fr);
   }
+  /* Both columns are the full layout height: the left panel stretches and
+     the transcript box absorbs whatever the video cannot use. */
+  body:not(.admin) .col { display: flex; flex-direction: column; min-height: 0; }
+  body:not(.admin) .col > .panel { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  body:not(.admin) .player-wrap, body:not(.admin) .now, body:not(.admin) .rail { flex: none; }
+  body:not(.admin) .caption { flex: 1; height: auto; min-height: 8.2rem; }
+  body:not(.admin) .feed-panel { display: flex; flex-direction: column; min-height: 0; }
+  body:not(.admin) .feed-panel > .panel-title, body:not(.admin) .summary-bar, body:not(.admin) .weak-drawer { flex: none; }
+  body:not(.admin) .feed { flex: 1; min-height: 0; max-height: none; }
+  body:not(.admin) .weak-list { max-height: 32vh; }
 }
 

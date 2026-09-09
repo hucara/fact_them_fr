@@ -233,6 +233,7 @@ async function boot() {
 }
 
 function applySession() {
+  setTimeout(fitDesktop, 0);
   $('session-title').textContent = session.title || session.session_id;
   document.title = `${session.title || session.session_id} · Facthem directo`;
   rosterByKey = new Map();
@@ -417,10 +418,12 @@ function renderRail() {
   const rail = $('rail');
   if (railIsStatic()) {
     rail.innerHTML = (session.roster || []).map((r) => personHTML(r, 'en el plató')).join('');
+    setTimeout(fitDesktop, 0);
     return;
   }
   const sig = railKeys.join('|');
   if (rail.dataset.keys === sig && rail.childElementCount) { fitRail(); return; }
+  setTimeout(fitDesktop, 0);   // the rail's height is part of the column budget
   rail.dataset.keys = sig;
   flipChildren(rail, '.person', (el) => el.dataset.key, () => {
     rail.innerHTML = railKeys
@@ -892,7 +895,10 @@ function applyVerdict(ev) {
 
 function parkInDrawer(el) {
   const drawer = $('weak-drawer');
-  $('weak-list').appendChild(el);
+  // Newest first, like the main list.
+  const list = $('weak-list');
+  const before = [...list.querySelectorAll('.claim-card')].find((c) => +c.dataset.t < +el.dataset.t);
+  if (before) list.insertBefore(el, before); else list.appendChild(el);
   drawer.hidden = false;
   $('weak-count').textContent = $('weak-list').childElementCount;
   bumpEl($('weak-count'));
@@ -900,6 +906,38 @@ function parkInDrawer(el) {
 }
 
 const isMobile = () => !!(window.matchMedia && matchMedia('(max-width: 760px)').matches);
+
+/* Public desktop: size the video column so the video plus speaker, rail and
+   transcript fill the layout height exactly — no empty band under the
+   transcript, nothing pushed off screen. Re-run on resize. */
+function fitDesktop() {
+  const root = document.documentElement;
+  if (window.LIVE_ADMIN || !matchMedia('(min-width: 1001px)').matches) { root.style.removeProperty('--video-col'); return; }
+  const layout = document.querySelector('.layout');
+  const col = document.querySelector('.col');
+  const wrap = document.querySelector('.player-wrap');
+  if (!layout || !col || !wrap) return;
+  const cs = getComputedStyle(layout);
+  const avail = layout.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  // Measure the panel at its natural size: it and the transcript box are
+  // stretched to fill the column, which would otherwise be read back as
+  // chrome and shrink the video on every pass.
+  const panel = col.querySelector('.panel');
+  const cap = $('caption');
+  panel.style.flex = 'none'; cap.style.flex = 'none';
+  const chrome = panel.getBoundingClientRect().height - wrap.getBoundingClientRect().height;
+  panel.style.flex = ''; cap.style.flex = '';
+  const videoH = Math.max(180, avail - chrome);
+  root.style.setProperty('--video-col', `${Math.round(videoH * 16 / 9)}px`);
+}
+window.addEventListener('resize', () => setTimeout(fitDesktop, 50));
+document.addEventListener('DOMContentLoaded', fitDesktop);
+if (window.ResizeObserver) {
+  // The layout (window resize) and the pieces of chrome whose height changes
+  // as the session runs: the rail fills as speakers take the floor.
+  const ro = new ResizeObserver(() => fitDesktop());
+  for (const sel of ['.layout', '.rail', '.now']) { const el = document.querySelector(sel); if (el) ro.observe(el); }
+}
 const mobileLive = () => isMobile() && !window.LIVE_ADMIN;
 
 /* Fade out in place, close the space, move (the callback), reopen. */
