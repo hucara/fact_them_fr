@@ -963,10 +963,8 @@ body.admin .claim-card.future::before { content: 'en verificación · sale en ' 
   .feed { max-height: none; overflow: visible; padding: 0; gap: .6rem; }
   .feed-new { display: none !important; }
 
-  /* The unverifiable drawer sits under the list; the tally does not count them here. */
   .weak-drawer { margin: .9rem 0 0; }
   .weak-list { padding: 0 .5rem .5rem; }
-  .sb-seg.sb-nv, .sb-key[data-cls="nv"] { display: none !important; }
 
   .claim-card { padding: .85rem .9rem; }
   .claim-header { gap: .45rem; }

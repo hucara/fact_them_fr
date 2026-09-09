@@ -931,8 +931,7 @@ const VB_ORDER = [
   ['parcial', 'Con matiz'],
   ['enganoso', 'Sobre/subestimado'],
   ['falso', 'Falso'],
-  ['nv', 'Sin datos'],
-];
+];   // unverifiable claims are counted on the drawer, not here
 const verdictCounts = {};
 
 function countVerdict(resultado) {
