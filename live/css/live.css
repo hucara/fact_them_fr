@@ -537,6 +537,9 @@ button.btn.primary { background: var(--c-accent-dim); border-color: rgba(200, 96
   transition: color .12s, border-color .12s;
 }
 .detail-toggle::after { content: ' ▾'; }
+/* Reserved row while the claim is being verified: same box as the real
+   button, so the card does not grow when the verdict lands. */
+.detail-toggle.placeholder { visibility: hidden; pointer-events: none; }
 .detail-toggle[aria-expanded="true"]::after { content: ' ▴'; }
 .detail-toggle:hover { color: var(--c-accent); border-color: var(--c-accent); }
 .verdict-detail[hidden] { display: none; }

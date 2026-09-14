@@ -705,7 +705,9 @@ function cardHTML(c, sp, t) {
     </div>
     <p class="claim-text">${esc(c.texto_normalizado || c.texto_original)}</p>
     ${tags ? `<div class="claim-tags">${tags}</div>` : ''}
-    <div class="verdict" hidden></div>`;
+    <div class="verdict">
+      <div class="claim-actions"><button class="detail-toggle placeholder" disabled aria-hidden="true">Ver verificación completa</button></div>
+    </div>`;
 }
 
 function makeCard(payload, state) {
@@ -935,15 +937,14 @@ function applyVerdict(ev) {
     </div></div></div>`;
 
   countVerdict(verdict.resultado);
+  // The actions row was reserved while the claim was in verification (a
+  // disabled placeholder of the same size), so landing the verdict changes
+  // nothing in the card's height: the buttons only fade in.
+  if (motion() && el.animate) box.querySelector('.claim-actions')?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 350 });
   if (toDrawer) {
-    // The actions row is not opened here: the card is about to leave, and a
-    // box that grows only to fold a moment later is the jitter that reads as
-    // clunky. It shows once the card is in the drawer.
-    if (!motion()) { box.hidden = false; parkInDrawer(el); }
-    else setTimeout(() => relocateCard(el, () => { box.hidden = false; parkInDrawer(el); }), DEMOTE_HOLD_MS);
-    return;
+    if (!motion()) parkInDrawer(el);
+    else setTimeout(() => relocateCard(el, () => parkInDrawer(el)), DEMOTE_HOLD_MS);
   }
-  growBox(box);
 }
 const DEMOTE_HOLD_MS = 4000;
 
@@ -1002,8 +1003,8 @@ const mobileLive = () => isMobile() && !window.LIVE_ADMIN;
    the durations mirror growIn (fade 440 ms, space 610 ms) so arriving and
    leaving read as the same motion in opposite directions. */
 const LEAVE_FADE_MS = 440;
-const LEAVE_HOLD_MS = 900;
-const LEAVE_CLOSE_MS = 610;
+const LEAVE_HOLD_MS = 1600;
+const LEAVE_CLOSE_MS = 700;
 const LEAVE_MS = LEAVE_FADE_MS + LEAVE_HOLD_MS + LEAVE_CLOSE_MS;
 function relocateCard(el, move) {
   const box = openBox(el);
