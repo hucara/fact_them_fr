@@ -738,17 +738,28 @@ function makeCard(payload, state) {
    runs over it. Collapsing is the same motion in reverse. */
 const SHRINK = { duration: 1400, fill: 'forwards' };
 const closedBox = { height: '0px', paddingTop: '0px', paddingBottom: '0px', borderTopWidth: '0px', borderBottomWidth: '0px', marginBottom: '-0.75rem' };
+/* The card's own box, spelled out. Every keyframe must carry the same
+   properties as closedBox: a property present only in one keyframe is
+   interpolated across the WHOLE animation from the underlying value, so a
+   padding named only at the closed end would start shrinking during the
+   fade — the few pixels of creep that made the list move "too soon". */
+function openBox(el) {
+  const cs = getComputedStyle(el);
+  return { height: `${el.getBoundingClientRect().height}px`, paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom,
+           borderTopWidth: cs.borderTopWidth, borderBottomWidth: cs.borderBottomWidth, marginBottom: cs.marginBottom };
+}
 /* Two phases in one animation, never overlapping: first the space opens (the
    card, still invisible, grows and pushes the others down), then the card
    fades in where the space is. One animation and no inline styles, so there
    is no state to clean up and nothing can be left half-shown. */
 function growIn(el) {
   if (!motion() || !el.animate) return;
-  const h = el.getBoundingClientRect().height;
+  const open = openBox(el);
+  if (!parseFloat(open.height)) return;
   el.animate(
     [{ ...closedBox, opacity: 0, transform: 'translateY(6px)', easing: 'cubic-bezier(.25, .1, .25, 1)' },
-     { height: `${h}px`, opacity: 0, transform: 'translateY(6px)', offset: .58, easing: 'cubic-bezier(.2, .7, .2, 1)' },
-     { height: `${h}px`, opacity: 1, transform: 'none' }],
+     { ...open, opacity: 0, transform: 'translateY(6px)', offset: .58, easing: 'cubic-bezier(.2, .7, .2, 1)' },
+     { ...open, opacity: 1, transform: 'none' }],
     { duration: 1050 });
 }
 
@@ -984,28 +995,37 @@ if (window.ResizeObserver) {
 const mobileLive = () => isMobile() && !window.LIVE_ADMIN;
 
 /* Fade out in place, close the space, move (the callback), reopen. */
+/* A card leaving the list is growIn in reverse, phase by phase: the card
+   fades out where it is (nothing else moves), its empty slot stays for a
+   beat, then the slot closes and the cards below glide up over it. One
+   animation with three segments, so no phase can overlap or lag another;
+   the durations mirror growIn (fade 440 ms, space 610 ms) so arriving and
+   leaving read as the same motion in opposite directions. */
+const LEAVE_FADE_MS = 440;
+const LEAVE_HOLD_MS = 900;
+const LEAVE_CLOSE_MS = 610;
+const LEAVE_MS = LEAVE_FADE_MS + LEAVE_HOLD_MS + LEAVE_CLOSE_MS;
 function relocateCard(el, move) {
-  const h = el.getBoundingClientRect().height;
+  const box = openBox(el);
+  if (!motion() || !el.animate || !parseFloat(box.height)) { move(); return; }
   el.style.overflow = 'hidden';
-  // Fade (700 ms, eased both ends), a beat of empty space, then the space
-  // closes (750 ms, ease-in-out). Nothing moves while the card can be seen.
-  const fold = el.animate(
-    [{ opacity: 1, height: `${h}px`, easing: 'cubic-bezier(.45, 0, .55, 1)' },
-     { opacity: 0, height: `${h}px`, offset: .43, easing: 'linear' },
-     { opacity: 0, height: `${h}px`, offset: .54, easing: 'cubic-bezier(.65, 0, .35, 1)' },
+  const leave = el.animate(
+    [{ opacity: 1, ...box, easing: 'cubic-bezier(.45, 0, .55, 1)' },
+     { opacity: 0, ...box, offset: LEAVE_FADE_MS / LEAVE_MS, easing: 'linear' },
+     { opacity: 0, ...box, offset: (LEAVE_FADE_MS + LEAVE_HOLD_MS) / LEAVE_MS, easing: 'cubic-bezier(.2, .7, .2, 1)' },
      { opacity: 0, ...closedBox }],
-    { duration: 1650, fill: 'forwards' });
+    { duration: LEAVE_MS, fill: 'forwards' });
   let done = false;
   const finish = () => {
     if (done) return;
     done = true;
-    fold.cancel();
+    leave.cancel();
     el.style.overflow = '';
     move();
     growIn(el);
   };
-  fold.onfinish = finish;
-  setTimeout(finish, 1800);
+  leave.onfinish = finish;
+  setTimeout(finish, LEAVE_MS + 600);
 }
 
 /* ── verdict breakdown (left column) ────────────────────────────────────── */
