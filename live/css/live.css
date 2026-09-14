@@ -1022,3 +1022,7 @@ body.admin .claim-card.future::before { content: 'en verificación · sale en ' 
   transition: background .15s, color .15s;
 }
 .feed-empty.idle .donate-btn:hover { background: var(--c-accent); color: #fff; text-decoration: none; }
+
+/* The empty slot a leaving card hands over to (see relocateCard). */
+.claim-slot { flex: none; overflow: hidden; }
+.sb-key.sb-waiting { color: var(--c-text-muted); font-style: italic; }

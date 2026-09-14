@@ -236,6 +236,7 @@ async function boot() {
 
 function applySession() {
   setTimeout(fitDesktop, 0);
+  renderBreakdown();
   $('session-title').textContent = session.title || session.session_id;
   document.title = `${session.title || session.session_id} · Facthem directo`;
   rosterByKey = new Map();
@@ -998,35 +999,44 @@ const mobileLive = () => isMobile() && !window.LIVE_ADMIN;
 /* Fade out in place, close the space, move (the callback), reopen. */
 /* A card leaving the list is growIn in reverse, phase by phase: the card
    fades out where it is (nothing else moves), its empty slot stays for a
-   beat, then the slot closes and the cards below glide up over it. One
-   animation with three segments, so no phase can overlap or lag another;
-   the durations mirror growIn (fade 440 ms, space 610 ms) so arriving and
-   leaving read as the same motion in opposite directions. */
+   beat, then the slot closes and the cards below glide up over it.
+   The card itself is never resized: once faded it is swapped for a plain
+   spacer of the same outer height, and only the spacer's height (and the
+   flex gap it carries) is animated. Two properties, present in every
+   keyframe, so nothing can creep while the slot is meant to stand still. */
 const LEAVE_FADE_MS = 440;
 const LEAVE_HOLD_MS = 1600;
 const LEAVE_CLOSE_MS = 700;
-const LEAVE_MS = LEAVE_FADE_MS + LEAVE_HOLD_MS + LEAVE_CLOSE_MS;
 function relocateCard(el, move) {
-  const box = openBox(el);
-  if (!motion() || !el.animate || !parseFloat(box.height)) { move(); return; }
-  el.style.overflow = 'hidden';
-  const leave = el.animate(
-    [{ opacity: 1, ...box, easing: 'cubic-bezier(.45, 0, .55, 1)' },
-     { opacity: 0, ...box, offset: LEAVE_FADE_MS / LEAVE_MS, easing: 'linear' },
-     { opacity: 0, ...box, offset: (LEAVE_FADE_MS + LEAVE_HOLD_MS) / LEAVE_MS, easing: 'cubic-bezier(.2, .7, .2, 1)' },
-     { opacity: 0, ...closedBox }],
-    { duration: LEAVE_MS, fill: 'forwards' });
+  const h = el.getBoundingClientRect().height;
+  if (!motion() || !el.animate || !h) { move(); return; }
+  const fade = el.animate([{ opacity: 1 }, { opacity: 0 }],
+    { duration: LEAVE_FADE_MS, easing: 'cubic-bezier(.45, 0, .55, 1)', fill: 'forwards' });
   let done = false;
+  let spacer = null;
   const finish = () => {
     if (done) return;
     done = true;
-    leave.cancel();
-    el.style.overflow = '';
+    fade.cancel();
+    spacer?.remove();
     move();
     growIn(el);
   };
-  leave.onfinish = finish;
-  setTimeout(finish, LEAVE_MS + 600);
+  setTimeout(() => {
+    if (done) return;
+    spacer = document.createElement('div');
+    spacer.className = 'claim-slot';
+    spacer.style.height = `${h}px`;
+    el.replaceWith(spacer);
+    const hold = LEAVE_HOLD_MS / (LEAVE_HOLD_MS + LEAVE_CLOSE_MS);
+    spacer.animate(
+      [{ height: `${h}px`, marginBottom: '0px' },
+       { height: `${h}px`, marginBottom: '0px', offset: hold, easing: 'cubic-bezier(.2, .7, .2, 1)' },
+       { height: '0px', marginBottom: '-0.75rem' }],
+      { duration: LEAVE_HOLD_MS + LEAVE_CLOSE_MS, fill: 'forwards' });
+    setTimeout(finish, LEAVE_HOLD_MS + LEAVE_CLOSE_MS);
+  }, LEAVE_FADE_MS);
+  setTimeout(finish, LEAVE_FADE_MS + LEAVE_HOLD_MS + LEAVE_CLOSE_MS + 1000);
 }
 
 /* ── verdict breakdown (left column) ────────────────────────────────────── */
@@ -1075,8 +1085,10 @@ function renderCost(cost) {
 function renderBreakdown() {
   const total = Object.values(verdictCounts).reduce((a, b) => a + b, 0);
   const bar = $('summary-bar');
-  if (!total) { bar.hidden = true; return; }
-  const firstShow = bar.hidden;
+  // The bar is on the page from the start, with its space reserved: an
+  // empty track and a waiting line, so the first verdict fills it in place
+  // instead of pushing the list down.
+  bar.hidden = false;
 
   // Built once, then updated in place: the segments' flex values tween and
   // a changed count bumps, instead of the whole bar being rebuilt.
@@ -1086,9 +1098,11 @@ function renderBreakdown() {
       ${VB_ORDER.map(([cls]) => `<span class="sb-seg sb-${cls} empty" data-cls="${cls}" style="flex:0"></span>`).join('')}
     </div>
     <div class="sb-legend">
+      <span class="sb-key sb-waiting">Esperando la primera verificación</span>
       ${VB_ORDER.map(([cls, label]) => `<span class="sb-key" data-cls="${cls}" hidden><span class="dot sb-${cls}"></span>${label} <b>0</b></span>`).join('')}
     </div>`;
   }
+  bar.querySelector('.sb-waiting').hidden = total > 0;
   for (const [cls] of VB_ORDER) {
     const n = verdictCounts[cls] || 0;
     const seg = bar.querySelector(`.sb-seg[data-cls="${cls}"]`);
@@ -1099,7 +1113,6 @@ function renderBreakdown() {
     const b = key.querySelector('b');
     if (b.textContent !== String(n)) { b.textContent = n; bumpEl(b); }
   }
-  if (firstShow) growBox(bar);
 }
 
 
