@@ -1005,7 +1005,7 @@ const mobileLive = () => isMobile() && !window.LIVE_ADMIN;
    flex gap it carries) is animated. Two properties, present in every
    keyframe, so nothing can creep while the slot is meant to stand still. */
 const LEAVE_FADE_MS = 440;
-const LEAVE_HOLD_MS = 1600;
+const LEAVE_HOLD_MS = 700;
 const LEAVE_CLOSE_MS = 700;
 function relocateCard(el, move) {
   const h = el.getBoundingClientRect().height;
