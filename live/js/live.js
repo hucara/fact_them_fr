@@ -993,12 +993,12 @@ function parkInDrawer(el) {
 
 const isMobile = () => !!(window.matchMedia && matchMedia('(max-width: 760px)').matches);
 
-/* Public desktop: size the video column so the video plus speaker, rail and
-   transcript fill the layout height exactly — no empty band under the
-   transcript, nothing pushed off screen. Re-run on resize. */
+/* Public desktop: the columns split half and half; cap the video's width so
+   video plus speaker, rail and transcript fit the layout height — nothing
+   pushed off screen. Re-run on resize. */
 function fitDesktop() {
   const root = document.documentElement;
-  if (window.LIVE_ADMIN || !matchMedia('(min-width: 1001px)').matches) { root.style.removeProperty('--video-col'); return; }
+  if (window.LIVE_ADMIN || !matchMedia('(min-width: 1001px)').matches) { root.style.removeProperty('--video-max-w'); return; }
   const layout = document.querySelector('.layout');
   const col = document.querySelector('.col');
   const wrap = document.querySelector('.player-wrap');
@@ -1014,7 +1014,7 @@ function fitDesktop() {
   const chrome = panel.getBoundingClientRect().height - wrap.getBoundingClientRect().height;
   panel.style.flex = ''; cap.style.flex = '';
   const videoH = Math.max(180, avail - chrome);
-  root.style.setProperty('--video-col', `${Math.round(videoH * 16 / 9)}px`);
+  root.style.setProperty('--video-max-w', `${Math.round(videoH * 16 / 9)}px`);
 }
 window.addEventListener('resize', () => setTimeout(fitDesktop, 50));
 document.addEventListener('DOMContentLoaded', fitDesktop);

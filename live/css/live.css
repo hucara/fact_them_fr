@@ -995,21 +995,26 @@ body.admin .claim-card.future::before { content: 'en verificación · sale en ' 
   .site-footer { padding: .9rem; font-size: .68rem; }
 }
 
-/* ── Public desktop: the video takes the height the screen offers ──────────
-   The left column is sized from the viewport height (video + speaker +
-   rail + transcript ≈ 23rem of chrome), so the picture is as big as fits
-   and nothing is left empty under the transcript. Admin keeps the split it
-   has, its controls need the room. */
+/* ── Public desktop: two equal columns, one screen ─────────────────────────
+   The video is as big as fits in its half: full column width, or narrower
+   when the height left after speaker, rail and transcript cannot hold it.
+   Admin keeps the split it has, its controls need the room. */
 @media (min-width: 1001px) {
   /* The page itself never scrolls: header, one screen of layout, footer.
      The claims column is exactly as tall as the video column and scrolls
-     inside; the video column width is set by the script (fitDesktop) from
+     inside; the video's width cap is set by the script (fitDesktop) from
      the height that is actually left once speaker, rail and transcript are
      accounted for. */
   body:not(.admin) { height: 100vh; overflow: hidden; }
   body:not(.admin) .layout {
     flex: 1; min-height: 0; align-items: stretch;
-    grid-template-columns: minmax(0, var(--video-col, calc((100vh - 23rem) * 16 / 9))) minmax(380px, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  /* Half and half. When the screen is too short for a half-width 16:9 video,
+     the picture shrinks and centres on black inside its column (fitDesktop
+     sets --video-max-w) rather than narrowing the column. */
+  body:not(.admin) .player-wrap video, body:not(.admin) .player-wrap #yt-player {
+    max-width: var(--video-max-w, 100%); margin: 0 auto;
   }
   /* Both columns are the full layout height: the left panel stretches and
      the transcript box absorbs whatever the video cannot use. */
