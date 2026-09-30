@@ -90,6 +90,20 @@ a { color: var(--c-accent); }
   color: var(--c-text-muted);
 }
 
+.beta-badge {
+  font-size: .56rem;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  line-height: 1;
+  padding: .22em .5em .2em;
+  border-radius: 999px;
+  color: var(--c-accent);
+  border: 1px solid color-mix(in srgb, var(--c-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--c-accent) 12%, transparent);
+  white-space: nowrap;
+}
+
 .header-spacer { flex: 1; }
 
 .session-title {
@@ -1014,6 +1028,7 @@ body.admin .claim-card.future::before { content: 'en verificación · sale en ' 
 .feed .feed-empty.idle { display: block; padding: 3.5rem 1.5rem; text-align: center; font-size: 1.05rem; line-height: 1.7; color: var(--c-text); max-width: none; margin: 0 auto; }
 .feed-empty.idle a { color: var(--c-accent); font-weight: 600; text-decoration: none; }
 .feed-empty.idle a:hover { text-decoration: underline; }
+.feed-empty.idle .idle-late { margin: 0 0 1rem; font-size: 1.35rem; font-weight: 800; font-style: normal; color: var(--c-accent); }
 .feed-empty.idle .idle-archive { margin: 1.4rem 0 0; color: var(--c-text-muted); font-size: .95rem; }
 .feed-empty.idle .idle-donate { margin: 1.6rem 0 0; font-size: .95rem; color: var(--c-text-muted); }
 .feed-empty.idle .donate-btn {
@@ -1026,3 +1041,14 @@ body.admin .claim-card.future::before { content: 'en verificación · sale en ' 
 /* The empty slot a leaving card hands over to (see relocateCard). */
 .claim-slot { flex: none; overflow: hidden; }
 .sb-key.sb-waiting { color: var(--c-text-muted); font-style: italic; }
+
+
+/* A change of speaker inside the transcript box: a thin rule, named when the
+   speaker is known (the presidency gets the rule alone). */
+.caption .cap-sep {
+  display: flex; align-items: center; gap: .6rem; margin: .45rem 0 .3rem;
+  font-style: normal; font-size: .6rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--c-text-muted);
+}
+.caption .cap-sep::before, .caption .cap-sep::after { content: ''; flex: 1; height: 1px; background: var(--c-border); }
+.caption .cap-sep:empty { gap: 0; }

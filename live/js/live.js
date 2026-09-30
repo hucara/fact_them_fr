@@ -262,6 +262,7 @@ function closedBucket() {
    (its claims are archived in the parliament DB), just where to find us.
    `?replay` (or `?s=<session>`) still opens the archive view of a session. */
 const IDLE_HTML =
+  '<p class="idle-late">¡Llegas tarde, Ana Pasteur!</p>' +
   'Ahora mismo no estamos verificando ningún pleno en directo.<br />' +
   'Vuelve otro día y síguenos en ' +
   '<a href="https://www.youtube.com/@facthem_es" target="_blank" rel="noopener">YouTube</a>, ' +
@@ -595,7 +596,19 @@ function flushPending() {
 function applyTimed(ev) {
   switch (ev.type) {
     case 'transcript.final': showCaption(ev.payload.text); bump('segments'); break;
-    case 'speaker.assigned': speakerTimeline.push({ t: ev.t || 0, sp: ev.payload.speaker }); showSpeaker(ev.payload.speaker); break;
+    case 'speaker.assigned': {
+      // Kept sorted by media time: a speaker placed at the presidency's
+      // hand-over arrives after the event it precedes.
+      const entry = { t: ev.t || 0, sp: ev.payload.speaker };
+      let i = speakerTimeline.length;
+      while (i > 0 && speakerTimeline[i - 1].t > entry.t) i--;
+      speakerTimeline.splice(i, 0, entry);
+      // Applied late (its moment already passed on this page): the timeline
+      // has it for rewinds, but it must not replace whoever is shown now.
+      const newest = speakerTimeline[speakerTimeline.length - 1];
+      if (newest === entry || ev.payload.from !== 'handover') showSpeaker(ev.payload.speaker);
+      break;
+    }
     case 'window.result': if (ev.payload.is_final && !ev.payload.skipped) bump('windows'); break;
     case 'claim.detected': addClaim(ev); bump('claims'); break;
   }
@@ -605,29 +618,47 @@ function applyTimed(ev) {
 let captionParts = [];
 const captionWords = (t) =>
   esc(t).split(/\s+/).filter(Boolean).map((w, i) => `<span class="w" style="--i:${Math.min(i, 36)}">${w}</span>`).join(' ');
-function showCaption(text) {
-  if (switchActive === false) return;
-  captionParts = [...captionParts, text].slice(-4);
-  // The newest chunk arrives word by word; the one before it settles from
-  // bright to muted; anything older is just text.
-  const last = captionParts.length - 1;
+/* The box keeps the last few chunks across speakers. A change of speaker
+   does not wipe it: a thin rule with the new speaker's name goes between
+   their lines, so the hand-over can be read instead of guessed. Entries are
+   strings (a transcript chunk) or {sep: label} (a speaker change). */
+function renderCaption() {
+  let last = -1;
+  captionParts.forEach((p, i) => { if (typeof p === 'string') last = i; });
+  let prev = -1;
+  for (let i = last - 1; i >= 0; i--) if (typeof captionParts[i] === 'string') { prev = i; break; }
   $('caption').innerHTML = captionParts
-    .map((t, i) => {
-      if (i === last) return `<b class="fresh">${captionWords(t)}</b>`;
-      if (i === last - 1) return `<span class="settling">${esc(t)}</span>`;
-      return esc(t);
+    .map((p, i) => {
+      if (typeof p !== 'string') return `<div class="cap-sep">${p.sep ? `<span>${esc(p.sep)}</span>` : ''}</div>`;
+      // The newest chunk arrives word by word; the one before it settles from
+      // bright to muted; anything older is just text.
+      if (i === last) return `<b class="fresh">${captionWords(p)}</b>`;
+      if (i === prev) return `<span class="settling">${esc(p)}</span>`;
+      return esc(p);
     })
     .join(' ');
+}
+function showCaption(text) {
+  if (switchActive === false) return;
+  captionParts = [...captionParts, text].slice(-6);
+  while (captionParts.length && typeof captionParts[0] !== 'string') captionParts.shift();  // never open on a rule
+  renderCaption();
+}
+function captionSpeakerChange(label) {
+  if (switchActive === false || !captionParts.length) return;  // nothing above to separate from
+  if (typeof captionParts[captionParts.length - 1] !== 'string') captionParts.pop();  // two changes in a row: keep the last
+  captionParts.push({ sep: label || '' });
+  renderCaption();
 }
 
 let shownSpeakerKey = null;
 function showSpeaker(sp) {
   if (!sp) {
-    // Nobody to show (the presiding officer has the floor): blank panel, the
-    // transcript box starts over, the rail keeps the last real speakers.
+    // Nobody to show (the presiding officer has the floor): blank panel, an
+    // unnamed rule in the transcript box, the rail keeps the last real speakers.
     if (shownSpeakerKey !== null) {
       shownSpeakerKey = null;
-      if (switchActive !== false) { captionParts = []; $('caption').textContent = ''; }
+      captionSpeakerChange('');
       $('now-name').textContent = '—';
       $('now-name').title = '';
       $('now-name').classList.remove('unknown');
@@ -641,10 +672,9 @@ function showSpeaker(sp) {
   const key = sp.politician_id || sp.name || 'unknown';
   const changed = key !== shownSpeakerKey;
   if (changed) {
-    // New speaker: the transcript box starts over, so what is on screen is
-    // this person's words only.
+    // New speaker: a named rule in the transcript box, the earlier lines stay.
     shownSpeakerKey = key;
-    if (switchActive !== false) { captionParts = []; $('caption').textContent = ''; }
+    captionSpeakerChange(sp.name ? shortName(sp) : '');
     pulseClass(document.querySelector('.now'), 'swap', 700);
   }
   noteSpeakerInRail(sp);
