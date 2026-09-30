@@ -1008,11 +1008,15 @@ function fitDesktop() {
   // Measure the panel at its natural size: it and the transcript box are
   // stretched to fill the column, which would otherwise be read back as
   // chrome and shrink the video on every pass.
+  // The transcript only gets its minimum here: measured at its content
+  // height, a long transcript shrank the video (1920x1000: 767 px of a 922 px
+  // column). The video takes the rest; the transcript fills what is left.
   const panel = col.querySelector('.panel');
   const cap = $('caption');
-  panel.style.flex = 'none'; cap.style.flex = 'none';
-  const chrome = panel.getBoundingClientRect().height - wrap.getBoundingClientRect().height;
-  panel.style.flex = ''; cap.style.flex = '';
+  const capMin = parseFloat(getComputedStyle(cap).minHeight) || 0;
+  panel.style.flex = 'none'; cap.style.flex = 'none'; cap.style.height = '0px'; cap.style.minHeight = '0px';
+  const chrome = panel.getBoundingClientRect().height - wrap.getBoundingClientRect().height + capMin;
+  panel.style.flex = ''; cap.style.flex = ''; cap.style.height = ''; cap.style.minHeight = '';
   const videoH = Math.max(180, avail - chrome);
   root.style.setProperty('--video-max-w', `${Math.round(videoH * 16 / 9)}px`);
 }

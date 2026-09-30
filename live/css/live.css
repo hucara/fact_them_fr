@@ -995,9 +995,9 @@ body.admin .claim-card.future::before { content: 'en verificación · sale en ' 
   .site-footer { padding: .9rem; font-size: .68rem; }
 }
 
-/* ── Public desktop: two equal columns, one screen ─────────────────────────
-   The video is as big as fits in its half: full column width, or narrower
-   when the height left after speaker, rail and transcript cannot hold it.
+/* ── Public desktop: video column and claims column, one screen ────────────
+   The video is as big as fits in its column: full width, or narrower when the
+   height left after speaker, rail and a minimal transcript cannot hold it.
    Admin keeps the split it has, its controls need the room. */
 @media (min-width: 1001px) {
   /* The page itself never scrolls: header, one screen of layout, footer.
@@ -1008,11 +1008,12 @@ body.admin .claim-card.future::before { content: 'en verificación · sale en ' 
   body:not(.admin) { height: 100vh; overflow: hidden; }
   body:not(.admin) .layout {
     flex: 1; min-height: 0; align-items: stretch;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
   }
-  /* Half and half. When the screen is too short for a half-width 16:9 video,
-     the picture shrinks and centres on black inside its column (fitDesktop
-     sets --video-max-w) rather than narrowing the column. */
+  /* Video column a bit wider than the claims (~57/43). When the screen is too
+     short for a full-width 16:9 video, the picture shrinks and centres on
+     black inside its column (fitDesktop sets --video-max-w) rather than
+     narrowing the column. */
   body:not(.admin) .player-wrap video, body:not(.admin) .player-wrap #yt-player {
     max-width: var(--video-max-w, 100%); margin: 0 auto;
   }
@@ -1021,7 +1022,7 @@ body.admin .claim-card.future::before { content: 'en verificación · sale en ' 
   body:not(.admin) .col { display: flex; flex-direction: column; min-height: 0; }
   body:not(.admin) .col > .panel { flex: 1; display: flex; flex-direction: column; min-height: 0; }
   body:not(.admin) .player-wrap, body:not(.admin) .now, body:not(.admin) .rail { flex: none; }
-  body:not(.admin) .caption { flex: 1; height: auto; min-height: 8.2rem; }
+  body:not(.admin) .caption { flex: 1; height: auto; min-height: var(--caption-min, 6.5rem); }
   body:not(.admin) .feed-panel { display: flex; flex-direction: column; min-height: 0; }
   body:not(.admin) .feed-panel > .panel-title, body:not(.admin) .summary-bar, body:not(.admin) .weak-drawer { flex: none; }
   body:not(.admin) .feed { flex: 1; min-height: 0; max-height: none; }
