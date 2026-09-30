@@ -996,33 +996,29 @@ body.admin .claim-card.future::before { content: 'en verificación · sale en ' 
 }
 
 /* ── Public desktop: video column and claims column, one screen ────────────
-   The video is as big as fits in its column: full width, or narrower when the
-   height left after speaker, rail and a minimal transcript cannot hold it.
+   The video is always the full width of its column; speaker, rail and the
+   transcript share the height under it.
    Admin keeps the split it has, its controls need the room. */
 @media (min-width: 1001px) {
   /* The page itself never scrolls: header, one screen of layout, footer.
      The claims column is exactly as tall as the video column and scrolls
-     inside; the video's width cap is set by the script (fitDesktop) from
-     the height that is actually left once speaker, rail and transcript are
-     accounted for. */
+     inside. */
   body:not(.admin) { height: 100vh; overflow: hidden; }
   body:not(.admin) .layout {
     flex: 1; min-height: 0; align-items: stretch;
-    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, min(56%, calc((100vh - 23rem) * 16 / 9))) minmax(0, 1fr);
   }
-  /* Video column a bit wider than the claims (~57/43). When the screen is too
-     short for a full-width 16:9 video, the picture shrinks and centres on
-     black inside its column (fitDesktop sets --video-max-w) rather than
-     narrowing the column. */
-  body:not(.admin) .player-wrap video, body:not(.admin) .player-wrap #yt-player {
-    max-width: var(--video-max-w, 100%); margin: 0 auto;
-  }
+  /* Video column a bit wider than the claims (~56/44), and the video always
+     fills its column's width. On a short, wide screen the *column* narrows
+     (from the viewport height alone: header, footer, speaker, rail and a
+     minimal transcript ≈ 23rem) so the transcript keeps its room — nothing
+     here depends on how much text the transcript holds. */
   /* Both columns are the full layout height: the left panel stretches and
      the transcript box absorbs whatever the video cannot use. */
   body:not(.admin) .col { display: flex; flex-direction: column; min-height: 0; }
-  body:not(.admin) .col > .panel { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  body:not(.admin) .col > .panel { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
   body:not(.admin) .player-wrap, body:not(.admin) .now, body:not(.admin) .rail { flex: none; }
-  body:not(.admin) .caption { flex: 1; height: auto; min-height: var(--caption-min, 6.5rem); }
+  body:not(.admin) .caption { flex: 1; height: auto; min-height: var(--caption-min, 4.5rem); }
   body:not(.admin) .feed-panel { display: flex; flex-direction: column; min-height: 0; }
   body:not(.admin) .feed-panel > .panel-title, body:not(.admin) .summary-bar, body:not(.admin) .weak-drawer { flex: none; }
   body:not(.admin) .feed { flex: 1; min-height: 0; max-height: none; }
