@@ -104,6 +104,25 @@
       border-color: var(--c-accent);
     }
 
+    .blog-post figure {
+      margin: 1.5rem 0;
+    }
+
+    .blog-post figure img {
+      display: block;
+      width: 100%;
+      max-width: 560px;
+      height: auto;
+      border-radius: 12px;
+      border: 1px solid var(--c-border);
+    }
+
+    .blog-post figcaption {
+      margin-top: .5rem;
+      font-size: .85rem;
+      color: var(--c-text-muted);
+    }
+
     .blog-divider {
       height: 1px;
       background: var(--c-border);
@@ -166,6 +185,58 @@
     <p class="blog-subtitle">Actualizaciones y mejoras de Facthem</p>
 
     <!-- ── Posts (más reciente primero) ──────────────────────────────────── -->
+
+    <article class="blog-post">
+      <time datetime="2026-10-05">5 octubre 2026</time>
+      <h2>Fe de errores: la cuota ferroviaria de mercancías era del País Vasco, no de España</h2>
+      <p>
+        El 22 de septiembre, en el pleno del Congreso, el diputado de EH Bildu Mikel Otero afirmó que «la cuota
+        de mercancías en tren» era «menor del 2 %». Publicamos esa afirmación como <strong>Subestimado</strong>.
+      </p>
+      <p>
+        Hoy el propio Otero nos ha escrito para pedirnos un «fact check inverso»: su dato no se refería a toda
+        España, sino a la Comunidad Autónoma del País Vasco, dentro de un debate con el PNV sobre la red
+        ferroviaria vasca. Hemos repasado la intervención y <strong>tiene razón</strong>.
+      </p>
+      <figure>
+        <a href="https://x.com/otero_mikel" target="_blank" rel="noopener" style="border:0">
+          <img src="assets/blog/otero-tweet-2026-10-05.png" width="1152" height="738" loading="lazy"
+            alt="Tuit de Mikel Otero (@otero_mikel) a @facthem_es: «Creo que tenemos que hacer un fact check inverso. Mi referencia a que el transporte de mercancías es inferior a un 2% no era para todo el estado, sino para la CAPV, en un diálogo con el PNV. En concreto, la cuota modal está en torno al 1,8%. Repasad la intervención.»">
+        </a>
+        <figcaption>Mensaje de Mikel Otero a @facthem_es, 5 de octubre de 2026.</figcaption>
+      </figure>
+      <p>
+        <strong>Qué falló.</strong> Nuestro sistema interpretó, erróneamente, que Otero hablaba del conjunto de
+        España y no del País Vasco.
+      </p>
+      <p><strong>Qué hemos corregido.</strong></p>
+      <ul>
+        <li>Hemos reformulado la afirmación con su ámbito correcto: <em>«La cuota de mercancías transportadas por
+          ferrocarril en el País Vasco es inferior al 2 %»</em>.</li>
+        <li>La hemos vuelto a verificar. El dato autonómico más reciente que hemos encontrado, del Gobierno Vasco,
+          es compatible con lo que dijo, pero tiene varios años y no hemos localizado cifras oficiales
+          actualizadas. El veredicto pasa a <strong>No verificable</strong>. Puedes ver la ficha actualizada
+          <a href="claim/la-cuota-de-mercancias-transportadas-por-ferrocarril-en-49638255.html">aquí</a>.</li>
+      </ul>
+      <p>
+        <strong>Qué cambia a partir de ahora.</strong> Hemos mejorado el sistema para que detecte mejor este tipo
+        de situaciones y no asuma que España es el contexto del que se habla.
+      </p>
+      <p>
+        Gracias a Mikel Otero por avisarnos. Verificamos a todos los grupos con el mismo criterio, y eso incluye
+        corregirnos cuando nos equivocamos. Si detectas un error en cualquier ficha, escríbenos.
+      </p>
+      <p>
+        Mantener Facthem implica costes reales de infraestructura y modelos de IA. Si el proyecto te resulta
+        útil, cualquier contribución ayuda a que sigamos adelante. 🥸
+      </p>
+      <div class="blog-donate-row">
+        <a href="https://ko-fi.com/hugocasero" class="donate-btn" target="_blank" rel="noopener">Ko-fi</a>
+        <a href="https://paypal.me/hcasero" class="donate-btn" target="_blank" rel="noopener">PayPal</a>
+      </div>
+    </article>
+
+    <div class="blog-divider"></div>
 
     <article class="blog-post">
       <time datetime="2026-07-20">20 julio 2026</time>
