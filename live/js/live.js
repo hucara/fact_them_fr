@@ -478,14 +478,18 @@ function personHTML(r, sub) {
       </div>`;
 }
 
+/* Moderators (a TV debate's presenter) are in the roster so faces can tell
+   them apart, but they are never shown — like the Congress presidency. */
+const onRail = (r) => !r.presiding;
+
 function railIsStatic() {
-  return (session?.roster || []).length <= RAIL_STATIC_MAX;
+  return (session?.roster || []).filter(onRail).length <= RAIL_STATIC_MAX;
 }
 
 function renderRail() {
   const rail = $('rail');
   if (railIsStatic()) {
-    rail.innerHTML = (session.roster || []).map((r) => personHTML(r, 'en el plató')).join('');
+    rail.innerHTML = (session.roster || []).filter(onRail).map((r) => personHTML(r, 'en el plató')).join('');
     return;
   }
   const sig = railKeys.join('|');
@@ -1735,7 +1739,7 @@ const SIM_CLAIMS = [
 let simN = 0;
 function simulateClaim() {
   simN += 1;
-  const roster = (session.roster || []).filter((r) => r.politician_id);
+  const roster = (session.roster || []).filter((r) => r.politician_id && onRail(r));
   const other = roster.filter((r) => r.politician_id !== shownSpeakerKey);
   const who = (other.length ? other : roster)[simN % Math.max(1, (other.length ? other : roster).length)];
   const sp = who
