@@ -200,10 +200,15 @@ async function fetchJSON(url, opts = {}) {
 async function boot() {
   bucketBase = dataBase();
   const sid = new URLSearchParams(location.search).get('s');
+  // A second runner (a TV debate beside the Congress stream) publishes its own
+  // pointer: ?c=tv → sessions/current-tv.json. The runner's own page sets it.
+  const channel = (new URLSearchParams(location.search).get('c') || window.LIVE_CHANNEL || '')
+    .toLowerCase().replace(/[^a-z0-9-]/g, '');
   // 1. Published buckets (static hosting / aton). The manifest is the only
   //    mutable object, so it is fetched with the cache bypassed.
   try {
-    const key = sid ? `sessions/${encodeURIComponent(sid)}.json` : 'sessions/current.json';
+    const key = sid ? `sessions/${encodeURIComponent(sid)}.json`
+      : channel ? `sessions/current-${channel}.json` : 'sessions/current.json';
     bucketCfg = await fetchJSON(bucketBase + key, { cache: 'no-store' });
     mode = 'buckets';
   } catch {
@@ -301,9 +306,13 @@ async function bootBuckets() {
     roster: bucketCfg.roster || [],
     stages: bucketCfg.stages || {},
     youtube_id: bucketCfg.youtube_id,
+    tv: bucketCfg.tv || null,
   };
   applySession();
   delaySeconds = bucketCfg.delay_recommended ?? delaySeconds;
+  // A TV channel is the viewer's own screen: the broadcast is already ahead of
+  // the pipeline, so there is nothing to hold back — show verdicts as they come.
+  if (session.tv) { delaySeconds = 0; setupSecondScreen(session.tv); }
   // A phone plays the stream where YouTube puts it — the live edge — and the
   // claims show as the pipeline emits them. No delay, no seeking the embed.
   if (mobileLive()) delaySeconds = 0;
@@ -368,6 +377,26 @@ async function pollBuckets(drainAll) {
   } finally {
     polling = false;
   }
+}
+
+/* ── Second screen (TV channel) ───────────────────────────────────────────
+   No embed: the debate is on the viewer's TV or atresplayer. The player box
+   becomes a pointer to the channel; the cards below follow the broadcast. */
+function setupSecondScreen(tv) {
+  const wrap = document.querySelector('.player-wrap');
+  if (!wrap || wrap.querySelector('.tv-card')) return;
+  const card = document.createElement('div');
+  card.className = 'tv-card';
+  const name = String(tv.channel || 'la televisión');
+  const link = /^https:\/\/www\.atresplayer\.com\//.test(tv.watch_url || '') ? tv.watch_url : '';
+  card.innerHTML =
+    '<div class="tv-kicker">Segunda pantalla</div>' +
+    `<div class="tv-title">Míralo en <strong></strong></div>` +
+    '<div class="tv-note">Las verificaciones aparecen aquí unos segundos después de cada frase.</div>' +
+    (link ? '<a class="btn primary tv-link" target="_blank" rel="noopener">Abrir el directo</a>' : '');
+  card.querySelector('strong').textContent = name;
+  if (link) card.querySelector('.tv-link').href = link;
+  wrap.appendChild(card);
 }
 
 /* ── YouTube embed ───────────────────────────────────────────────────────

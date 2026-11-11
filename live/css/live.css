@@ -236,6 +236,19 @@ video, #yt-player { width: 100%; height: auto; display: block; background: #000;
 #yt-player iframe { width: 100%; height: 100%; display: block; }
 video[hidden], #yt-player[hidden] { display: none; }
 
+/* Second screen: a TV debate has no embed, the box points at the channel. */
+.tv-card {
+  aspect-ratio: 16/9;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: .6rem; padding: 1.5rem; text-align: center;
+  background: radial-gradient(ellipse at center, var(--c-surface-2), #000 75%);
+}
+.tv-kicker { font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--c-accent); font-weight: 700; }
+.tv-title { font-size: 1.5rem; color: var(--c-text); }
+.tv-note { font-size: .85rem; color: var(--c-text-muted); max-width: 32ch; }
+.tv-link { margin-top: .4rem; text-decoration: none; }
+@media (max-width: 640px) { .tv-card { aspect-ratio: auto; padding: 1.1rem; } .tv-title { font-size: 1.2rem; } }
+
 #play-overlay {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
