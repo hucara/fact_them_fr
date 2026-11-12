@@ -96,6 +96,8 @@ const SOURCE_LABEL = {
   face_onscreen: 'reconocimiento facial · en pantalla',
   face_sticky: 'reconocimiento facial · mantenido (sigue pareciendo la misma persona)',
   face_carry: 'última identidad conocida (sin cara en plano)',
+  voice: 'reconocimiento de voz',
+  voice_override: 'reconocimiento de voz (en pantalla, otra persona)',
   hint: 'etiqueta del subtítulo',
   roundrobin: 'turno estimado',
   unknown: 'sin identificar',
@@ -312,7 +314,7 @@ async function bootBuckets() {
   delaySeconds = bucketCfg.delay_recommended ?? delaySeconds;
   // A TV channel is the viewer's own screen: the broadcast is already ahead of
   // the pipeline, so there is nothing to hold back — show verdicts as they come.
-  if (session.tv) { delaySeconds = 0; setupSecondScreen(session.tv); }
+  if (session.tv) { delaySeconds = 0; setupTv(session.tv); }
   // A phone plays the stream where YouTube puts it — the live edge — and the
   // claims show as the pipeline emits them. No delay, no seeking the embed.
   if (mobileLive()) delaySeconds = 0;
@@ -379,9 +381,69 @@ async function pollBuckets(drainAll) {
   }
 }
 
-/* ── Second screen (TV channel) ───────────────────────────────────────────
-   No embed: the debate is on the viewer's TV or atresplayer. The player box
-   becomes a pointer to the channel; the cards below follow the broadcast. */
+/* ── TV channel ───────────────────────────────────────────────────────────
+   The runner publishes the channel's tokenised HLS master (`tv.hls`, Spain
+   only, ~8 h). We play it in a <video> of its own — not #player, whose
+   currentTime the bucket clock drives — at the live edge, where the pipeline
+   also captures it. If it cannot play (abroad, expired token, no MSE) the box
+   falls back to a pointer to the channel: second screen. */
+const HLS_JS = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js';
+const TV_HLS = /^https:\/\/atres-live\.atresmedia\.com\/[^\s"'<>]+\.m3u8$/;
+
+function setupTv(tv) {
+  const wrap = document.querySelector('.player-wrap');
+  if (!wrap || wrap.querySelector('.tv-video, .tv-card')) return;
+  if (!TV_HLS.test(tv.hls || '')) { setupSecondScreen(tv); return; }
+  const video = document.createElement('video');
+  video.className = 'tv-video';
+  Object.assign(video, { controls: true, muted: true, autoplay: true, playsInline: true });
+  wrap.appendChild(video);
+  // A just-issued token answers errors for a few seconds (measured 2026-11-12:
+  // the first load fails, the same URL plays a moment later), so retry before
+  // giving up on the embed.
+  const RETRIES = 5;
+  let tries = 0, hls = null, done = false;
+  const play = () => video.play().catch(() => {});  // muted autoplay; the controls cover the rest
+  const native = video.canPlayType('application/vnd.apple.mpegurl') !== '';
+  const fail = (why) => {
+    if (done) return;
+    if (hls) { hls.destroy(); hls = null; }
+    if (++tries <= RETRIES) {
+      console.warn(`tv: stream error (${why}), retry ${tries}/${RETRIES}`);
+      setTimeout(load, 2000 * tries);
+      return;
+    }
+    done = true;
+    console.warn('tv: stream not playable here —', why);
+    video.remove();
+    setupSecondScreen(tv);
+  };
+  video.addEventListener('error', () => { if (native) fail('native HLS error'); });
+  video.addEventListener('playing', () => { tries = 0; });
+  function load() {
+    if (native) {   // Safari, iOS, recent Chrome
+      video.src = tv.hls;
+      video.load();
+      play();
+      return;
+    }
+    if (!window.Hls || !Hls.isSupported()) { done = true; video.remove(); setupSecondScreen(tv); return; }
+    hls = new Hls({ liveSyncDurationCount: 3 });
+    hls.on(Hls.Events.ERROR, (_, d) => { if (d.fatal) fail(d.details); });
+    hls.on(Hls.Events.MANIFEST_PARSED, play);
+    hls.loadSource(tv.hls);
+    hls.attachMedia(video);
+  }
+  if (native || window.Hls) { load(); return; }
+  const tag = document.createElement('script');
+  tag.src = HLS_JS;
+  tag.onload = load;
+  tag.onerror = () => { done = true; video.remove(); setupSecondScreen(tv); };
+  document.head.appendChild(tag);
+}
+
+/* Second screen: the debate is on the viewer's TV or atresplayer. The player
+   box becomes a pointer to the channel; the cards below follow the broadcast. */
 function setupSecondScreen(tv) {
   const wrap = document.querySelector('.player-wrap');
   if (!wrap || wrap.querySelector('.tv-card')) return;
@@ -715,7 +777,7 @@ function showSpeaker(sp) {
   $('now-how').textContent = (SOURCE_LABEL[sp.source] || sp.source) + conf;
   const av = $('now-avatar');
   av.src = photoFor(sp) || 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
-  av.classList.toggle('live', String(sp.source || '').startsWith('face'));
+  av.classList.toggle('live', /^(face|voice)/.test(String(sp.source || '')));
   document.querySelectorAll('.person').forEach((el) =>
     el.classList.toggle('active', el.dataset.key === (sp.politician_id || ''))
   );
