@@ -390,10 +390,15 @@ async function pollBuckets(drainAll) {
 const HLS_JS = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js';
 const TV_HLS = /^https:\/\/atres-live\.atresmedia\.com\/[^\s"'<>]+\.m3u8$/;
 
+// Off since 2026-11-13: the token only played from the IP that resolved it
+// (aton), so every viewer got a broken player. The card is the default; turn
+// this back on once the stream is served from our side or the token is open.
+const TV_EMBED = false;
+
 function setupTv(tv) {
   const wrap = document.querySelector('.player-wrap');
   if (!wrap || wrap.querySelector('.tv-video, .tv-card')) return;
-  if (!TV_HLS.test(tv.hls || '')) { setupSecondScreen(tv); return; }
+  if (!TV_EMBED || !TV_HLS.test(tv.hls || '')) { setupSecondScreen(tv); return; }
   const video = document.createElement('video');
   video.className = 'tv-video';
   Object.assign(video, { controls: true, muted: true, autoplay: true, playsInline: true });
