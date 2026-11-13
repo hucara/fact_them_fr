@@ -404,7 +404,11 @@ function setupTv(tv) {
   const RETRIES = 5;
   let tries = 0, hls = null, done = false;
   const play = () => video.play().catch(() => {});  // muted autoplay; the controls cover the rest
-  const native = video.canPlayType('application/vnd.apple.mpegurl') !== '';
+  // hls.js wherever Media Source exists (Android, desktop): Android Chrome
+  // claims native HLS but showed a broken player on 2026-11-13. Native only
+  // where there is no MSE (iPhone Safari).
+  const mse = !!(window.MediaSource || window.ManagedMediaSource);
+  const native = !mse && video.canPlayType('application/vnd.apple.mpegurl') !== '';
   const fail = (why) => {
     if (done) return;
     if (hls) { hls.destroy(); hls = null; }
@@ -427,7 +431,10 @@ function setupTv(tv) {
       play();
       return;
     }
-    if (!window.Hls || !Hls.isSupported()) { done = true; video.remove(); setupSecondScreen(tv); return; }
+    if (!window.Hls || !Hls.isSupported()) {
+      if (video.canPlayType('application/vnd.apple.mpegurl')) { video.src = tv.hls; video.load(); play(); return; }
+      done = true; video.remove(); setupSecondScreen(tv); return;
+    }
     hls = new Hls({ liveSyncDurationCount: 3 });
     hls.on(Hls.Events.ERROR, (_, d) => { if (d.fatal) fail(d.details); });
     hls.on(Hls.Events.MANIFEST_PARSED, play);
