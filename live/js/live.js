@@ -461,14 +461,12 @@ function setupSecondScreen(tv) {
   if (!wrap || wrap.querySelector('.tv-card')) return;
   const card = document.createElement('div');
   card.className = 'tv-card';
-  const name = String(tv.channel || 'la televisión');
   const link = /^https:\/\/www\.atresplayer\.com\//.test(tv.watch_url || '') ? tv.watch_url : '';
   card.innerHTML =
     '<div class="tv-kicker">Segunda pantalla</div>' +
-    `<div class="tv-title">Míralo en <strong></strong></div>` +
-    '<div class="tv-note">Las verificaciones aparecen aquí unos segundos después de cada frase.</div>' +
+    '<div class="tv-title">Míralo en directo</div>' +
+    '<div class="tv-note">y comprueba aquí las verificaciones.</div>' +
     (link ? '<a class="btn primary tv-link" target="_blank" rel="noopener">Abrir el directo</a>' : '');
-  card.querySelector('strong').textContent = name;
   if (link) card.querySelector('.tv-link').href = link;
   wrap.appendChild(card);
 }
