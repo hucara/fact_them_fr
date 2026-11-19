@@ -90,7 +90,7 @@ body {
 .hero-content {
   position: relative;
   z-index: 2;
-  max-width: 600px;
+  max-width: 760px;
 }
 
 .hero-tagline {
@@ -141,6 +141,7 @@ body {
   letter-spacing: .02em;
   transition: background .15s, color .15s, border-color .15s;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .hero-cta--primary {
@@ -162,6 +163,35 @@ body {
 
 .hero-cta--secondary:hover {
   background: rgba(200, 96, 122, .22);
+}
+
+.hero-cta--live {
+  background: rgba(229, 57, 53, .12);
+  border: 1px solid #e53935;
+  color: #ff6b66;
+}
+
+.hero-cta--live:hover {
+  background: rgba(229, 57, 53, .24);
+}
+
+.live-dot {
+  width: .5rem;
+  height: .5rem;
+  border-radius: 50%;
+  background: #e53935;
+  box-shadow: 0 0 0 0 rgba(229, 57, 53, .7);
+  animation: live-pulse 1.6s ease-out infinite;
+}
+
+@keyframes live-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(229, 57, 53, .7); }
+  70%  { box-shadow: 0 0 0 .45rem rgba(229, 57, 53, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(229, 57, 53, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-dot { animation: none; }
 }
 
 /* ── Header ───────────────────────────────────────────────────────────────── */
@@ -1967,6 +1997,10 @@ h1.claim-text {
   .hero-cta {
     flex: 0 0 calc(50% - .25rem);
     justify-content: center;
+  }
+
+  .hero-cta--live {
+    flex-basis: 100%;
   }
 
   .dashboard-view {
