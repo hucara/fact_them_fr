@@ -487,7 +487,6 @@ function showReplayGrid(list) {
     const meta = `<div class="rg-meta">${esc([fmtDateEs(s.session_date), s.label].filter(Boolean).join(' · '))}</div>`;
     const featured = i === 0 && list.length > 2;  // two debates: two equal big cards
     const thumb = `<div class="rg-thumb" style="background-image:url(https://i.ytimg.com/vi/${encodeURIComponent(s.youtube_id)}/hqdefault.jpg)">` +
-      (i === 0 ? '<span class="rg-tag">último debate</span>' : '') +
       `<span class="rg-play">▶</span>${s.duration ? `<span class="rg-dur">${fmtDuration(s.duration)}</span>` : ''}</div>`;
     // Cards are big (two a row at most): every one gets the count, the legend and the button.
     const tail = `<div class="rg-big">${total}<small>afirmaciones verificadas</small></div>${bar}

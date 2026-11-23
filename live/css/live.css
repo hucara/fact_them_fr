@@ -1100,8 +1100,10 @@ body.admin .claim-card.future::before { content: 'en verificación · sale en ' 
 .replay-grid[hidden] { display: none; }
 .rb-back { display: inline-block; margin-bottom: .45rem; font-size: .85rem; }
 .rg-head { margin: 0 0 1rem; font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; font-weight: 800; }
-/* at most two cards a row: big thumbnails, the tag stays small beside the faces */
-.rg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, max(340px, calc(50% - .7rem))), 1fr)); gap: 1.25rem; }
+/* three cards a row; two on a narrow laptop or tablet, one on a phone */
+.rg-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; }
+@media (max-width: 1100px) { .rg-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .rg-grid { grid-template-columns: 1fr; } }
 .rg-card { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius); overflow: hidden;
   display: flex; flex-direction: column; color: var(--c-text); text-decoration: none; transition: border-color .15s, transform .15s; }
 .rg-card:hover { border-color: color-mix(in srgb, var(--c-accent) 60%, var(--c-border)); transform: translateY(-2px); }
