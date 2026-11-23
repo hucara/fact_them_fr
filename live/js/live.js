@@ -485,15 +485,14 @@ function showReplayGrid(list) {
     const who = people.length <= 3 ? people.map((r) => esc(r.short_name || r.name)).join(' · ') : `${people.length} participantes`;
     const bar = `<div class="rg-bar">${VERDICT_KEYS.map(([k]) => counts[k] ? `<i class="sb-${k}" style="flex:${counts[k]}"></i>` : '').join('')}</div>`;
     const meta = `<div class="rg-meta">${esc([fmtDateEs(s.session_date), s.label].filter(Boolean).join(' · '))}</div>`;
-    const featured = i === 0 && list.length > 1;
+    const featured = i === 0 && list.length > 2;  // two debates: two equal big cards
     const thumb = `<div class="rg-thumb" style="background-image:url(https://i.ytimg.com/vi/${encodeURIComponent(s.youtube_id)}/hqdefault.jpg)">` +
       (i === 0 ? '<span class="rg-tag">último debate</span>' : '') +
       `<span class="rg-play">▶</span>${s.duration ? `<span class="rg-dur">${fmtDuration(s.duration)}</span>` : ''}</div>`;
-    const tail = featured
-      ? `<div class="rg-big">${total}<small>afirmaciones verificadas</small></div>${bar}
+    // Cards are big (two a row at most): every one gets the count, the legend and the button.
+    const tail = `<div class="rg-big">${total}<small>afirmaciones verificadas</small></div>${bar}
          <div class="rg-legend">${VERDICT_KEYS.map(([k, l]) => `<span><i class="sb-${k}"></i>${l} <b>${counts[k]}</b></span>`).join('')}</div>
-         <span class="rg-cta">▶ Ver en diferido</span>`
-      : `${bar}<div class="rg-nums"><span><b>${total}</b> afirmaciones</span>${counts.falso ? `<span class="rg-falsas"><b>${counts.falso}</b> falsas</span>` : ''}</div>`;
+         <span class="rg-cta">▶ Ver en diferido</span>`;
     return `<a class="rg-card${featured ? ' featured' : ''}" href="${esc(diferidoHref(s.session_id))}">${thumb}
       <div class="rg-body">${meta}<h3 class="rg-title">${esc(s.title || s.session_id)}</h3>
         <div class="rg-people"><span class="rg-faces">${faces}</span>${who}</div>${tail}</div></a>`;

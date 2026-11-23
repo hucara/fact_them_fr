@@ -1100,7 +1100,8 @@ body.admin .claim-card.future::before { content: 'en verificación · sale en ' 
 .replay-grid[hidden] { display: none; }
 .rb-back { display: inline-block; margin-bottom: .45rem; font-size: .85rem; }
 .rg-head { margin: 0 0 1rem; font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; font-weight: 800; }
-.rg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.1rem; }
+/* at most two cards a row: big thumbnails, the tag stays small beside the faces */
+.rg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, max(340px, calc(50% - .7rem))), 1fr)); gap: 1.25rem; }
 .rg-card { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius); overflow: hidden;
   display: flex; flex-direction: column; color: var(--c-text); text-decoration: none; transition: border-color .15s, transform .15s; }
 .rg-card:hover { border-color: color-mix(in srgb, var(--c-accent) 60%, var(--c-border)); transform: translateY(-2px); }
@@ -1127,7 +1128,7 @@ body.admin .claim-card.future::before { content: 'en verificación · sale en ' 
 .rg-nums b, .rg-legend b { color: var(--c-text); }
 .rg-nums .rg-falsas b { color: var(--c-falso); }
 .rg-card.featured { grid-column: span 2; flex-direction: row; }
-.rg-card.featured .rg-thumb { flex: 1.25; aspect-ratio: auto; min-height: 260px; }
+.rg-card.featured .rg-thumb { flex: 1.5; aspect-ratio: 16 / 9; min-height: 0; }
 .rg-card.featured .rg-body { flex: 1; padding: 1.2rem 1.3rem; gap: .75rem; }
 .rg-card.featured .rg-title { font-size: 1.45rem; }
 .rg-card.featured .rg-play, .rg-card:only-child .rg-play { opacity: 1; transform: translate(-50%, -50%) scale(1); }
