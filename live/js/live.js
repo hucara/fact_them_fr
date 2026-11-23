@@ -146,6 +146,8 @@ let yt = null;             // YT.Player
 let ytReady = false;
 let ytOffset = null;       // YouTube currentTime − pipeline media time
 let seeking = false;
+let replayMode = false;    // diferido: a past session replayed against a YouTube video
+let replayEvents = [];     // the whole replay file, sorted by media time
 
 
 
@@ -267,19 +269,23 @@ function closedBucket() {
 /* No sitting being verified right now: nothing of the last session is shown
    (its claims are archived in the parliament DB), just where to find us.
    `?replay` (or `?s=<session>`) still opens the archive view of a session. */
-const IDLE_HTML =
-  '<p class="idle-late">¡Llegas tarde, Ana Pasteur!</p>' +
-  'Ahora mismo no estamos verificando ningún pleno en directo.<br />' +
-  'Vuelve otro día y síguenos en ' +
+const IDLE_FOLLOW =
+  'síguenos en ' +
   '<a href="https://www.youtube.com/@facthem_es" target="_blank" rel="noopener">YouTube</a>, ' +
   '<a href="https://www.tiktok.com/@facthem_es" target="_blank" rel="noopener">TikTok</a> y ' +
   '<a href="https://x.com/facthem_es" target="_blank" rel="noopener">X</a>: ' +
-  '<b>@facthem_es</b> y <b>@facthem_eu</b>.' +
+  '<b>@facthem_es</b> y <b>@facthem_eu</b>.';
+const IDLE_DONATE =
+  '♥ Apóyanos: ' +
+  '<a href="https://paypal.me/hcasero" class="donate-btn" target="_blank" rel="noopener">PayPal</a> ' +
+  '<a href="https://ko-fi.com/hugocasero" class="donate-btn" target="_blank" rel="noopener">Ko-fi</a>';
+const IDLE_HTML =
+  '<p class="idle-late">¡Llegas tarde, Ana Pasteur!</p>' +
+  'Ahora mismo no estamos verificando ningún pleno en directo.<br />' +
+  'Vuelve otro día y ' + IDLE_FOLLOW +
   '<p class="idle-archive">Si buscas una sesión anterior, puedes verla en ' +
   '<a href="https://facthem.es/">facthem.es</a>.</p>' +
-  '<p class="idle-donate">♥ Apóyanos: ' +
-  '<a href="https://paypal.me/hcasero" class="donate-btn" target="_blank" rel="noopener">PayPal</a> ' +
-  '<a href="https://ko-fi.com/hugocasero" class="donate-btn" target="_blank" rel="noopener">Ko-fi</a></p>';
+  '<p class="idle-donate">' + IDLE_DONATE + '</p>';
 function showIdle() {
   sessionEnded = true;
   $('session-title').textContent = 'sin emisión';
@@ -301,7 +307,12 @@ function showIdle() {
 
 async function bootBuckets() {
   const replay = new URLSearchParams(location.search).has('replay') || new URLSearchParams(location.search).has('s');
-  if (bucketCfg.status === 'ended' && !replay) { showIdle(); return; }
+  const forceDiferido = new URLSearchParams(location.search).has('diferido');
+  if ((bucketCfg.status === 'ended' && !replay) || forceDiferido) {
+    if (await bootReplay()) return;
+    showIdle();
+    return;
+  }
   session = {
     session_id: bucketCfg.session_id,
     title: bucketCfg.title,
@@ -350,6 +361,152 @@ async function bootBuckets() {
   await pollBuckets(false);
   setTimeout(markSettled, 1500);
   setInterval(() => pollBuckets(false), 1000);
+}
+
+/* ── diferido: replaying a past session ─────────────────────────────────
+   Nothing on air: the page replays the last debate as if it were live. The
+   YouTube video is the clock (media t = video time − vod_offset); claims show
+   when the video reaches them, sit in "Verificando" for as long as the
+   verifier took (capped, see applyVerdict) and land their verdict. Any jump
+   of the video — the viewer's own bar, a card's time — rebuilds the page at
+   the new position without animation, so it always shows exactly what had
+   been said and checked up to that moment.
+
+   Which session and video is set by hand: `python -m fact_them_be.live.replay
+   set …` writes sessions/replay.json. Testing a video before setting it:
+   ?diferido=<session>&yt=<video id>&offset=<s>[&start=<s>]. On a set replay,
+   ?offset= / ?start= override the pointer's values (to check an alignment). */
+async function bootReplay() {
+  const q = new URLSearchParams(location.search);
+  const want = q.get('diferido');
+  let ptr = null;
+  if (want && q.get('yt')) {
+    ptr = { status: 'replay', session_id: want, youtube_id: q.get('yt'), vod_offset: 0, start: 0,
+            events: `replays/${encodeURIComponent(want)}.json` };
+  } else {
+    try { ptr = await fetchJSON(`${bucketBase}sessions/replay.json`, { cache: 'no-store' }); } catch { ptr = null; }
+  }
+  if (!ptr || ptr.status !== 'replay' || !ptr.youtube_id || !ptr.events) return false;
+  if (q.has('offset')) ptr.vod_offset = parseFloat(q.get('offset')) || 0;
+  if (q.has('start')) ptr.start = parseFloat(q.get('start')) || 0;
+  let data;
+  try { data = await fetchJSON(bucketBase + ptr.events); } catch { return false; }
+
+  replayMode = true;
+  replayEvents = data.events || [];
+  bucketCfg = { ...ptr, vod: true, status: 'ended', wall0: 0, delay_recommended: 0 };
+  session = {
+    session_id: ptr.session_id,
+    title: data.title || ptr.title || ptr.session_id,
+    roster: ptr.roster || [],
+    stages: {},
+    youtube_id: ptr.youtube_id,
+  };
+  applySession();
+  document.body.classList.add('replay');
+  $('session-title').textContent = `Diferido · ${session.title}`;
+  document.title = `${session.title} (diferido) · Facthem`;
+  const badge = $('onair');
+  badge.textContent = 'diferido';
+  badge.classList.add('diferido');
+  badge.hidden = false;
+  $('feed-empty').textContent = 'Las afirmaciones aparecerán a medida que se pronuncien en el vídeo.';
+  showReplayBanner(ptr, data);
+  sessionEnded = true;
+  delaySeconds = 0;
+  ytOffset = ptr.vod_offset || 0;
+  pipelineTime = data.t_last || 0;
+  setupYouTube(ptr.youtube_id);
+  setTimeout(markSettled, 1500);
+  // A sitting going live while someone watches the replay: say so.
+  setInterval(checkLiveFromReplay, 60000);
+  return true;
+}
+
+function fmtDateEs(iso) {
+  if (!iso) return '';
+  const d = new Date(`${iso}T12:00:00`);
+  return isNaN(d) ? iso : d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function showReplayBanner(ptr, data) {
+  const el = $('replay-banner');
+  const when = [fmtDateEs(data.session_date || ptr.session_date), ptr.label].filter(Boolean).join(' · ');
+  el.innerHTML =
+    '<p class="rb-late">¡Llegas tarde, Ana Pasteur!</p>' +
+    '<p class="rb-msg">Ahora mismo no estamos verificando nada en directo. Mientras tanto, revive en diferido ' +
+    `<b>${esc(session.title)}</b>${when ? ` (${esc(when)})` : ''}: ` +
+    'las afirmaciones se verifican a medida que avanza el vídeo.</p>' +
+    '<p class="rb-links">Para el próximo directo, ' + IDLE_FOLLOW + ' <span class="rb-donate">' + IDLE_DONATE + '</span></p>' +
+    '<p class="rb-live" id="rb-live" hidden></p>';
+  el.hidden = false;
+}
+
+async function checkLiveFromReplay() {
+  let cfg = null;
+  try { cfg = await fetchJSON(`${bucketBase}sessions/current.json`, { cache: 'no-store' }); } catch { return; }
+  if (!cfg || cfg.status === 'ended' || cfg.listed === false) return;
+  const el = $('rb-live');
+  if (!el.hidden) return;
+  el.innerHTML = `● Ahora estamos en directo: <a href="${esc(location.pathname)}">${esc(cfg.title || 'ver el directo')}</a>`;
+  el.hidden = false;
+}
+
+/* The video drives the clock. A position the passage of time cannot explain
+   (a seek, a scrub, the first sample) rebuilds the page there. */
+let replayLastCur = null;
+let replayLastMs = 0;
+let replayWasPlaying = false;
+function tickReplay() {
+  if (!yt || !ytReady) return;
+  let cur, playing;
+  try { cur = yt.getCurrentTime(); playing = yt.getPlayerState() === YT.PlayerState.PLAYING; } catch { return; }
+  if (cur == null || isNaN(cur)) return;
+  const nowMs = Date.now();
+  const expected = replayLastCur == null ? null
+    : replayLastCur + (replayWasPlaying ? (nowMs - replayLastMs) / 1000 : 0);
+  replayLastCur = cur; replayLastMs = nowMs; replayWasPlaying = playing;
+  const t = cur - ytOffset;
+  pictureTime = t;
+  if (expected == null || Math.abs(cur - expected) > 3) replayRebuild(t);
+  else { clock = t; flushPending(); }
+  updateFuture();
+  tickPending();
+  $('clock-emision').textContent = fmtTime(cur);
+  $('clock-lag').textContent = 'diferido';
+  $('clock-lag').hidden = false;
+}
+
+/* Empty the page and replay every event up to `t`, with motion off. */
+function replayRebuild(t) {
+  settled = false;
+  document.body.classList.add('settling');
+  claims.clear();
+  heldVerdicts.clear();
+  pending = [];
+  for (const k of Object.keys(verdictCounts)) delete verdictCounts[k];
+  for (const k of Object.keys(stats)) delete stats[k];
+  speakerTimeline.length = 0;
+  captionParts = [];
+  $('caption').textContent = '';
+  $('feed').querySelectorAll('.claim-card, .claim-slot').forEach((el) => el.remove());
+  $('weak-list').replaceChildren();
+  $('weak-drawer').hidden = true;
+  $('weak-count').textContent = '0';
+  newAbove = 0;
+  $('feed-new').hidden = true;
+  $('claim-count').textContent = '0';
+  $('feed-empty').hidden = false;
+  clock = t;
+  for (const ev of replayEvents) {
+    // Old captions would only be overwritten: skip them.
+    if (ev.type === 'transcript.final' && (ev.payload?.t_end ?? ev.t ?? 0) < t - 30) continue;
+    onEvent(ev);
+  }
+  renderBreakdown();
+  renderStats();
+  rewindState();
+  setTimeout(markSettled, 600);
 }
 
 let polling = false;
@@ -483,11 +640,14 @@ function setupYouTube(videoId) {
   const create = () => {
     yt = new YT.Player('yt-player', {
       videoId,
-      playerVars: { autoplay: 1, mute: 1, playsinline: 1, rel: 0, modestbranding: 1 },
+      playerVars: { autoplay: 1, mute: 1, playsinline: 1, rel: 0, modestbranding: 1,
+                    ...(replayMode && bucketCfg?.start ? { start: Math.floor(bucketCfg.start) } : {}) },
       events: {
         onReady: () => {
           ytReady = true;
-          if (vodOffset() != null) {
+          if (replayMode) {
+            // Diferido: the video leads, the page follows (tickReplay).
+          } else if (vodOffset() != null) {
             // VOD standing in for a live stream: the mapping is known up front.
             ytOffset = vodOffset();
             requestYtSeek(clock + ytOffset, 'vod.start');
@@ -658,7 +818,7 @@ function onEvent(ev) {
   // so "what is being verified right now" is visible, and survives a
   // reload. The public page keeps queueing: a viewer must not see a claim
   // before the delayed picture reaches the words.
-  if (window.LIVE_ADMIN && ev.type === 'claim.detected' && (ev.t || 0) > clock) {
+  if (window.LIVE_ADMIN && !replayMode && ev.type === 'claim.detected' && (ev.t || 0) > clock) {
     applyTimed(ev);
     updateFuture();
     return;
@@ -832,7 +992,7 @@ function cardHTML(c, sp, t) {
       ${photo ? `<img src="${esc(photo)}" alt="" />` : ''}
       <span class="politician-name ${sp?.name ? '' : 'unknown'}" title="${esc(sp?.name || '')}">${esc(sp?.name ? shortName(sp) : 'Sin atribuir')} ${partyChip(partyFor(sp))}</span>
       <button class="claim-at" data-seek="${t}" title="Ir a este momento del debate">
-        <span class="clock-icon">◷</span>${fmtTime(t)}
+        <span class="clock-icon">◷</span>${fmtTime(replayMode ? t + (ytOffset || 0) : t)}
       </button>
       <span class="resultado-badge resultado-forming">Detectando</span>
     </div>
@@ -849,6 +1009,12 @@ function makeCard(payload, state) {
   el.dataset.state = state;
   el.innerHTML = cardHTML(payload.claim, payload.speaker, payload.t_start ?? 0);
   el.querySelector('.claim-at').addEventListener('click', (e) => {
+    if (replayMode) {
+      const at = parseFloat(e.currentTarget.dataset.seek) - 3 + ytOffset;
+      try { yt.playVideo(); } catch { /* ignore */ }
+      requestYtSeek(at, 'card');
+      return;
+    }
     clock = Math.max(0, parseFloat(e.target.dataset.seek) - 3);
     if (yt && ytOffset != null) requestYtSeek(clock + ytOffset, 'card');
     else { videoSeekBy = clock; player.currentTime = clock; }
@@ -975,7 +1141,8 @@ function tickPending() {
     if (entry.held && clock >= entry.verdictAt) { const h = entry.held; entry.held = null; applyVerdict(h); continue; }
     const badge = el.querySelector('.resultado-badge');
     if (badge?.classList.contains('resultado-pending')) {
-      badge.textContent = `Verificando ${Math.round((now - startedAt) / 1000)}s`;
+      const secs = replayMode ? clock - (entry.t ?? clock) : (now - startedAt) / 1000;
+      badge.textContent = `Verificando ${Math.max(0, Math.round(secs))}s`;
     }
   }
   renderStats();
@@ -1423,6 +1590,7 @@ function trace(ev) {
 /* ── the viewer clock ───────────────────────────────────────────────────── */
 let wasAhead = false;
 function tickClock() {
+  if (replayMode) return tickReplay();
   const nowMs = Date.now();
   const dt = clockLastMs == null ? 0 : (nowMs - clockLastMs) / 1000;
   clockLastMs = nowMs;
@@ -1462,6 +1630,7 @@ function tickClock() {
    invisible, where a backward jump is not. */
 let videoSeekBy = null;   // currentTime we last set ourselves
 function syncVideo() {
+  if (replayMode) return;
   if (yt) return syncYouTube();
   if (!session?.video_url || !player.duration || player.seeking) return;
   const drift = clock - player.currentTime;
@@ -1524,7 +1693,7 @@ function syncLog(what, extra = {}) {
 }
 
 function requestYtSeek(playerTime, why) {
-  if (!yt || !ytReady || mobileLive()) return;
+  if (!yt || !ytReady || (mobileLive() && !replayMode)) return;
   const target = Math.max(0, playerTime);
   ytSeekTarget = target;
   ytSeekAt = Date.now();

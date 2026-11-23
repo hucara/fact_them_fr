@@ -1068,3 +1068,29 @@ body.admin .claim-card.future::before { content: 'en verificación · sale en ' 
 }
 .caption .cap-sep::before, .caption .cap-sep::after { content: ''; flex: 1; height: 1px; background: var(--c-border); }
 .caption .cap-sep:empty { gap: 0; }
+
+/* ── diferido: the last debate replayed while nothing is on air ────────── */
+.onair.diferido { color: var(--c-text-muted); border-color: var(--c-border); background: var(--c-surface-2); }
+.onair.diferido::before { animation: none; background: var(--c-text-muted); }
+.replay-banner {
+  margin: 1.25rem 1.75rem 0; padding: .85rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--c-accent) 35%, transparent);
+  background: var(--c-accent-dim); border-radius: 6px;
+  font-size: .9rem; line-height: 1.55; color: var(--c-text);
+}
+.replay-banner[hidden] { display: none; }
+.replay-banner p { margin: 0; }
+.replay-banner .rb-late { font-weight: 800; color: var(--c-accent); font-size: 1rem; margin-bottom: .2rem; }
+.replay-banner .rb-links { margin-top: .35rem; color: var(--c-text-muted); font-size: .84rem; }
+.replay-banner .rb-donate { margin-left: .6rem; white-space: nowrap; }
+.replay-banner a { color: var(--c-accent); font-weight: 600; text-decoration: none; }
+.replay-banner a:hover { text-decoration: underline; }
+.replay-banner .donate-btn {
+  display: inline-block; margin-left: .25rem; padding: .05rem .5rem; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--c-accent) 55%, transparent); font-size: .8rem;
+}
+.replay-banner .rb-live { margin-top: .5rem; font-weight: 700; color: var(--c-falso); }
+@media (max-width: 760px) {
+  .replay-banner { margin: .6rem .6rem 0; font-size: .85rem; }
+  .replay-banner .rb-donate { display: block; margin: .3rem 0 0; }
+}
