@@ -372,8 +372,9 @@ async function bootBuckets() {
    the new position without animation, so it always shows exactly what had
    been said and checked up to that moment.
 
-   Which session and video is set by hand: `python -m fact_them_be.live.replay
-   set …` writes sessions/replay.json. Testing a video before setting it:
+   Which sessions and videos is set by hand: `python -m fact_them_be.live.replay
+   set …` adds one to sessions/replay.json. With none chosen the page shows
+   them in a grid (showReplayGrid); a card opens ?diferido=<session>. Testing a video before setting it:
    ?diferido=<session>&yt=<video id>&offset=<s>[&start=<s>]. On a set replay,
    ?offset= / ?start= override the pointer's values (to check an alignment). */
 async function bootReplay() {
@@ -384,9 +385,17 @@ async function bootReplay() {
     ptr = { status: 'replay', session_id: want, youtube_id: q.get('yt'), vod_offset: 0, start: 0,
             events: `replays/${encodeURIComponent(want)}.json` };
   } else {
-    try { ptr = await fetchJSON(`${bucketBase}sessions/replay.json`, { cache: 'no-store' }); } catch { ptr = null; }
+    let pointer = null;
+    try { pointer = await fetchJSON(`${bucketBase}sessions/replay.json`, { cache: 'no-store' }); } catch { pointer = null; }
+    if (!pointer || pointer.status !== 'replay') return false;
+    // The grid, newest first. A pointer of the first version is one session.
+    const list = (pointer.sessions?.length ? pointer.sessions : [pointer]).filter((s) => s.youtube_id && s.events);
+    if (!list.length) return false;
+    ptr = want ? list.find((s) => s.session_id === want) : null;
+    if (!ptr) { showReplayGrid(list); return true; }
+    replayHasGrid = true;
   }
-  if (!ptr || ptr.status !== 'replay' || !ptr.youtube_id || !ptr.events) return false;
+  if (!ptr || !ptr.youtube_id || !ptr.events) return false;
   if (q.has('offset')) ptr.vod_offset = parseFloat(q.get('offset')) || 0;
   if (q.has('start')) ptr.start = parseFloat(q.get('start')) || 0;
   let data;
@@ -406,10 +415,7 @@ async function bootReplay() {
   document.body.classList.add('replay');
   $('session-title').textContent = `Diferido · ${session.title}`;
   document.title = `${session.title} (diferido) · Facthem`;
-  const badge = $('onair');
-  badge.textContent = 'diferido';
-  badge.classList.add('diferido');
-  badge.hidden = false;
+  showDiferidoBadge();
   $('feed-empty').textContent = 'Las afirmaciones aparecerán a medida que se pronuncien en el vídeo.';
   showReplayBanner(ptr, data);
   sessionEnded = true;
@@ -423,6 +429,81 @@ async function bootReplay() {
   return true;
 }
 
+let replayHasGrid = false;   // the replay was picked from the grid: offer the way back
+
+function showDiferidoBadge() {
+  const badge = $('onair');
+  badge.textContent = 'diferido';
+  badge.classList.add('diferido');
+  badge.hidden = false;
+}
+
+/* The page's own URL with ?diferido=<session> (or without it, for the grid). */
+function diferidoHref(sid) {
+  const u = new URL(location.href);
+  for (const k of ['diferido', 'yt', 'offset', 'start']) u.searchParams.delete(k);
+  if (sid) u.searchParams.set('diferido', sid);
+  return u.pathname + u.search;
+}
+
+function fmtDuration(sec) {
+  const m = Math.round((sec || 0) / 60);
+  return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min` : `${m} min`;
+}
+
+/* Nothing on air and no session chosen: the idle message plus a grid of the
+   sessions that can be replayed. A card is a link to ?diferido=<session>, so
+   the choice can be shared and Back returns here. */
+const VERDICT_KEYS = [
+  ['verdadero', 'Confirmado'], ['parcial', 'Con matiz'], ['enganoso', 'Engañoso'],
+  ['falso', 'Falso'], ['nv', 'Sin datos'],
+];
+function showReplayGrid(list) {
+  sessionEnded = true;
+  document.body.classList.add('replay-picker');
+  $('session-title').textContent = 'sin emisión';
+  document.title = 'Facthem directo · diferido';
+  showDiferidoBadge();
+  document.querySelector('.layout').hidden = true;
+  const ban = $('replay-banner');
+  ban.innerHTML =
+    '<p class="rb-late">¡Llegas tarde, Ana Pasteur!</p>' +
+    '<p class="rb-msg">Ahora mismo no estamos verificando nada en directo. ' +
+    `Elige ${list.length > 1 ? 'un debate' : 'el último debate'} y míralo en diferido: ` +
+    'las afirmaciones se verifican a medida que avanza el vídeo.</p>' +
+    '<p class="rb-links">Para el próximo directo, ' + IDLE_FOLLOW + ' <span class="rb-donate">' + IDLE_DONATE + '</span></p>' +
+    '<p class="rb-live" id="rb-live" hidden></p>';
+  ban.hidden = false;
+
+  const cards = list.map((s, i) => {
+    const counts = Object.fromEntries(VERDICT_KEYS.map(([k]) => [k, 0]));
+    for (const [res, n] of Object.entries(s.verdicts || {})) counts[resultadoToClass(res)] += n;
+    const total = Object.values(counts).reduce((a, b) => a + b, 0) || s.claims || 0;
+    const people = (s.roster || []).filter((r) => !r.presiding);
+    const faces = people.filter((r) => r.photo_url).map((r) =>
+      `<img src="${esc(r.photo_url)}" alt="${esc(r.name)}" title="${esc(r.name)}">`).join('');
+    const who = people.length <= 3 ? people.map((r) => esc(r.short_name || r.name)).join(' · ') : `${people.length} participantes`;
+    const bar = `<div class="rg-bar">${VERDICT_KEYS.map(([k]) => counts[k] ? `<i class="sb-${k}" style="flex:${counts[k]}"></i>` : '').join('')}</div>`;
+    const meta = `<div class="rg-meta">${esc([fmtDateEs(s.session_date), s.label].filter(Boolean).join(' · '))}</div>`;
+    const featured = i === 0 && list.length > 1;
+    const thumb = `<div class="rg-thumb" style="background-image:url(https://i.ytimg.com/vi/${encodeURIComponent(s.youtube_id)}/hqdefault.jpg)">` +
+      (i === 0 ? '<span class="rg-tag">último debate</span>' : '') +
+      `<span class="rg-play">▶</span>${s.duration ? `<span class="rg-dur">${fmtDuration(s.duration)}</span>` : ''}</div>`;
+    const tail = featured
+      ? `<div class="rg-big">${total}<small>afirmaciones verificadas</small></div>${bar}
+         <div class="rg-legend">${VERDICT_KEYS.map(([k, l]) => `<span><i class="sb-${k}"></i>${l} <b>${counts[k]}</b></span>`).join('')}</div>
+         <span class="rg-cta">▶ Ver en diferido</span>`
+      : `${bar}<div class="rg-nums"><span><b>${total}</b> afirmaciones</span>${counts.falso ? `<span class="rg-falsas"><b>${counts.falso}</b> falsas</span>` : ''}</div>`;
+    return `<a class="rg-card${featured ? ' featured' : ''}" href="${esc(diferidoHref(s.session_id))}">${thumb}
+      <div class="rg-body">${meta}<h3 class="rg-title">${esc(s.title || s.session_id)}</h3>
+        <div class="rg-people"><span class="rg-faces">${faces}</span>${who}</div>${tail}</div></a>`;
+  });
+  const grid = $('replay-grid');
+  grid.innerHTML = `<h2 class="rg-head">Directos anteriores</h2><div class="rg-grid">${cards.join('')}</div>`;
+  grid.hidden = false;
+  setInterval(checkLiveFromReplay, 60000);
+}
+
 function fmtDateEs(iso) {
   if (!iso) return '';
   const d = new Date(`${iso}T12:00:00`);
@@ -433,6 +514,7 @@ function showReplayBanner(ptr, data) {
   const el = $('replay-banner');
   const when = [fmtDateEs(data.session_date || ptr.session_date), ptr.label].filter(Boolean).join(' · ');
   el.innerHTML =
+    (replayHasGrid ? `<a class="rb-back" href="${esc(diferidoHref(''))}">← Directos anteriores</a>` : '') +
     '<p class="rb-late">¡Llegas tarde, Ana Pasteur!</p>' +
     '<p class="rb-msg">Ahora mismo no estamos verificando nada en directo. Mientras tanto, revive en diferido ' +
     `<b>${esc(session.title)}</b>${when ? ` (${esc(when)})` : ''}: ` +
@@ -1465,7 +1547,7 @@ document.addEventListener('click', (e) => {
 /* ── debug: text processing ──────────────────────────────────────────────
    What each transcript window looked like when it was handed to the model,
    and what came back: claims, duplicates dropped, or why it was skipped
-   (paused, prefilter). Off by default and recorded only while the checkbox
+   (paused, moderator). Off by default and recorded only while the checkbox
    is on — it is a diagnostic for us, not a view for a reader. Arrival-timed,
    not reveal-timed: it shows the pipeline as it happens. */
 const DEBUG_MAX = 80;
