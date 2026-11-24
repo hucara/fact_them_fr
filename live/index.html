@@ -21,21 +21,28 @@
   <link rel="icon" href="https://facthem.es/assets/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" sizes="32x32" href="https://facthem.es/assets/favicon-32x32.png" />
   <link rel="apple-touch-icon" href="https://facthem.es/assets/apple-touch-icon.png" />
-  <meta name="robots" content="noindex, nofollow" />
-  <meta name="theme-color" content="#0d0d0d" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" />
-  <link rel="stylesheet" href="css/live.css" />
+  <meta name="theme-color" content="#120c0f" />
+  <!-- Inter is self-hosted by facthem.es (/assets/fonts); elsewhere (the runner's
+       own page) the system font stands in. -->
+  <link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="css/live.css?v=f13a7360a6" />
 </head>
 <body>
 
-  <header class="site-header">
-    <a class="brand" href="https://facthem.es/">Facthem</a>
+  <!-- One header on every screen: the site's wordmark, whether we are on air,
+       the session, the way back to the site, and sharing the session. -->
+  <header class="site-header live-top" id="topbar">
+    <a class="brand wordmark" href="https://facthem.es/" aria-label="Facthem, inicio">Facthem</a>
     <span class="brand-tag">directo</span>
-    <span class="beta-badge" title="Versión beta: puede contener errores">beta</span>
-    <span class="session-title" id="session-title">cargando…</span>
     <span class="onair" id="onair" hidden>en directo</span>
+    <h1 class="session-title" id="session-title">cargando…</h1>
+    <nav class="live-nav" aria-label="Facthem">
+      <a href="https://facthem.es/">Sesiones</a>
+      <a href="https://facthem.es/representantes.html">Representantes</a>
+      <a href="https://facthem.es/estadisticas.html">Estadísticas</a>
+      <a href="https://facthem.es/metodologia.html">Metodología</a>
+    </nav>
+    <div class="live-share" id="live-share"></div>
   </header>
 
   <!-- Diferido: nothing on air, the last debate replays below (see bootReplay in live.js). -->
@@ -75,7 +82,7 @@
     <section class="panel feed-panel">
       <h2 class="panel-title">
         Afirmaciones verificadas
-        <span class="count" id="claim-count">0</span>
+        <span class="count num" id="claim-count">0</span>
       </h2>
       <div class="summary-bar" id="summary-bar" hidden></div>
       <div class="feed" id="feed">
@@ -107,6 +114,6 @@
        Set to the R2 custom domain (e.g. https://live-data.facthem.es/) when the
        page is hosted elsewhere. `?data=` on the URL overrides it. -->
   <script>window.LIVE_DATA_BASE = window.LIVE_DATA_BASE || 'https://pub-4b0592b162234f079cbe05777d9aa1f2.r2.dev/';</script>
-  <script src="js/live.js"></script>
+  <script src="js/live.js?v=060da15d85"></script>
 </body>
 </html>

@@ -9,33 +9,58 @@
 
 /* ── Variables ────────────────────────────────────────────────────────────── */
 :root {
-  --c-bg: #0d0d0d;
-  --c-surface: #141414;
-  --c-surface-2: #1c1c1c;
-  --c-border: #2a2424;
-  --c-text: #e4e0e0;
-  --c-text-muted: #9a8e8e;
-  --c-accent: #c8607a;
-  --c-accent-dim: rgba(200, 96, 122, .12);
+  /* Redesign 2026: the facthem.es palette (fact_them_fr/css/site.css). The
+     older --c-* names below are kept as aliases so every rule written for
+     them (operator panel, diferido grid, idle page) follows the new look. */
+  --bg: #120c0f; --bg-2: #181014; --surface: #1c1317; --surface-2: #24181d;
+  --line: #34232b; --line-2: #4a313c;
+  --text: #eedfe3; --text-2: #b9a1a9; --muted: #86707a;
+  --accent: #d9708a; --accent-ink: #1a0d12;
+  --v-ok: #5bc487; --v-matiz: #5aa9d6; --v-sobre: #d9a045; --v-sub: #c98b4a;
+  --v-impreciso: #b38a6e; --v-descontext: #a77bb0; --v-falso: #e2566f; --v-nv: #6d5c64;
+  --logo: linear-gradient(135deg, #f0b8c4 0%, #c8607a 100%);
+  --r: 10px; --r-sm: 6px;
+  --ease: cubic-bezier(.2, .7, .2, 1); --ease-out: cubic-bezier(.16, 1, .3, 1);
 
-  --c-verdadero: #3da966;
-  --c-falso: #c43e5e;
-  --c-enganoso: #b07825;
-  --c-parcial: #3890bc;
-  --c-nv: #5c4a52;
+  --c-bg: var(--bg);
+  --c-surface: var(--bg-2);
+  --c-surface-2: var(--surface-2);
+  --c-border: var(--line);
+  --c-text: var(--text);
+  --c-text-muted: var(--muted);
+  --c-accent: var(--accent);
+  --c-accent-dim: rgba(217, 112, 138, .12);
 
-  --c-verdadero-bg: rgba(61, 169, 102, .07);
-  --c-falso-bg: rgba(196, 62, 94, .08);
-  --c-enganoso-bg: rgba(176, 120, 37, .07);
-  --c-parcial-bg: rgba(56, 144, 188, .07);
+  --c-verdadero: var(--v-ok);
+  --c-falso: var(--v-falso);
+  --c-enganoso: var(--v-sobre);
+  --c-parcial: var(--v-matiz);
+  --c-nv: var(--v-nv);
+
+  --c-verdadero-bg: rgba(91, 196, 135, .07);
+  --c-falso-bg: rgba(226, 86, 111, .08);
+  --c-enganoso-bg: rgba(217, 160, 69, .07);
+  --c-parcial-bg: rgba(90, 169, 214, .07);
   --c-nv-bg: rgba(255, 255, 255, .02);
 
-  --radius: 6px;
+  --radius: var(--r-sm);
   --radius-sm: 4px;
   --radius-xs: 2px;
-  --header-h: 56px;
-  --shadow: 0 2px 8px rgba(0, 0, 0, .6);
-  --shadow-md: 0 6px 20px rgba(0, 0, 0, .7);
+  --header-h: 60px;
+  --shadow: none;
+  --shadow-md: 0 20px 40px -12px rgba(0, 0, 0, .8);
+}
+
+/* Inter, self-hosted by facthem.es; the runner's own page falls back to the system font. */
+@font-face {
+  font-family: 'Inter'; font-style: normal; font-weight: 400 900; font-display: swap;
+  src: url(/assets/fonts/inter-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Inter'; font-style: normal; font-weight: 400 900; font-display: swap;
+  src: url(/assets/fonts/inter-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 /* ── Reset ────────────────────────────────────────────────────────────────── */
@@ -1152,3 +1177,228 @@ body.admin .claim-card.future::before { content: 'en verificación · sale en ' 
 .rg-card .sb-enganoso { background: var(--c-enganoso); }
 .rg-card .sb-falso { background: var(--c-falso); }
 .rg-card .sb-nv { background: var(--c-nv); }
+
+/* ═══ Redesign 2026 ══════════════════════════════════════════════════════════
+   The facthem.es look (fact_them_fr/css/site.css, mockup/live.html) on top of
+   the rules above: same class names, so live.js behaviour is untouched.
+   Kept in sync by hand with site.css for the shared pieces (verdict tag,
+   stamp, share menu, confidence bar, claim-page sections). */
+
+body { font: 400 15px/1.55 'Inter', system-ui, -apple-system, sans-serif; font-feature-settings: 'cv11', 'ss03'; background: var(--bg); color: var(--text); }
+.num, .claim-at, .clocks, .sb-key b, .count { font-variant-numeric: tabular-nums; }
+
+/* ── One header on every screen ─────────────────────────────────────── */
+.site-header.live-top {
+  min-height: var(--header-h); height: var(--header-h); padding: 0 clamp(16px, 4vw, 40px); gap: 14px; flex-wrap: nowrap;
+  background: color-mix(in oklab, var(--bg) 90%, transparent); border-bottom: 1px solid var(--line);
+}
+.live-top .wordmark { font-size: 22px; font-weight: 900; letter-spacing: -.04em; line-height: 1; text-decoration: none; flex: none;
+  background: var(--logo); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.live-top .brand-tag { display: none; }
+body.admin .live-top .brand-tag { display: inline; }
+.live-top .onair { flex: none; height: 26px; padding: 0 10px; border-radius: var(--r-sm); font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none;
+  color: #ffd9e1; background: rgba(226, 86, 111, .14); border: 1px solid rgba(226, 86, 111, .35); }
+.live-top .onair.diferido { color: var(--text-2); background: var(--surface); border-color: var(--line); }
+.live-top .onair.diferido::before { background: var(--muted); animation: none; }
+.live-top .session-title { flex: 1; min-width: 0; margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -.01em; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.live-nav { display: flex; gap: 2px; flex: none; }
+.live-nav a { padding: 6px 10px; font-size: 14px; color: var(--text-2); text-decoration: none; border-radius: var(--r-sm); }
+.live-nav a:hover { color: var(--text); }
+.live-share { flex: none; }
+.live-share .share-wrapper { margin: 0; }
+.beta-badge, body:not(.admin) #clock-lag { display: none !important; }
+
+/* ── Panels and the player column ───────────────────────────────────── */
+.panel { background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r); box-shadow: none; }
+.player-wrap { border-radius: var(--r) var(--r) 0 0; overflow: hidden; background: #0b0709; }
+.now-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; object-position: 50% 20%; }
+.now-name { font-size: 15px; font-weight: 600; }
+.now-how { font-size: 12px; color: var(--muted); }
+.clocks { font-size: 12px; color: var(--muted); }
+.party { font-size: 12px; font-weight: 500; color: var(--muted); background: none; border: 0; padding: 0; letter-spacing: 0; text-transform: none; }
+.party::before { content: '· '; }
+.person { border-radius: 99px; border-color: var(--line); background: transparent; font-size: 12px; }
+.person.active { border-color: var(--accent); background: rgba(217, 112, 138, .1); }
+
+/* Transcript: a fixed slot, newest text anchored at the bottom, older text
+   fading out at the top, speaker changes as a thin named rule. */
+.caption { font-size: 15px; line-height: 1.5; color: var(--text-2); display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 1.4em); mask-image: linear-gradient(to bottom, transparent 0, #000 1.4em); }
+.caption b { font-weight: 400; }
+.caption b.fresh { color: var(--text); }
+.caption .cap-sep { display: flex; align-items: center; gap: 10px; margin: 6px 0 4px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); line-height: 1; }
+.caption .cap-sep::before, .caption .cap-sep::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+/* ── Feed column ────────────────────────────────────────────────────── */
+.feed-panel > .panel-title { display: flex; align-items: baseline; gap: 6px; font-size: 15px; font-weight: 600; letter-spacing: -.01em; text-transform: none; color: var(--text); padding-bottom: 10px; }
+.feed-panel > .panel-title .count { background: none; border: 0; padding: 0; color: var(--muted); font-size: 15px; font-weight: 500; }
+.summary-bar { padding: 0 0 12px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.sb-track { display: flex; height: 6px; gap: 2px; border-radius: 3px; overflow: hidden; background: var(--surface-2); }
+.sb-seg { background: var(--c); }
+.sb-seg.hatch { background: repeating-linear-gradient(-45deg, var(--c) 0 4px, color-mix(in oklab, var(--c) 60%, var(--bg)) 4px 7px); }
+.sb-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 8px; font-size: 12px; color: var(--muted); text-transform: none; letter-spacing: 0; font-weight: 400; }
+.sb-key { display: inline-flex; align-items: center; gap: 6px; }
+.sb-key .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c); }
+.sb-key b { color: var(--text-2); font-weight: 500; }
+.sb-waiting { font-style: normal; }
+/* old class names still used by the diferido grid */
+.sb-verdadero { background: var(--v-ok); } .sb-parcial { background: var(--v-matiz); } .sb-enganoso { background: var(--v-sobre); }
+.sb-falso { background: var(--v-falso); } .sb-nv { background: var(--v-nv); }
+.feed { gap: 10px; padding-top: 12px; }
+.feed-empty { font-style: normal; font-size: 14px; color: var(--muted); }
+.feed-new { font: 600 13px/1 'Inter', system-ui, sans-serif; letter-spacing: 0; text-transform: none; color: var(--accent-ink); background: var(--text); border: 0; padding: 8px 14px; }
+.feed-new b { color: inherit; }
+.weak-drawer { border-color: var(--line); border-radius: var(--r); background: transparent; }
+.weak-drawer > summary { font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--text-2); }
+.weak-count { background: none; border: 0; color: var(--muted); }
+
+/* ── Claim card: same surface as the session cards on facthem.es ──────── */
+.claim-card, .claim-card[data-state], .claim-card[data-resultado] {
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r); padding: 16px 18px; box-shadow: none;
+  --vc: var(--c, var(--accent)); --vc-soft: color-mix(in oklab, var(--c, var(--accent)) 14%, transparent);
+}
+.claim-card:hover { transform: none; box-shadow: none; border-color: var(--line-2); }
+.claim-card[data-state="pending"] { border-color: color-mix(in oklab, var(--accent) 35%, var(--line)); }
+.claim-card[data-state="forming"] { border-style: dashed; }
+/* no coloured top line: the stamp and the flash carry the moment */
+.claim-card::after, .claim-card.reveal::after, .claim-card[data-state="pending"]::after { content: none !important; }
+
+.claim-header { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; flex-wrap: nowrap; min-width: 0; }
+.claim-header .c-tags { flex: 1; min-width: 0; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.claim-header .c-tags .off-vocab { font-style: italic; }
+.claim-at { margin-left: auto; flex: none; border: 0; padding: 0; font-size: 12px; color: var(--muted); background: none; }
+.claim-at:hover { color: var(--text); border: 0; }
+.claim-text { margin: 0; font-size: 16px; font-weight: 500; line-height: 1.45; letter-spacing: -.01em; color: var(--text); overflow-wrap: anywhere; }
+.claim-card[data-state="pending"] .claim-text { color: var(--text-2); }
+.claim-who { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; color: var(--text-2); min-width: 0; }
+.claim-who img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; object-position: 50% 20%; flex: none; background: var(--surface-2); }
+.claim-who .politician-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Verdict tag: a coloured square with a symbol, then the label */
+.resultado-badge, .resultado-badge[class*="resultado-"] {
+  margin: 0; flex: none; display: inline-flex; align-items: center; gap: 8px; height: 20px; padding: 0; border: 0; border-radius: 6px;
+  background: transparent; color: var(--text); font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; white-space: nowrap;
+}
+.resultado-badge.vtag:not(.vtag-pending)::before { content: none; }
+.resultado-badge .vi { width: 20px; height: 20px; border-radius: 4px; display: grid; place-items: center; background: var(--c); color: #160c10; font-size: 12px; font-weight: 800; line-height: 1; }
+.resultado-badge.vtag-pending { color: #f0b8c4; font-variant-numeric: tabular-nums; }
+.resultado-badge.vtag-pending::before { content: ''; width: 14px; height: 14px; border-radius: 50%; background: none; border: 2px solid rgba(217, 112, 138, .25); border-top-color: var(--accent); animation: spin .7s linear infinite; }
+.resultado-forming.vtag-pending { color: var(--muted); }
+.resultado-forming.vtag-pending::before { border-color: var(--line-2); border-top-color: var(--muted); }
+
+/* Actions row: reserved while verifying, so the card doesn't grow when the verdict lands */
+.verdict { margin-top: 10px; }
+.claim-actions { min-height: 39px; padding-top: 10px; border-top: 1px solid var(--line); justify-content: space-between; }
+.detail-toggle { all: unset; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text-2); }
+.detail-toggle:hover { color: var(--text); }
+.detail-toggle::after { content: ' ↓'; color: var(--muted); }
+.detail-toggle[aria-expanded="true"]::after { content: ' ↑'; }
+.detail-toggle.placeholder { visibility: hidden; }
+.detail-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+/* Full verification: the claim page's sections and wording; the confidence bar is the separator */
+.vd-pad { margin-top: 10px; padding-top: 0; border-top: 0; display: grid; gap: 20px; }
+.c-conf { display: grid; gap: 8px; }
+.c-conf-track { height: 3px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.c-conf-track span { display: block; height: 100%; width: var(--p); background: var(--c); transform-origin: left; transform: scaleX(0); transition: transform .8s .1s var(--ease-out); }
+.verdict-detail.open .c-conf-track span { transform: none; }
+.c-conf-lbl { justify-self: end; font-size: 12px; color: var(--muted); }
+.c-conf-lbl b { color: var(--text-2); font-weight: 600; }
+.c-sec h4 { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: 0; text-transform: none; }
+.c-sec h4 .n { font-weight: 400; }
+.c-sec p, .c-sec li { margin: 0; font-size: 15px; line-height: 1.6; color: var(--text-2); overflow-wrap: anywhere; }
+.c-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.c-list li { position: relative; padding-left: 20px; }
+.c-list li::before { content: ''; position: absolute; left: 0; top: .78em; width: 10px; height: 2px; background: var(--b, var(--muted)); }
+.c-sources { list-style: none; padding: 0; margin: 0; counter-reset: s; border-top: 1px solid var(--line); }
+.c-sources li { counter-increment: s; display: grid; grid-template-columns: 24px 1fr; gap: 2px 6px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.c-sources li::before { content: counter(s); grid-row: span 3; color: var(--muted); font-size: 13px; }
+.c-sources li > * { grid-column: 2; }
+.c-sources a, .c-sources .src-name { color: var(--text); font-weight: 500; font-size: 14px; text-decoration: none; }
+.c-sources a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.c-sources .meta { font-size: 12px; color: var(--muted); }
+.c-sources .meta .prim { color: var(--v-ok); }
+.c-sources .dato { font-size: 13px; color: var(--text-2); }
+.claim-foot { margin: 0; font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--muted); }
+
+/* ── Share: three dots; menu below, or above when there is no room ───── */
+.share-wrapper { margin-left: auto; }
+.share-btn { height: 28px; min-width: 28px; justify-content: center; gap: 6px; padding: 0 6px; border: 0; border-radius: 6px; color: var(--muted); background: transparent; }
+.share-btn:hover { color: var(--text); background: var(--surface-2); border: 0; }
+.share-btn.has-label { height: 34px; padding: 0 12px; font-size: 14px; border: 1px solid var(--line); color: var(--text-2); }
+.share-menu { top: calc(100% + 6px); bottom: auto; right: 0; min-width: 190px; padding: 6px; border: 1px solid var(--line-2); border-radius: var(--r); background: var(--surface); box-shadow: var(--shadow-md); transform-origin: top right; }
+.share-menu.up { top: auto; bottom: calc(100% + 6px); transform-origin: bottom right; }
+.share-option { padding: 8px 10px; border-radius: 6px; font: 400 13px/1.4 'Inter', system-ui, sans-serif; color: var(--text-2); }
+.share-option:hover { background: var(--surface-2); color: var(--text); }
+.claim-card:has(.share-menu:not([hidden])) { z-index: 6; }
+
+/* ── Footer ─────────────────────────────────────────────────────────── */
+.site-footer { border-top: 1px solid var(--line); background: var(--bg); color: var(--muted); font-size: 12px; }
+
+/* ── Motion: the stamp. Lifted above the page, lands with a short press,
+   a faint ink ring, and the card takes the impact. Restrained, ~0.75 s. */
+.resultado-badge.stamped { position: relative; }
+@media (prefers-reduced-motion: no-preference) {
+  .claim-card.reveal { animation: card-flash 1.4s ease-out, impact .75s ease-out; }
+  .claim-card.reveal .resultado-badge.stamped { transform-origin: 30% 60%; animation: stamp-lift .75s cubic-bezier(.3, .6, .2, 1) both; }
+  .claim-card.reveal .resultado-badge.stamped::after { content: ''; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none; animation: stamp-ring .7s ease-out .42s both; }
+  .claim-card.reveal .resultado-badge.stamped .vi { animation: stamp-ink .6s ease-out .4s both; }
+  @keyframes stamp-lift {
+    0%   { opacity: 0; transform: translate(-4px, -16px) scale(1.45) rotate(-7deg); filter: blur(3px) drop-shadow(0 18px 12px rgba(0,0,0,.5)); }
+    45%  { opacity: 1; transform: translate(-2px, -8px) scale(1.2) rotate(-4deg); filter: blur(0) drop-shadow(0 12px 9px rgba(0,0,0,.45)); }
+    62%  { transform: translate(0, 1px) scale(.94) rotate(-1deg); filter: drop-shadow(0 1px 1px rgba(0,0,0,.5)); }
+    78%  { transform: scale(1.02) rotate(0); filter: none; }
+    100% { opacity: 1; transform: none; filter: none; }
+  }
+  @keyframes stamp-ring { 0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--c) 55%, transparent); opacity: 1; } 100% { box-shadow: 0 0 0 9px color-mix(in oklab, var(--c) 0%, transparent); opacity: 0; } }
+  @keyframes stamp-ink { 0% { filter: brightness(1.6) saturate(1.3); } 100% { filter: none; } }
+  @keyframes impact { 0%, 55% { transform: none; } 64% { transform: translateY(1px) scale(.997); } 100% { transform: none; } }
+  .share-menu { animation: pop .18s var(--ease-out); }
+}
+
+/* ── Phones: video fixed on top, then the bar with its legend and the claims.
+   No speaker box, transcript or counter: they need a bigger screen. */
+@media (max-width: 860px) {
+  .live-nav { display: none; }
+}
+@media (max-width: 760px) {
+  .site-header.live-top { position: sticky; padding: 0 14px; gap: 10px; }
+  .live-top .wordmark { font-size: 20px; }
+  .live-top .onair { height: 22px; padding: 0 7px; font-size: 11px; }
+  .live-top .session-title { font-size: 14px; flex-basis: auto; order: 0; padding: 0; }
+  .live-share .share-btn.has-label span { display: none; }
+  .live-share .share-btn.has-label { border: 0; padding: 0 6px; }
+  body:not(.admin) .col { top: var(--header-h); }
+  body:not(.admin) .now, body:not(.admin) .feed-panel > .panel-title { display: none !important; }
+  .col > .panel { border-radius: 0; border-left: 0; border-right: 0; border-top: 0; }
+  .player-wrap { border-radius: 0; }
+  .feed-panel { padding: 0 12px; }
+  .summary-bar { padding-top: 12px; }
+  .sb-legend { font-size: 11px; gap: 3px 12px; }
+  .claim-card, .claim-card[data-state], .claim-card[data-resultado] { padding: 14px 16px; }
+  .claim-header .resultado-badge { width: auto; height: 20px; padding: 0; font-size: 13px; }
+  .claim-header img { display: none; }
+  .claim-text { font-size: 15px; }
+}
+
+/* ── Diferido: the banner stays compact so the video column still fits one screen ── */
+.replay-banner { border-radius: var(--r); border-color: var(--line); background: var(--bg-2); }
+.replay-banner .rb-late { font-size: 15px; font-weight: 700; }
+@media (min-width: 1001px) {
+  body.replay .replay-banner { padding: 10px 16px; font-size: 13px; line-height: 1.5; }
+  body.replay .replay-banner .rb-late { display: inline; margin: 0 6px 0 0; }
+  body.replay .replay-banner .rb-msg { display: inline; }
+  body.replay .replay-banner .rb-links { margin-top: 2px; font-size: 12px; }
+  body.replay .replay-banner .rb-back { margin: 0 12px 0 0; font-size: 13px; }
+  /* the banner (~5.5rem) comes off the height the video can take */
+  body.replay:not(.admin) .layout { grid-template-columns: minmax(0, min(56%, calc((100vh - 29rem) * 16 / 9))) minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  body.replay .replay-banner { margin: 8px 12px 0; padding: 10px 12px; font-size: 13px; }
+  body.replay .replay-banner .rb-msg, body.replay .replay-banner .rb-links { display: none; }
+  body.replay .replay-banner .rb-late { font-size: 14px; margin: 0; }
+}
+@media (max-width: 760px) {
+  /* the tally stays in view under the video while the claims scroll */
+  body:not(.admin) .summary-bar { position: sticky; top: calc(var(--header-h) + 56.25vw); z-index: 4; background: var(--bg); margin: 0 -12px; padding: 10px 12px; }
+}

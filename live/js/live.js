@@ -71,11 +71,27 @@ const RESULTADO_LABELS = {
   CONFIRMADO_CON_MATIZ: 'Confirmado con matiz',
   DESCONTEXTUALIZADO: 'Descontextualizado',
   FALSO: 'Falso',
-  IMPRECISO: 'Impreciso',
+  IMPRECISO: 'Inexacto',
   NO_VERIFICABLE: 'No verificable',
   SOBREESTIMADO: 'Sobreestimado',
   SUBESTIMADO: 'Subestimado',
 };
+
+/* Same tag as the rest of facthem.es (site_chrome.VERDICTS / js/ui.js): a
+   coloured square with a symbol, then the label. Order = display order. */
+const VERDICTS = [
+  ['CONFIRMADO', 'Confirmado', 'Confirmado', '✓', 'var(--v-ok)'],
+  ['CONFIRMADO_CON_MATIZ', 'Con matiz', 'Confirmado con matiz', '≈', 'var(--v-matiz)'],
+  ['SOBREESTIMADO', 'Sobreestimado', 'Sobreestimado', '↑', 'var(--v-sobre)'],
+  ['SUBESTIMADO', 'Subestimado', 'Subestimado', '↓', 'var(--v-sub)'],
+  ['IMPRECISO', 'Inexacto', 'Inexacto', '~', 'var(--v-impreciso)'],
+  ['DESCONTEXTUALIZADO', 'Descontextualizado', 'Descontextualizado', '⋯', 'var(--v-descontext)'],
+  ['FALSO', 'Falso', 'Falso', '✕', 'var(--v-falso)'],
+  ['NO_VERIFICABLE', 'No verificable', 'No verificable', '?', 'var(--v-nv)'],
+];
+const VKEY = Object.fromEntries(VERDICTS.map((v) => [v[0], v]));
+const verdictKey = (r) => { const k = String(r || '').trim().toUpperCase().replaceAll(' ', '_'); return VKEY[k] ? k : 'NO_VERIFICABLE'; };
+const vtagInner = (k) => `<span class="vi" aria-hidden="true">${VKEY[k][3]}</span>${esc(VKEY[k][2])}`;
 
 function resultadoToClass(resultado) {
   const map = {
@@ -243,8 +259,26 @@ async function boot() {
   setupAdmin();
 }
 
+/* The header's share button: the session as a whole. */
+function renderSessionShare() {
+  const slot = $('live-share'); if (!slot) return;
+  const url = liveShareUrl();
+  const title = session?.title || 'el debate';
+  const text = `${replayMode ? '▶️' : '🔴'} ${title}, verificado ${replayMode ? 'en diferido' : 'en directo'} en Facthem`;
+  const enc = encodeURIComponent;
+  slot.innerHTML = `<span class="share-wrapper">
+      <button class="share-btn has-label" aria-label="Compartir" data-url="${esc(url)}" data-text="${esc(text)}">${SHARE_ICON}<span>Compartir</span></button>
+      <span class="share-menu" hidden>
+        <button type="button" class="share-option" data-copy="${esc(url)}">Copiar enlace</button>
+        <a class="share-option" href="https://wa.me/?text=${enc(`${text} ${url}`)}" target="_blank" rel="noopener">WhatsApp</a>
+        <a class="share-option" href="https://twitter.com/intent/tweet?text=${enc(text)}&url=${enc(url)}&via=${SHARE_VIA}" target="_blank" rel="noopener">X / Twitter</a>
+        <a class="share-option" href="https://t.me/share/url?url=${enc(url)}&text=${enc(text)}" target="_blank" rel="noopener">Telegram</a>
+      </span></span>`;
+}
+
 function applySession() {
   renderBreakdown();
+  renderSessionShare();
   $('session-title').textContent = session.title || session.session_id;
   document.title = `${session.title || session.session_id} · Facthem directo`;
   rosterByKey = new Map();
@@ -801,6 +835,7 @@ function railIsStatic() {
 }
 
 function renderRail() {
+  if (!session) return;   // the diferido picker has no session (ResizeObserver fires anyway)
   const rail = $('rail');
   if (railIsStatic()) {
     rail.innerHTML = (session.roster || []).filter(onRail).map((r) => personHTML(r, 'en el plató')).join('');
@@ -1068,18 +1103,18 @@ function tag(field, value, { strong = false } = {}) {
 
 function cardHTML(c, sp, t) {
   const photo = photoFor(sp);
-  const tags = [tag('ambito_tematico', c.ambito_tematico), tag('ambito_geografico', c.ambito_geografico)].join('');
+  const tags = [tag('ambito_tematico', c.ambito_tematico), tag('ambito_geografico', c.ambito_geografico)].filter(Boolean).join('<span class="sep"> · </span>');
   return `
     <div class="claim-header">
-      ${photo ? `<img src="${esc(photo)}" alt="" />` : ''}
-      <span class="politician-name ${sp?.name ? '' : 'unknown'}" title="${esc(sp?.name || '')}">${esc(sp?.name ? shortName(sp) : 'Sin atribuir')} ${partyChip(partyFor(sp))}</span>
-      <button class="claim-at" data-seek="${t}" title="Ir a este momento del debate">
-        <span class="clock-icon">◷</span>${fmtTime(replayMode ? t + (ytOffset || 0) : t)}
-      </button>
-      <span class="resultado-badge resultado-forming">Detectando</span>
+      <span class="resultado-badge resultado-forming vtag vtag-pending">Detectando</span>
+      ${tags ? `<span class="c-tags">${tags}</span>` : ''}
+      <button class="claim-at" data-seek="${t}" title="Ir a este momento del debate">${fmtTime(replayMode ? t + (ytOffset || 0) : t)}</button>
     </div>
     <p class="claim-text">${esc(c.texto_normalizado || c.texto_original)}</p>
-    ${tags ? `<div class="claim-tags">${tags}</div>` : ''}
+    <div class="claim-who">
+      ${photo ? `<img src="${esc(photo)}" alt="" width="22" height="22" />` : ''}
+      <span class="politician-name ${sp?.name ? '' : 'unknown'}" title="${esc(sp?.name || '')}">${esc(sp?.name ? shortName(sp) : 'Sin atribuir')}</span>${partyChip(partyFor(sp))}
+    </div>
     <div class="verdict">
       <div class="claim-actions"><button class="detail-toggle placeholder" disabled aria-hidden="true">Ver verificación completa</button></div>
     </div>`;
@@ -1211,8 +1246,8 @@ function markPending(claimId) {
   const entry = claims.get(claimId);
   if (!entry) return;
   const badge = entry.el.querySelector('.resultado-badge');
-  badge.className = 'resultado-badge resultado-pending';
-  badge.textContent = 'Verificando 0s';
+  badge.className = 'resultado-badge resultado-pending vtag vtag-pending';
+  badge.textContent = 'Verificando 0 s';
 }
 
 /* A ticking counter on every in-flight verification. Verification takes tens of
@@ -1226,7 +1261,7 @@ function tickPending() {
     const badge = el.querySelector('.resultado-badge');
     if (badge?.classList.contains('resultado-pending')) {
       const secs = replayMode ? clock - (entry.t ?? clock) : (now - startedAt) / 1000;
-      badge.textContent = `Verificando ${Math.max(0, Math.round(secs))}s`;
+      badge.textContent = `Verificando ${Math.max(0, Math.round(secs))} s`;
     }
   }
   renderStats();
@@ -1270,37 +1305,35 @@ function applyVerdict(ev) {
   const toDrawer = weak;
   el.dataset.resultado = cls;
 
+  const vk = verdictKey(verdict.resultado);
+  el.style.setProperty('--c', VKEY[vk][4]);
+  el.dataset.v = vk;
   const badge = el.querySelector('.resultado-badge');
-  badge.className = `resultado-badge resultado-${cls}`;
-  badge.textContent = RESULTADO_LABELS[verdict.resultado] || verdict.resultado;
+  badge.className = `resultado-badge resultado-${cls} vtag stamped`;
+  badge.style.setProperty('--c', VKEY[vk][4]);
+  badge.innerHTML = vtagInner(vk);
   if (motion() && !toDrawer) el.classList.add('reveal');
 
-  // Sources: tier, name, the specific figure it gives — one row each, the
-  // tier badge a fixed width so the names line up.
-  // Primary sources first, then academic, then the rest — in the order the
-  // verifier gave them within each tier.
-  const tierRank = (f) => ({ primaria: 0, academica: 1, secundaria: 2, terciaria: 3 }[foldKey(f.tipo || '')] ?? 4);
-  const sources = (verdict.fuentes || [])
-    .filter((f) => f.url)
+  // Unfolded, the same sections and wording as the claim page on facthem.es:
+  // the confidence bar as the separator, what the data says, errors, missing
+  // context, sources (primary first, in the verifier's order within a tier).
+  const tierRank = (f) => ({ primaria: 0, primary: 0, academica: 1, academic: 1, secundaria: 2, secondary: 2, terciaria: 3, tertiary: 3 }[foldKey(f.tipo || '')] ?? 4);
+  const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return ''; } };
+  const srcs = (verdict.fuentes || [])
+    .filter((f) => f.url || f.nombre)
     .map((f, i) => [f, i])
     .sort((a, b) => tierRank(a[0]) - tierRank(b[0]) || a[1] - b[1])
-    .map(([f]) => f)
-    .slice(0, 4)
-    .map((f) => {
-      const tier = f.tipo || '';
-      const gloss = VOCAB.fuente_tipo?.[tier];
-      return `<a class="src" href="${esc(f.url)}" target="_blank" rel="noopener">
-        <span class="src-tier src-${esc(foldKey(tier || 'otra'))}"${gloss ? ` title="${esc(gloss)}"` : ''}>${esc(tier || 'fuente')}</span>
-        <span class="src-body"><b>${esc(f.nombre || f.url)}</b>${f.dato_especifico ? `<small>${esc(f.dato_especifico)}</small>` : ''}</span>
-      </a>`;
-    })
-    .join('');
-  const notes = (verdict.errores || []).concat(verdict.omisiones || []).slice(0, 3);
+    .map(([f]) => f);
+  const sources = srcs.map((f) => {
+    const prim = tierRank(f) === 0;
+    const name = f.url ? `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.nombre || host(f.url))}</a>` : `<span class="src-name">${esc(f.nombre)}</span>`;
+    const meta = [f.url ? esc(host(f.url)) : '', prim ? '<span class="prim">fuente primaria</span>' : esc(String(f.tipo || '').toLowerCase())].filter(Boolean).join(' · ');
+    return `<li>${name}${meta ? `<span class="meta">${meta}</span>` : ''}${f.dato_especifico ? `<span class="dato">${esc(f.dato_especifico)}</span>` : ''}</li>`;
+  }).join('');
+  const list = (arr, color) => `<ul class="c-list" style="--b:${color}">${arr.map((x) => `<li>${esc(typeof x === 'string' ? x : x?.descripcion || '')}</li>`).join('')}</ul>`;
+  const errs = (verdict.errores || []).filter(Boolean);
+  const oms = (verdict.omisiones || []).filter(Boolean);
   const conf = Math.round(100 * (verdict.confidence_score || 0));
-
-  // Collapsed, a card answers one question: who said what, and was it true?
-  // Expanded, three labelled blocks: the correct statement, the nuances, the
-  // sources — and one footer line with confidence and timing.
   const headline = verdict.afirmacion_correcta || '';
 
   const box = el.querySelector('.verdict');
@@ -1310,14 +1343,15 @@ function applyVerdict(ev) {
       ${shareButton(el, verdict)}
     </div>
     <div class="verdict-detail"><div class="vd-inner"><div class="vd-pad">
-      ${headline ? `<section class="vd"><h4>Lo que dicen los datos</h4><p class="verdict-headline">${esc(headline)}</p></section>` : ''}
-      ${notes.length ? `<section class="vd"><h4>Matices</h4><ul>${notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul></section>` : ''}
-      ${sources ? `<section class="vd"><h4>Fuentes</h4><div class="sources">${sources}</div></section>` : ''}
-      <div class="claim-foot">
-        <span class="confidence"><span class="confidence-track"><span class="confidence-fill" style="width:${conf}%"></span></span>${conf}% confianza</span>
-        ${latency_seconds != null ? `<span>verificado en ${Math.round(latency_seconds)} s</span>` : ''}
-        ${cache_hit ? '<span>⚡ caché</span>' : ''}
+      <div class="c-conf" style="--c:${VKEY[vk][4]};--p:${conf}%" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${conf}" aria-label="Confianza de la verificación">
+        <div class="c-conf-track"><span></span></div>
+        <span class="c-conf-lbl">Confianza de la verificación <b>${conf}%</b></span>
       </div>
+      ${headline ? `<section class="c-sec"><h4>Lo que dicen los datos</h4><p>${esc(headline)}</p></section>` : ''}
+      ${errs.length ? `<section class="c-sec"><h4>Errores <span class="n">· ${errs.length}</span></h4>${list(errs, 'var(--v-falso)')}</section>` : ''}
+      ${oms.length ? `<section class="c-sec"><h4>Contexto que falta <span class="n">· ${oms.length}</span></h4>${list(oms, 'var(--v-sobre)')}</section>` : ''}
+      ${sources ? `<section class="c-sec"><h4>Fuentes <span class="n">· ${srcs.length}</span></h4><ol class="c-sources">${sources}</ol></section>` : ''}
+      ${window.LIVE_ADMIN && (latency_seconds != null || cache_hit) ? `<p class="claim-foot">${latency_seconds != null ? `verificado en ${Math.round(latency_seconds)} s` : ''}${cache_hit ? ' · ⚡ caché' : ''}</p>` : ''}
     </div></div></div>`;
 
   countVerdict(verdict.resultado);
@@ -1392,17 +1426,13 @@ function relocateCard(el, move) {
 }
 
 /* ── verdict breakdown (left column) ────────────────────────────────────── */
-const VB_ORDER = [
-  ['verdadero', 'Confirmado'],
-  ['parcial', 'Con matiz'],
-  ['enganoso', 'Sobre/subestimado'],
-  ['falso', 'Falso'],
-];   // unverifiable claims are counted on the drawer, not here
+// Every verdict but "no verificable": those are counted on the drawer, not here.
+const VB_ORDER = VERDICTS.filter((v) => v[0] !== 'NO_VERIFICABLE');
 const verdictCounts = {};
 
 function countVerdict(resultado) {
-  const cls = resultadoToClass(resultado);
-  verdictCounts[cls] = (verdictCounts[cls] || 0) + 1;
+  const k = verdictKey(resultado);
+  verdictCounts[k] = (verdictCounts[k] || 0) + 1;
   renderBreakdown();
 }
 
@@ -1435,7 +1465,7 @@ function renderCost(cost) {
    two), five separate tracks are mostly empty rails; a single bar shows the
    mix at a glance and reads as a summary of the feed it sits above. */
 function renderBreakdown() {
-  const total = Object.values(verdictCounts).reduce((a, b) => a + b, 0);
+  const total = VB_ORDER.reduce((a, [k]) => a + (verdictCounts[k] || 0), 0);
   const bar = $('summary-bar');
   // The bar is on the page from the start, with its space reserved: an
   // empty track and a waiting line, so the first verdict fills it in place
@@ -1447,26 +1477,25 @@ function renderBreakdown() {
   if (!bar.firstElementChild) {
     bar.innerHTML = `
     <div class="sb-track">
-      ${VB_ORDER.map(([cls]) => `<span class="sb-seg sb-${cls} empty" data-cls="${cls}" style="flex:0"></span>`).join('')}
+      ${VB_ORDER.map(([k, , long, , c]) => `<span class="sb-seg${k === 'SUBESTIMADO' ? ' hatch' : ''} empty" data-k="${k}" style="--c:${c};flex:0" title="${esc(long)}"></span>`).join('')}
     </div>
     <div class="sb-legend">
       <span class="sb-key sb-waiting">Esperando la primera verificación</span>
-      ${VB_ORDER.map(([cls, label]) => `<span class="sb-key" data-cls="${cls}" hidden><span class="dot sb-${cls}"></span>${label} <b>0</b></span>`).join('')}
+      ${VB_ORDER.map(([k, label, , , c]) => `<span class="sb-key" data-k="${k}" style="--c:${c}" hidden><span class="dot"></span>${esc(label)} <b>0</b></span>`).join('')}
     </div>`;
   }
   bar.querySelector('.sb-waiting').hidden = total > 0;
-  for (const [cls] of VB_ORDER) {
-    const n = verdictCounts[cls] || 0;
-    const seg = bar.querySelector(`.sb-seg[data-cls="${cls}"]`);
+  for (const [k] of VB_ORDER) {
+    const n = verdictCounts[k] || 0;
+    const seg = bar.querySelector(`.sb-seg[data-k="${k}"]`);
     seg.style.flex = String(n);
     seg.classList.toggle('empty', !n);
-    const key = bar.querySelector(`.sb-key[data-cls="${cls}"]`);
+    const key = bar.querySelector(`.sb-key[data-k="${k}"]`);
     key.hidden = !n;
     const b = key.querySelector('b');
     if (b.textContent !== String(n)) { b.textContent = n; bumpEl(b); }
   }
 }
-
 
 /* ── Share ──────────────────────────────────────────────────────────────────
    Same menu as the rest of Facthem (see fact_them_fr/js/app.js). A live claim
@@ -1622,8 +1651,9 @@ function shareButton(el, verdict) {
   const tw = encodeURIComponent(tweetText(el, verdict, url));
   return `
     <span class="share-wrapper">
-      <button class="share-btn" aria-label="Compartir afirmación">${SHARE_ICON}</button>
+      <button class="share-btn" aria-label="Compartir afirmación" data-url="${esc(url)}" data-text="${esc(`${text}\n\n${liveCallout()}`)}">${SHARE_ICON}</button>
       <span class="share-menu" hidden>
+        <button type="button" class="share-option" data-copy="${esc(url)}">Copiar enlace</button>
         <a class="share-option" href="https://wa.me/?text=${wa}" target="_blank" rel="noopener">WhatsApp</a>
         <a class="share-option" href="https://twitter.com/intent/tweet?text=${tw}&via=${SHARE_VIA}"
            target="_blank" rel="noopener">X / Twitter</a>
@@ -1649,10 +1679,30 @@ document.addEventListener('click', (e) => {
 
   if (btn) {
     e.stopPropagation();
+    // Phones and tablets: the system share sheet, as everywhere on facthem.es.
+    if (navigator.share && window.matchMedia && matchMedia('(pointer: coarse)').matches) {
+      navigator.share({ title: 'Facthem', text: btn.dataset.text || '', url: btn.dataset.url || liveShareUrl() }).catch(() => {});
+      return;
+    }
     const menu = btn.closest('.share-wrapper').querySelector('.share-menu');
+    // Open upwards when the menu would fall below the feed's scroll box.
+    menu.classList.remove('up');
     const wasHidden = menu.hidden;
     document.querySelectorAll('.share-menu').forEach((m) => { m.hidden = true; });
     menu.hidden = !wasHidden;
+    if (!menu.hidden) {
+      const box = btn.closest('.feed')?.getBoundingClientRect();
+      const limit = box ? Math.min(innerHeight, box.bottom) : innerHeight;
+      if (menu.getBoundingClientRect().bottom > limit - 8) menu.classList.add('up');
+    }
+    return;
+  }
+  const copy = e.target.closest('[data-copy]');
+  if (copy) {
+    e.stopPropagation();
+    navigator.clipboard?.writeText(copy.dataset.copy).catch(() => {});
+    copy.textContent = 'Enlace copiado ✓';
+    setTimeout(() => { copy.textContent = 'Copiar enlace'; document.querySelectorAll('.share-menu').forEach((m) => { m.hidden = true; }); }, 900);
     return;
   }
   document.querySelectorAll('.share-menu').forEach((m) => { m.hidden = true; });
