@@ -1513,8 +1513,9 @@ def generate_directory(people):
         if p["k"] and p["p"] and p["p"] not in seen:
             seen.add(p["p"]); top.append(p)
     vips = []
-    for p in top:
-        photo = (f'<img src="{esc(p["f"])}" alt="" width="88" height="88" />' if p["f"]
+    for i, p in enumerate(top):
+        lazy = ' loading="lazy"' if i >= 4 else ""
+        photo = (f'<img src="{esc(p["f"])}" alt="" width="88" height="88"{lazy} />' if p["f"]
                  else f'<span class="person-ph" aria-hidden="true">{esc("".join(w[0] for w in p["n"].split()[:2]).upper())}</span>')
         role = re.sub(r"^Diputado/a por .*$", "Diputado/a", p["c"]) or ""
         stats = [f'{p["k"]} afirmaci{"ón" if p["k"] == 1 else "ones"}']

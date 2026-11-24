@@ -198,7 +198,11 @@ window.FT = (() => {
     const set = open => { nav.hidden = !open; btn.setAttribute('aria-expanded', String(open)); document.body.classList.toggle('menu-open', open); };
     btn.onclick = e => { e.stopPropagation(); set(nav.hidden); };
     document.addEventListener('click', e => { if (!nav.hidden && !nav.contains(e.target) && !btn.contains(e.target)) set(false); });
-    addEventListener('keydown', e => { if (e.key === 'Escape') set(false); });
+    addEventListener('keydown', e => {
+      if (e.key !== 'Escape' || nav.hidden) return;
+      const inside = nav.contains(document.activeElement) || document.activeElement === btn;
+      set(false); if (inside) btn.focus();   // keyboard users land back on the ☰ button
+    });
   }
 
   // ── "En directo": shown only while a broadcast is actually on ────────────
