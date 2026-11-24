@@ -51,6 +51,7 @@ BASE_URL      = "https://facthem.es"
 OUT_DIR       = Path(__file__).parent / "claim"
 POL_OUT_DIR   = Path(__file__).parent / "politician"
 PEOPLE_JSON   = Path(__file__).parent / "assets" / "people.json"
+DIRECTORY_PATH = Path(__file__).parent / "representantes.html"
 SITEMAP_PATH  = Path(__file__).parent / "sitemap.xml"
 SALARY_DATA_PATH = Path(__file__).parent / "assets" / "salary-data.js"
 TODAY         = date.today().isoformat()
@@ -813,7 +814,7 @@ def generate_salary_data(salaries):
 
 STATIC_URLS = [
     ("https://facthem.es/",                  "2026-03-11T00:00:00+00:00", "weekly",  "1.0"),
-    ("https://facthem.es/?tab=parlamentarios", "2026-05-21T00:00:00+00:00", "weekly",  "0.8"),
+    ("https://facthem.es/representantes.html", TODAY,                       "weekly",  "0.8"),
     ("https://facthem.es/aviso.html",        "2026-03-11T00:00:00+00:00", "yearly",  "0.3"),
     ("https://facthem.es/metodologia.html",  "2026-05-05T00:00:00+00:00", "yearly",  "0.4"),
     ("https://facthem.es/acerca.html",       "2026-05-05T00:00:00+00:00", "yearly",  "0.4"),
@@ -1504,7 +1505,8 @@ def _write_politician_page(pol_slug, info, photo_for):
                             jsonld=(graph, crumbs_ld))
     (POL_OUT_DIR / f"{pol_slug}.html").write_text(page, encoding="utf-8")
     return {"n": nombre, "p": partido, "s": pol_slug, "f": photo, "c": role, "k": total,
-            "m": round(monthly or 0, 2), "a": round(annual or 0, 2)}
+            "m": round(monthly or 0, 2), "a": round(annual or 0, 2),
+            "o": info["nombre_completo"] if "," in info["nombre_completo"] else nombre}
 
 
 def generate_politician_pages(claims_with_slugs, salaries=None, photo_for=None):
@@ -1530,7 +1532,82 @@ def generate_politician_pages(claims_with_slugs, salaries=None, photo_for=None):
     with_claims = sum(1 for p in people if p["k"])
     print(f"  politician/ generado — {len(people)} páginas ({with_claims} con afirmaciones, "
           f"{len(people) - with_claims} solo salario) · assets/people.json")
+    generate_directory(people)
     return slug_dates
+
+
+def party_color(p):
+    """Party dot colour; regional federations take the national party's colour."""
+    pc = site_chrome.PARTY_COLORS
+    if p in pc:
+        return pc[p]
+    for k in ("PSOE", "PP", "VOX", "SUMAR"):
+        if k in str(p or "").upper():
+            return pc[k]
+    return "var(--muted)"
+
+
+def _sort_key(s):
+    s = unicodedata.normalize("NFD", str(s or "").lower())
+    return "".join(ch for ch in s if unicodedata.category(ch) != "Mn")
+
+
+def generate_directory(people):
+    """representantes.html: everyone, prerendered A–Z (by surname); js/directory.js
+    adds search, party filter and the other orders over these same links."""
+    people = sorted(people, key=lambda p: _sort_key(p["o"]))
+    parties = {}
+    for p in people:
+        parties[p["p"] or "Sin partido"] = parties.get(p["p"] or "Sin partido", 0) + 1
+    items = []
+    for i, p in enumerate(people):
+        photo = (f'<img src="{esc(p["f"])}" alt="" loading="lazy" width="44" height="44" />' if p["f"]
+                 else f'<span class="person-ph" aria-hidden="true">{esc("".join(w[0] for w in p["n"].split()[:2]).upper())}</span>')
+        meta = " · ".join(esc(x) for x in (p["p"], re.sub(r"^Diputado/a por ", "", p["c"])) if x)
+        stats = []
+        if p["k"]:
+            stats.append(f'<span class="person-k">{p["k"]} afirmaci{"ón" if p["k"] == 1 else "ones"}</span>')
+        if p["m"]:
+            stats.append(f'<span class="person-sal">{_format_eur(p["m"], compact=True)}/mes</span>')
+        items.append(
+            f'<li><a class="person" href="/politician/{esc(p["s"])}.html" data-o="{esc(_sort_key(p["o"]))}" '
+            f'data-p="{esc(p["p"] or "Sin partido")}" data-k="{p["k"]}" data-m="{p["m"]}" '
+            f'data-q="{esc(_sort_key(p["n"] + " " + p["p"] + " " + p["c"]))}">{photo}'
+            f'<span class="person-txt"><span class="person-name">{esc(p["n"])}</span>'
+            f'<span class="person-meta"><span class="pdot" style="--pc:{party_color(p["p"])}"></span>{meta}</span></span>'
+            f'<span class="person-stats">{"".join(stats)}</span></a></li>')
+    popts = "".join(f'<option value="{esc(k)}">{esc(k)} ({n})</option>'
+                    for k, n in sorted(parties.items(), key=lambda kv: -kv[1]))
+    n_dip = sum(1 for p in people if p["c"].startswith("Diputado"))
+    n_gov = sum(1 for p in people if p["c"] and not p["c"].startswith("Diputado"))
+    body = f"""<main class="page" id="main">
+<header class="page-head"><h1>Representantes</h1>
+<p class="muted">Diputados del Congreso y miembros del Gobierno: sus afirmaciones verificadas y su retribución pública.</p></header>
+<div class="dir-bar">
+<label class="search search-lg">{site_chrome.ICON_SEARCH.replace('width="14" height="14"', 'width="16" height="16"')}<span class="sr">Buscar representante</span>
+<input id="d-q" type="search" placeholder="Busca un nombre, un partido o una provincia" autocomplete="off" /></label>
+<div class="quiet-filters">
+<label class="select"><span class="sr">Partido</span><select id="d-p"><option value="">Partido</option>{popts}</select></label>
+<label class="select"><span class="sr">Orden</span><select id="d-o"><option value="az">A–Z</option><option value="k">Más afirmaciones</option><option value="m">Mayor sueldo</option></select></label>
+</div>
+<p class="panel-count" id="d-n" aria-live="polite"><strong>{len(people)}</strong> representantes</p>
+</div>
+<ul class="dir" id="dir">{''.join(items)}</ul>
+<p class="empty" id="d-empty" hidden>Nadie coincide con la búsqueda.</p>
+</main>"""
+    url = f"{BASE_URL}/representantes.html"
+    title = "Diputados del Congreso: afirmaciones verificadas y sueldos | Facthem"
+    desc = (f"Los {n_dip} diputados del Congreso y {n_gov} miembros del Gobierno: sus afirmaciones "
+            "verificadas en el Pleno y su retribución pública, mes a mes y al año.")
+    ld = [{"@context": "https://schema.org", "@type": "CollectionPage", "url": url, "name": title, "description": desc,
+           "isPartOf": {"@type": "WebSite", "name": "Facthem", "url": BASE_URL},
+           "mainEntity": {"@type": "ItemList", "numberOfItems": len(people), "itemListElement": [
+               {"@type": "ListItem", "position": i + 1, "url": f"{BASE_URL}/politician/{p['s']}.html", "name": p["n"]}
+               for i, p in enumerate(people)]}}]
+    DIRECTORY_PATH.write_text(site_chrome.page(
+        body=body, active="representantes", scripts=("js/ui.js", "js/directory.js"),
+        title=title, description=desc, canonical=url, jsonld=ld), encoding="utf-8")
+    print(f"  representantes.html generado — {len(people)} personas")
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────

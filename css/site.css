@@ -1221,3 +1221,12 @@ span.avatar { display: inline-block; }
 .sum-empty .sum-dim { white-space: normal; }
 .p-head .c-photo-none { width: 132px; height: 164px; border-radius: 12px; font-size: 40px; }
 @media (max-width: 860px) { .p-head .c-photo-none { width: 88px; height: 110px; font-size: 28px; } }
+
+/* ── Directory: prerendered list ─────────────────────────────────────── */
+ul.dir { list-style: none; margin: 0; padding: 0; }
+.person-ph { width: 44px; height: 44px; border-radius: 50%; flex: none; display: grid; place-items: center; font-size: 13px; font-weight: 700; color: var(--muted); background: var(--surface-2); }
+.person-stats { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex: none; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.person-stats .person-sal { margin: 0; font-size: 12px; color: var(--text-2); }
+.dir-bar .search-lg input::-webkit-search-cancel-button { filter: invert(.6); }
+@media (max-width: 639px) { .dir { grid-template-columns: minmax(0, 1fr); } .dir-bar .quiet-filters { width: 100%; } .dir-bar .panel-count { width: 100%; } }
+.dir { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
