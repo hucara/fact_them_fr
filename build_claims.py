@@ -1935,6 +1935,8 @@ MERGED_PROFILES = {
     "pedro-perez-sanchez-castejon-psoe": "pedro-sanchez-perez-castejon-psoe",
     "jordi-hereu-i-boher-psoe": "jordi-hereu-boher-psoe",
     "ana-tolon-jaime-psoe": "milagros-tolon-jaime-psoe",
+    # a record the speaker identifier invented (DS-PL-209: "El señor MERCADAL BAQUERO",
+    # called for the Grupo Socialista); the only Mercadal in Congress is Pepe (PSOE)
     "maria-de-las-nieves-angeles-mercadal-baquero-pp": "pepe-mercadal-baquero-psoe",
 }
 
