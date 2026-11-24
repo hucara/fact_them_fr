@@ -246,6 +246,10 @@ async function boot() {
     .toLowerCase().replace(/[^a-z0-9-]/g, '');
   // 1. Published buckets (static hosting / aton). The manifest is the only
   //    mutable object, so it is fetched with the cache bypassed.
+  // Off facthem.es the R2 data refuses the request (CORS): a local copy of the
+  // site falls back to its mirror of the data, /_livedata/.
+  if (!window.LIVE_ADMIN && !q.has('data') && location.hostname !== 'facthem.es'
+      && !(await fetchPointer('replay'))) bucketBase = '/_livedata/';
   if (!window.LIVE_ADMIN && !sid && !channel && !q.has('diferido') && !q.has('replay')) {
     // Plain /live/ ("Directos"): whatever is on air, on either pointer; with
     // nothing on air, the diferidos grid (bootBuckets → bootReplay).
@@ -327,9 +331,9 @@ function closedBucket() {
   return Math.floor((Date.now() / 1000 - grace) / bs) - 1;
 }
 
-/* No sitting being verified right now: nothing of the last session is shown
-   (its claims are archived in the parliament DB), just where to find us.
-   `?replay` (or `?s=<session>`) still opens the archive view of a session. */
+/* Nothing on air and no diferidos to offer (or they could not be loaded):
+   where to find us. `?replay` (or `?s=<session>`) still opens the archive
+   view of a session. "¡Llegas tarde!" belongs to the diferidos grid only. */
 const IDLE_FOLLOW =
   'síguenos en ' +
   '<a href="https://www.youtube.com/@facthem_es" target="_blank" rel="noopener">YouTube</a>, ' +
@@ -341,17 +345,19 @@ const IDLE_DONATE =
   '<a href="https://paypal.me/hcasero" class="donate-btn" target="_blank" rel="noopener">PayPal</a> ' +
   '<a href="https://ko-fi.com/hugocasero" class="donate-btn" target="_blank" rel="noopener">Ko-fi</a>';
 const IDLE_HTML =
-  '<p class="idle-late">¡Llegas tarde, Ana Pasteur!</p>' +
-  'Ahora mismo no estamos verificando ningún pleno en directo.<br />' +
-  'Vuelve otro día y ' + IDLE_FOLLOW +
-  '<p class="idle-archive">Si buscas una sesión anterior, puedes verla en ' +
-  '<a href="https://facthem.es/">facthem.es</a>.</p>' +
-  '<p class="idle-donate">' + IDLE_DONATE + '</p>';
+  '<p class="idle-late">Ahora mismo no hay ningún directo</p>' +
+  'Cuando verifiquemos un pleno o un debate en directo, estará aquí. Avisamos en ' +
+  '<a href="https://www.youtube.com/@facthem_es" target="_blank" rel="noopener">YouTube</a>, ' +
+  '<a href="https://www.tiktok.com/@facthem_es" target="_blank" rel="noopener">TikTok</a> y ' +
+  '<a href="https://x.com/facthem_es" target="_blank" rel="noopener">X</a>.' +
+  '<p class="idle-archive"><a href="/">Ver las sesiones verificadas →</a></p>';
+
 function showIdle() {
   sessionEnded = true;
-  $('session-title').textContent = 'sin emisión';
-  document.title = 'Facthem directo';
+  $('session-title').textContent = 'Directos';
+  document.title = 'Directos · Facthem';
   $('onair').hidden = true;
+  document.querySelector('.live-head-right')?.setAttribute('hidden', '');
   document.body.classList.add('idle');
   for (const sel of ['.live-stage', '#live-dist', '#weak-drawer', '#debug-current']) {
     const el = document.querySelector(sel);
