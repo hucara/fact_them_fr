@@ -228,6 +228,10 @@ def compare(snap_path, site, sample=None):
     fails, warns = [], []
     # Claims whose verdict was retired: the page is now a noindex redirect to the profile.
     redirected = set((exp.get("redirected") or {}).get("urls") or [])
+    archive_links = set()
+    for au, af in new_urls.items():
+        if "/archive" in au:
+            archive_links |= {urljoin(au, html.unescape(h)) for h in re.findall(r'href="([^"]+)"', af.read_text(encoding="utf-8"))}
     for u in sorted(redirected):
         f = new_urls.get(u)
         if not f or 'http-equiv="refresh"' not in f.read_text(encoding="utf-8"):
@@ -263,7 +267,11 @@ def compare(snap_path, site, sample=None):
         raw = p.links | set(re.findall(r'href="([^"]+)"', new_urls[u].read_text(encoding="utf-8")))
         hrefs = {urljoin(u, html.unescape(h)) for h in raw}
         for h in o["links"]:
-            if urljoin(u, h) not in hrefs and urljoin(u, h) not in redirected:
+            t = urljoin(u, h)
+            # archive pages group claims by speaker: a claim may move between them
+            if "/archive" in u and t in archive_links:
+                continue
+            if t not in hrefs and t not in redirected:
                 fails.append(f"{u}: link missing: {h}")
         if norm(p.title) != o["title"]:
             warns.append(f"{u}: title changed")

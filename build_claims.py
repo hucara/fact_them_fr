@@ -457,21 +457,6 @@ def render_page(claim, slug, session_date, ctx=None):
             lis.append(f"<li>{link}{meta_html}{dato_html}</li>")
         secs.append(f'<section class="c-sec"><h2>Fuentes <span class="n">· {len(src)}</span></h2>'
                     f'<ol class="c-sources">{"".join(lis)}</ol></section>')
-    # One plain sentence that answers "who said what, where, and what did Facthem
-    # find": the line answer engines quote, with the canonical link.
-    verified = str(v.get("created_at") or "")[:10]
-    where = (f"el Pleno del Congreso del {_format_session_date_es(sess.get('fecha')).lstrip('0')}"
-             if (sess.get("tipo") or "PL") == "PL" and sess.get("fecha") else
-             f"el {sess.get('organo')} del {_format_session_date_es(sess.get('fecha')).lstrip('0')}"
-             if sess.get("fecha") else "")
-    who_cite = f"{pol_nombre} ({pol_partido})" if pol_nombre and pol_partido else (pol_nombre or "Un político")
-    cite = (f"{esc(who_cite)} afirmó{' en ' + esc(where) if where else ''}: «{esc(desc_text.rstrip('.'))}». "
-            f"Facthem lo verificó"
-            + (f' el <time datetime="{verified}">{esc(_format_session_date_es(verified).lstrip("0"))}</time>' if verified else "")
-            + f" como «{esc(site_chrome.VK[vkey][2])}»"
-            + (f", con un {score} % de confianza" if score is not None else "") + ". "
-            + f'<a href="{esc(canon_url)}">{esc(canon_url)}</a>')
-    cite_html = f'<section class="c-sec c-cite"><h2>Cómo citar esta verificación</h2><p>{cite}</p></section>'
     if not secs:
         secs.append(f'<section class="c-sec c-lead"><h2>Lo que dicen los datos</h2>'
                     f'<p>{esc(site_chrome.VERDICT_WHAT[vkey])}</p></section>')
@@ -502,7 +487,7 @@ def render_page(claim, slug, session_date, ctx=None):
 </header>
 {conf_html}
 <div class="c-cols">
-<div class="c-main">{''.join(secs)}{cite_html}</div>
+<div class="c-main">{''.join(secs)}</div>
 <aside class="c-side">{''.join(side)}</aside>
 </div>
 </article>
@@ -1883,7 +1868,7 @@ Veredictos:
 
 ## Estructura
 
-- Cada afirmación verificada tiene una ficha estable en `{BASE_URL}/claim/<slug>.html` con la cita, el veredicto, lo que dicen los datos, los errores, el contexto que falta y las fuentes, y datos estructurados schema.org `ClaimReview`. Cada ficha incluye una frase para citarla.
+- Cada afirmación verificada tiene una ficha estable en `{BASE_URL}/claim/<slug>.html` con la cita, el veredicto, lo que dicen los datos, los errores, el contexto que falta y las fuentes, y datos estructurados schema.org `ClaimReview`.
 - Cada representante tiene un perfil en `{BASE_URL}/politician/<slug>.html` con su sueldo mensual y anual desglosado (fuentes oficiales del Congreso y del Gobierno) y todas sus afirmaciones.
 - Cada sesión tiene una página en `{BASE_URL}/sesion/<id>.html` con todas sus afirmaciones en el orden en que se dijeron.
 
@@ -1936,18 +1921,45 @@ def render_home(index, recs_by, n_people):
 RETIRED_VERDICTS = {"IMPRECISO", "DESCONTEXTUALIZADO"}
 
 
+def redirect_page(target):
+    """A page that used to exist and now lives elsewhere: noindex, canonical to the target."""
+    return ('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8" /><title>Facthem</title>'
+            f'<meta name="robots" content="noindex" /><link rel="canonical" href="{BASE_URL}{target}" />'
+            f'<meta http-equiv="refresh" content="0; url={target}" /></head>'
+            f'<body><script>location.replace({json.dumps(target)})</script><a href="{target}">Facthem</a></body></html>')
+
+
+# Duplicate politician records merged in the database (2026-11-24): the old profile
+# URL was public, so it stays as a redirect to the profile it was merged into.
+MERGED_PROFILES = {
+    "pedro-perez-sanchez-castejon-psoe": "pedro-sanchez-perez-castejon-psoe",
+    "jordi-hereu-i-boher-psoe": "jordi-hereu-boher-psoe",
+    "ana-tolon-jaime-psoe": "milagros-tolon-jaime-psoe",
+    "maria-de-las-nieves-angeles-mercadal-baquero-pp": "pepe-mercadal-baquero-psoe",
+}
+
+
+def write_profile_redirects():
+    n = 0
+    for old, new in MERGED_PROFILES.items():
+        if (POL_OUT_DIR / f"{old}.html").exists():
+            continue   # a real profile again
+        if not (POL_OUT_DIR / f"{new}.html").exists():
+            print(f"  aviso: {old} → {new}, pero {new} no existe")
+            continue
+        (POL_OUT_DIR / f"{old}.html").write_text(redirect_page(f"/politician/{new}.html"), encoding="utf-8")
+        n += 1
+    if n:
+        print(f"  {n} perfiles fusionados → redirección")
+
+
 def write_retired_redirects(retired):
     for slug, claim in retired:
         pol = claim.get("politician") or {}
         target = (f"/politician/{slugify_politician(format_nombre(pol['nombre_completo']), pol.get('partido') or '')}.html"
                   if pol.get("nombre_completo") else "/")
         OUT_DIR.mkdir(exist_ok=True)
-        (OUT_DIR / f"{slug}.html").write_text(
-            '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8" /><title>Facthem</title>'
-            f'<meta name="robots" content="noindex" /><link rel="canonical" href="{BASE_URL}{target}" />'
-            f'<meta http-equiv="refresh" content="0; url={target}" /></head>'
-            f'<body><script>location.replace({json.dumps(target)})</script><a href="{target}">Facthem</a></body></html>',
-            encoding="utf-8")
+        (OUT_DIR / f"{slug}.html").write_text(redirect_page(target), encoding="utf-8")
     if retired:
         print(f"  {len(retired)} afirmaciones con veredicto retirado → redirección al perfil")
 
@@ -2023,6 +2035,7 @@ def main():
     print("Generando páginas de políticos…")
     POL_OUT_DIR.mkdir(exist_ok=True)
     politician_dates = generate_politician_pages(claims_with_slugs, salaries, photo_for)
+    write_profile_redirects()
 
     print("Generando portada y datos de sesiones…")
     index, recs_by = write_session_data(claims_with_slugs, photo_for)

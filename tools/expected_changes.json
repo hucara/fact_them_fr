@@ -87,7 +87,7 @@
   }
  },
  "redirected": {
-  "why": "Retired verdicts (Inexacto / Descontextualizado, old taxonomy) are never shown; the 14 claim pages redirect to the speaker's profile (noindex).",
+  "why": "Retired verdicts (Inexacto / Descontextualizado): the 14 claim pages redirect to the speaker's profile. Duplicate politicians merged in the DB (2026-11-24): the 4 old profiles redirect to the merged one. All noindex.",
   "urls": [
    "https://facthem.es/claim/durante-las-recientes-emergencias-por-inundaciones-los-trayectos-926ebba8.html",
    "https://facthem.es/claim/el-1-de-los-grandes-millonarios-son-ayudados-28f9024a.html",
@@ -102,7 +102,11 @@
    "https://facthem.es/claim/la-presidenta-ayuso-ha-incurrido-en-multirreincidencia-beneficiando-94e77e0e.html",
    "https://facthem.es/claim/las-reservas-hidricas-han-estado-bajo-minimos-durante-b586dff3.html",
    "https://facthem.es/claim/los-estudiantes-de-comunidades-autonomas-con-lenguas-cooficiales-6113724a.html",
-   "https://facthem.es/claim/los-trabajadores-tienen-que-pagar-un-40-mas-7be459ba.html"
+   "https://facthem.es/claim/los-trabajadores-tienen-que-pagar-un-40-mas-7be459ba.html",
+   "https://facthem.es/politician/ana-tolon-jaime-psoe.html",
+   "https://facthem.es/politician/jordi-hereu-i-boher-psoe.html",
+   "https://facthem.es/politician/maria-de-las-nieves-angeles-mercadal-baquero-pp.html",
+   "https://facthem.es/politician/pedro-perez-sanchez-castejon-psoe.html"
   ]
  }
 }
