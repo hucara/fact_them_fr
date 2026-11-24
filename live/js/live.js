@@ -261,19 +261,11 @@ async function boot() {
 
 /* The header's share button: the session as a whole. */
 function renderSessionShare() {
-  const slot = $('live-share'); if (!slot) return;
   const url = liveShareUrl();
   const title = session?.title || 'el debate';
   const text = `${replayMode ? '▶️' : '🔴'} ${title}, verificado ${replayMode ? 'en diferido' : 'en directo'} en Facthem`;
-  const enc = encodeURIComponent;
-  slot.innerHTML = `<span class="share-wrapper">
-      <button class="share-btn has-label" aria-label="Compartir" data-url="${esc(url)}" data-text="${esc(text)}">${SHARE_ICON}<span>Compartir</span></button>
-      <span class="share-menu" hidden>
-        <button type="button" class="share-option" data-copy="${esc(url)}">Copiar enlace</button>
-        <a class="share-option" href="https://wa.me/?text=${enc(`${text} ${url}`)}" target="_blank" rel="noopener">WhatsApp</a>
-        <a class="share-option" href="https://twitter.com/intent/tweet?text=${enc(text)}&url=${enc(url)}&via=${SHARE_VIA}" target="_blank" rel="noopener">X / Twitter</a>
-        <a class="share-option" href="https://t.me/share/url?url=${enc(url)}&text=${enc(text)}" target="_blank" rel="noopener">Telegram</a>
-      </span></span>`;
+  $('live-share').innerHTML = shareMenu(url, text, `${text} ${url}`, '<span>Compartir</span>');
+  $('tb-share').innerHTML = shareMenu(url, text, `${text} ${url}`);
 }
 
 function applySession() {
@@ -325,8 +317,8 @@ function showIdle() {
   $('session-title').textContent = 'sin emisión';
   document.title = 'Facthem directo';
   $('onair').hidden = true;
-  document.querySelector('.layout')?.classList.add('idle');
-  for (const sel of ['.layout > .col', '.feed-panel .feed-head', '#summary-bar', '#weak-drawer', '#debug-current']) {
+  document.body.classList.add('idle');
+  for (const sel of ['.live-stage', '.feed-head', '#weak-drawer', '#debug-current']) {
     const el = document.querySelector(sel);
     if (el) el.hidden = true;
   }
@@ -429,6 +421,7 @@ async function bootReplay() {
     ptr = want ? list.find((s) => s.session_id === want) : null;
     if (!ptr) { showReplayGrid(list); return true; }
     replayHasGrid = true;
+    showPast(list.filter((s) => s.session_id !== want));
   }
   if (!ptr || !ptr.youtube_id || !ptr.events) return false;
   if (q.has('offset')) ptr.vod_offset = parseFloat(q.get('offset')) || 0;
@@ -487,20 +480,37 @@ function fmtDuration(sec) {
   return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min` : `${m} min`;
 }
 
-/* Nothing on air and no session chosen: the idle message plus a grid of the
-   sessions that can be replayed. A card is a link to ?diferido=<session>, so
-   the choice can be shared and Back returns here. */
-const VERDICT_KEYS = [
-  ['verdadero', 'Confirmado'], ['parcial', 'Con matiz'], ['enganoso', 'Engañoso'],
-  ['falso', 'Falso'], ['nv', 'Sin datos'],
-];
+/* "Debates anteriores" (mockup .past): one card per replayable debate —
+   date, title, its verdict bar, the count — linking to ?diferido=<session>,
+   so the choice can be shared and Back returns here. */
+function pastCards(list) {
+  return list.map((s) => {
+    const cnt = {};
+    for (const [res, n] of Object.entries(s.verdicts || {})) { const k = verdictKey(res); cnt[k] = (cnt[k] || 0) + n; }
+    const total = Object.values(cnt).reduce((a, b) => a + b, 0) || s.claims || 0;
+    const bar = VERDICTS.filter(([k]) => cnt[k]).map(([k, , long, , c]) =>
+      `<span class="${k === 'SUBESTIMADO' ? 'hatch' : ''}" style="--c:${c};flex:${cnt[k]}" title="${esc(long)}: ${cnt[k]}"></span>`).join('');
+    const when = [fmtDateEs(s.session_date), s.label].filter(Boolean).join(' · ');
+    return `<a class="past-card" href="${esc(diferidoHref(s.session_id))}">`
+      + (s.youtube_id ? `<span class="past-thumb" style="background-image:url(https://i.ytimg.com/vi/${encodeURIComponent(s.youtube_id)}/hqdefault.jpg)"><span class="past-play" aria-hidden="true">▶</span>${s.duration ? `<span class="past-dur">${fmtDuration(s.duration)}</span>` : ''}</span>` : '')
+      + `<span class="muted">${esc(when)}</span><strong>${esc(s.title || s.session_id)}</strong>`
+      + `<span class="mini-stack">${bar}</span><span class="muted">${total} afirmaciones · ver en diferido</span></a>`;
+  }).join('');
+}
+function showPast(list) {
+  if (!list.length) return;
+  $('past-grid').innerHTML = pastCards(list);
+  $('past').hidden = false;
+}
+
+/* Nothing on air and no session chosen: the note, and the debates to replay. */
 function showReplayGrid(list) {
   sessionEnded = true;
   document.body.classList.add('replay-picker');
-  $('session-title').textContent = 'sin emisión';
+  $('session-title').textContent = 'Directos anteriores';
   document.title = 'Facthem directo · diferido';
   showDiferidoBadge();
-  document.querySelector('.layout').hidden = true;
+  document.querySelector('.live-cols').hidden = true;
   const ban = $('replay-banner');
   ban.innerHTML =
     '<p class="rb-late">¡Llegas tarde, Ana Pasteur!</p>' +
@@ -511,31 +521,7 @@ function showReplayGrid(list) {
     '<p class="rb-live" id="rb-live" hidden></p>';
   ban.hidden = false;
   closableBanner(ban);
-
-  const cards = list.map((s, i) => {
-    const counts = Object.fromEntries(VERDICT_KEYS.map(([k]) => [k, 0]));
-    for (const [res, n] of Object.entries(s.verdicts || {})) counts[resultadoToClass(res)] += n;
-    const total = Object.values(counts).reduce((a, b) => a + b, 0) || s.claims || 0;
-    const people = (s.roster || []).filter((r) => !r.presiding);
-    const faces = people.filter((r) => r.photo_url).map((r) =>
-      `<img src="${esc(r.photo_url)}" alt="${esc(r.name)}" title="${esc(r.name)}">`).join('');
-    const who = people.length <= 3 ? people.map((r) => esc(r.short_name || r.name)).join(' · ') : `${people.length} participantes`;
-    const bar = `<div class="rg-bar">${VERDICT_KEYS.map(([k]) => counts[k] ? `<i class="sb-${k}" style="flex:${counts[k]}"></i>` : '').join('')}</div>`;
-    const meta = `<div class="rg-meta">${esc([fmtDateEs(s.session_date), s.label].filter(Boolean).join(' · '))}</div>`;
-    const featured = i === 0 && list.length > 2;  // two debates: two equal big cards
-    const thumb = `<div class="rg-thumb" style="background-image:url(https://i.ytimg.com/vi/${encodeURIComponent(s.youtube_id)}/hqdefault.jpg)">` +
-      `<span class="rg-play">▶</span>${s.duration ? `<span class="rg-dur">${fmtDuration(s.duration)}</span>` : ''}</div>`;
-    // Cards are big (two a row at most): every one gets the count, the legend and the button.
-    const tail = `<div class="rg-big">${total}<small>afirmaciones verificadas</small></div>${bar}
-         <div class="rg-legend">${VERDICT_KEYS.map(([k, l]) => `<span><i class="sb-${k}"></i>${l} <b>${counts[k]}</b></span>`).join('')}</div>
-         <span class="rg-cta">▶ Ver en diferido</span>`;
-    return `<a class="rg-card${featured ? ' featured' : ''}" href="${esc(diferidoHref(s.session_id))}">${thumb}
-      <div class="rg-body">${meta}<h3 class="rg-title">${esc(s.title || s.session_id)}</h3>
-        <div class="rg-people"><span class="rg-faces">${faces}</span>${who}</div>${tail}</div></a>`;
-  });
-  const grid = $('replay-grid');
-  grid.innerHTML = `<h2 class="rg-head">Directos anteriores</h2><div class="rg-grid">${cards.join('')}</div>`;
-  grid.hidden = false;
+  showPast(list);
   setInterval(checkLiveFromReplay, 60000);
 }
 
@@ -622,12 +608,11 @@ function replayRebuild(t) {
   speakerTimeline.length = 0;
   captionParts = [];
   $('caption').textContent = '';
-  $('feed').querySelectorAll('.claim-card, .claim-slot').forEach((el) => el.remove());
+  $('feed').querySelectorAll(':scope > .f-item').forEach((el) => el.remove());
   $('weak-list').replaceChildren();
   $('weak-drawer').hidden = true;
   $('weak-count').textContent = '0';
-  newAbove = 0;
-  $('feed-new').hidden = true;
+  clearNewAbove();
   $('claim-count').textContent = '0';
   $('feed-empty').hidden = false;
   clock = t;
@@ -880,7 +865,7 @@ function fitRail() {
     rail.lastElementChild.remove();
   }
 }
-if (window.ResizeObserver) new ResizeObserver(() => { $('rail').dataset.keys = ''; renderRail(); }).observe(document.querySelector('.col') || document.body);
+if (window.ResizeObserver) new ResizeObserver(() => { $('rail').dataset.keys = ''; renderRail(); }).observe(document.querySelector('.live-stage') || document.body);
 
 function noteSpeakerInRail(sp) {
   if (railIsStatic() || !sp?.politician_id || !rosterByKey.has(sp.politician_id)) return;
@@ -1016,23 +1001,19 @@ const captionWords = (t) =>
   esc(t).split(/\s+/).filter(Boolean).map((w, i) => `<span class="w" style="--i:${Math.min(i, 36)}">${w}</span>`).join(' ');
 /* The box keeps the last few chunks across speakers. A change of speaker
    does not wipe it: a thin rule with the new speaker's name goes between
-   their lines, so the hand-over can be read instead of guessed. Entries are
-   strings (a transcript chunk) or {sep: label} (a speaker change). */
+   their lines. Entries are strings (a transcript chunk) or {sep: label}. */
 function renderCaption() {
   let last = -1;
   captionParts.forEach((p, i) => { if (typeof p === 'string') last = i; });
   let prev = -1;
   for (let i = last - 1; i >= 0; i--) if (typeof captionParts[i] === 'string') { prev = i; break; }
-  $('caption').innerHTML = captionParts
-    .map((p, i) => {
-      if (typeof p !== 'string') return `<div class="cap-sep">${p.sep ? `<span>${esc(p.sep)}</span>` : ''}</div>`;
-      // The newest chunk arrives word by word; the one before it settles from
-      // bright to muted; anything older is just text.
-      if (i === last) return `<b class="fresh">${captionWords(p)}</b>`;
-      if (i === prev) return `<span class="settling">${esc(p)}</span>`;
-      return esc(p);
-    })
-    .join(' ');
+  $('caption').innerHTML = captionParts.map((p, i) => {
+    if (typeof p !== 'string') return `<span class="cap-sep">${p.sep ? `<span>${esc(p.sep)}</span>` : ''}</span>`;
+    // The newest chunk arrives word by word; the one before it settles.
+    if (i === last) return `<b class="fresh">${captionWords(p)}</b>`;
+    if (i === prev) return `<span class="cap-txt settling">${esc(p)}</span>`;
+    return `<span class="cap-txt">${esc(p)}</span>`;
+  }).join('');
 }
 function showCaption(text) {
   if (switchActive === false) return;
@@ -1047,58 +1028,40 @@ function captionSpeakerChange(label) {
   renderCaption();
 }
 
+/* "Hablando": the person with the floor, as in the mockup (avatar, name,
+   party, a level meter). How they were identified is for the operator. */
+const BLANK = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
 let shownSpeakerKey = null;
 function showSpeaker(sp) {
+  const now = $('now');
   if (!sp) {
-    // Nobody to show (the presiding officer has the floor): blank panel, an
-    // unnamed rule in the transcript box, the rail keeps the last real speakers.
     if (shownSpeakerKey !== null) {
       shownSpeakerKey = null;
       captionSpeakerChange('');
-      $('now-name').textContent = '—';
-      $('now-name').title = '';
-      $('now-name').classList.remove('unknown');
-      $('now-how').textContent = '';
-      $('now-avatar').src = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
-      $('now-avatar').classList.remove('live');
-      document.querySelector('.now')?.classList.remove('speaking');
+      now.classList.remove('speaking');
+      now.innerHTML = `<span class="now-avatar now-avatar-none" aria-hidden="true"></span><div><span class="now-label">Hablando</span><strong class="now-name muted">—</strong></div>`;
       document.querySelectorAll('.person').forEach((el) => el.classList.remove('active'));
     }
     return;
   }
   const key = sp.politician_id || sp.name || 'unknown';
   const changed = key !== shownSpeakerKey;
-  if (changed) {
-    // New speaker: a named rule in the transcript box, the earlier lines stay.
-    shownSpeakerKey = key;
-    captionSpeakerChange(sp.name ? shortName(sp) : '');
-    pulseClass(document.querySelector('.now'), 'swap', 700);
-  }
+  if (changed) { shownSpeakerKey = key; captionSpeakerChange(sp.name ? shortName(sp) : ''); }
   noteSpeakerInRail(sp);
-  document.querySelector('.now')?.classList.add('speaking');
-  $('now-name').innerHTML = `${esc(sp.name ? shortName(sp) : 'Orador no identificado')} ${partyChip(partyFor(sp))}`;
-  $('now-name').title = sp.name || '';
-  $('now-name').classList.toggle('unknown', !sp.name);
-  const conf = sp.confidence ? ` · ${(sp.confidence * 100).toFixed(0)}%` : '';
-  $('now-how').textContent = (SOURCE_LABEL[sp.source] || sp.source) + conf;
-  const av = $('now-avatar');
-  av.src = photoFor(sp) || 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
-  av.classList.toggle('live', /^(face|voice)/.test(String(sp.source || '')));
-  document.querySelectorAll('.person').forEach((el) =>
-    el.classList.toggle('active', el.dataset.key === (sp.politician_id || ''))
-  );
+  const photo = photoFor(sp);
+  const party = partyFor(sp);
+  const how = (SOURCE_LABEL[sp.source] || sp.source || '') + (sp.confidence ? ` · ${(sp.confidence * 100).toFixed(0)}%` : '');
+  now.classList.add('speaking');
+  now.innerHTML = `${photo ? `<img class="now-avatar" src="${esc(photo)}" alt="" width="40" height="40" />` : '<span class="now-avatar now-avatar-none" aria-hidden="true"></span>'}`
+    + `<div><span class="now-label">Hablando</span><strong class="now-name" title="${esc(sp.name || '')}">${esc(sp.name ? shortName(sp) : 'Orador no identificado')}</strong>`
+    + `${party ? ` <span class="muted now-party">· ${esc(party)}</span>` : ''}`
+    + `${window.LIVE_ADMIN && $('debug-text').checked ? `<span class="now-src">${esc(how)}</span>` : ''}</div>`
+    + '<span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>';
+  if (changed) pulseClass(now, 'swap', 900);
+  document.querySelectorAll('.person').forEach((el) => el.classList.toggle('active', el.dataset.key === (sp.politician_id || '')));
   if (changed) pulseClass(document.querySelector('.person.active'), 'just', 900);
 }
 
-/* ── claim cards ────────────────────────────────────────────────────────── */
-/* Tag labels come from /vocabularies, i.e. from the same lists that are
-   interpolated into the extractor's prompt. A value the model returned that
-   isn't in the vocabulary is shown but flagged, so extractor drift is visible
-   rather than silently rendered as if it were a valid category. */
-/* Accent- and case-insensitive, because the model returns "economia" as often
-   as "economía". That is a spelling difference, not a category the pipeline
-   doesn't know — flagging it as off-vocabulary would cry wolf and make the
-   real signal (a genuinely invented category) worthless. */
 const foldKey = (s) => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
 const foldedVocab = new Map(); // field → Map(foldedKey → label)
@@ -1120,135 +1083,131 @@ function tag(field, value, { strong = false } = {}) {
   return `<span class="${known ? '' : 'off-vocab'}"${title}>${strong ? '<b>' : ''}${esc(text)}${strong ? '</b>' : ''}</span>`;
 }
 
+/* ── claim cards ─────────────────────────────────────────────────────────
+   Structure and motion from fact_them_fr/mockup/live.js: a card grows in
+   when the claim is detected, sits in "Verificando N s" with its actions
+   row reserved, then the verdict stamps and the card flashes once; 650 ms
+   later the row fills (unfold + share) without changing the card's height.
+   Unverifiable claims show their verdict, hold, and leave for the drawer
+   under the feed, which lights up as it takes them. */
 function cardHTML(c, sp, t) {
   const photo = photoFor(sp);
-  const tags = [tag('ambito_tematico', c.ambito_tematico), tag('ambito_geografico', c.ambito_geografico)].filter(Boolean).join('<span class="sep"> · </span>');
+  const tags = [tag('ambito_tematico', c.ambito_tematico), tag('ambito_geografico', c.ambito_geografico)].filter(Boolean).join(' · ');
+  const party = partyFor(sp);
   return `
-    <div class="claim-header">
-      <span class="resultado-badge resultado-forming vtag vtag-pending">Detectando</span>
-      ${tags ? `<span class="c-tags">${tags}</span>` : ''}
-      <button class="claim-at" data-seek="${t}" title="Ir a este momento del debate">${fmtTime(replayMode ? t + (ytOffset || 0) : t)}</button>
+    <div class="f-top">
+      <span class="f-verdict"><span class="vtag vtag-pending"><span class="spin" aria-hidden="true"></span><span class="pend-txt">Detectando</span></span>${tags ? `<span class="c-tags">${tags}</span>` : ''}</span>
+      <button type="button" class="f-time" data-seek="${t}" title="Ir a este momento del debate">${fmtTime(replayMode ? t + (ytOffset || 0) : t)}</button>
     </div>
-    <p class="claim-text">${esc(c.texto_normalizado || c.texto_original)}</p>
-    <div class="claim-who">
-      ${photo ? `<img src="${esc(photo)}" alt="" width="22" height="22" />` : ''}
-      <span class="politician-name ${sp?.name ? '' : 'unknown'}" title="${esc(sp?.name || '')}">${esc(sp?.name ? shortName(sp) : 'Sin atribuir')}</span>${partyChip(partyFor(sp))}
-    </div>
-    <div class="verdict">
-      <div class="claim-actions"><button class="detail-toggle placeholder" disabled aria-hidden="true">Ver verificación completa</button></div>
-    </div>`;
+    <p class="f-claim">${esc(c.texto_normalizado || c.texto_original)}</p>
+    <div class="f-who">${photo ? `<img src="${esc(photo)}" alt="" width="22" height="22" />` : ''}<span class="f-name${sp?.name ? '' : ' unknown'}" title="${esc(sp?.name || '')}">${esc(sp?.name ? shortName(sp) : 'Sin atribuir')}</span>${party ? ` <span class="muted">· ${esc(party)}</span>` : ''}</div>
+    <div class="f-actions is-empty" aria-hidden="true"><span class="f-ph"></span><span class="f-ph f-ph-sm"></span></div>`;
+}
+
+/* Newest moment of the debate on top, whatever order the events arrive in
+   (a reload replays history; a resumed runner replays it after its own). */
+function insertByTime(list, el) {
+  const before = [...list.querySelectorAll(':scope > .f-item')].find((c) => +c.dataset.t < +el.dataset.t);
+  if (before) list.insertBefore(el, before); else list.appendChild(el);
 }
 
 function makeCard(payload, state) {
   const el = document.createElement('article');
-  el.className = 'claim-card';
+  el.className = 'f-item';
   el.dataset.state = state;
   el.innerHTML = cardHTML(payload.claim, payload.speaker, payload.t_start ?? 0);
   el._claim = payload.claim;  // what the share text is built from
   el._speaker = payload.speaker;
-  el.querySelector('.claim-at').addEventListener('click', (e) => {
+  el.querySelector('.f-time').addEventListener('click', (e) => {
     if (replayMode) {
       const at = parseFloat(e.currentTarget.dataset.seek) - 3 + ytOffset;
       try { yt.playVideo(); } catch { /* ignore */ }
       requestYtSeek(at, 'card');
       return;
     }
-    clock = Math.max(0, parseFloat(e.target.dataset.seek) - 3);
+    clock = Math.max(0, parseFloat(e.currentTarget.dataset.seek) - 3);
     if (yt && ytOffset != null) requestYtSeek(clock + ytOffset, 'card');
     else { videoSeekBy = clock; player.currentTime = clock; }
     adoptClock(clock);
   });
-  // Newest moment of the debate on top, whatever order the events arrive in
-  // (a reload replays history; a resumed runner replays it after its own).
   const feed = $('feed');
-  const t = payload.t_end ?? payload.t_start ?? 0;
-  el.dataset.t = t;
+  el.dataset.t = payload.t_end ?? payload.t_start ?? 0;
   el.dataset.flip = payload.claim_id || `x${Math.random()}`;
-  const before = [...feed.querySelectorAll('.claim-card')].find((c) => +c.dataset.t < t);
-  if (before) feed.insertBefore(el, before); else feed.appendChild(el);
-  growIn(el);
+  insertByTime(feed, el);
   $('feed-empty').hidden = true;
-  if (settled && el === feed.querySelector('.claim-card') && feed.scrollTop > 60) noteNewAbove();
+  growIn(el);
+  if (settled && el === feed.querySelector(':scope > .f-item')) followNewCard();
   return el;
 }
 
-/* A new card opens up from zero height to its own, so the cards around it
-   are pushed aside continuously instead of jumping; the fade (CSS `enter`)
-   runs over it. Collapsing is the same motion in reverse. */
-const SHRINK = { duration: 1400, fill: 'forwards' };
-const closedBox = { height: '0px', paddingTop: '0px', paddingBottom: '0px', borderTopWidth: '0px', borderBottomWidth: '0px', marginBottom: '-0.75rem' };
-/* The card's own box, spelled out. Every keyframe must carry the same
-   properties as closedBox: a property present only in one keyframe is
-   interpolated across the WHOLE animation from the underlying value, so a
-   padding named only at the closed end would start shrinking during the
-   fade — the few pixels of creep that made the list move "too soon". */
-function openBox(el) {
-  const cs = getComputedStyle(el);
-  return { height: `${el.getBoundingClientRect().height}px`, paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom,
-           borderTopWidth: cs.borderTopWidth, borderBottomWidth: cs.borderBottomWidth, marginBottom: cs.marginBottom };
-}
-/* Two phases in one animation, never overlapping: first the space opens (the
-   card, still invisible, grows and pushes the others down), then the card
-   fades in where the space is. One animation and no inline styles, so there
-   is no state to clean up and nothing can be left half-shown. */
+/* ── Height-first entrance and exit (mockup growIn / growBox / leave) ──── */
 function growIn(el) {
   if (!motion() || !el.animate) return;
-  const open = openBox(el);
-  if (!parseFloat(open.height)) return;
-  el.animate(
-    [{ ...closedBox, opacity: 0, transform: 'translateY(6px)', easing: 'cubic-bezier(.25, .1, .25, 1)' },
-     { ...open, opacity: 0, transform: 'translateY(6px)', offset: .58, easing: 'cubic-bezier(.2, .7, .2, 1)' },
-     { ...open, opacity: 1, transform: 'none' }],
-    { duration: 1050 });
+  const h = el.getBoundingClientRect().height;
+  if (!h) return;
+  el.style.overflow = 'hidden';
+  el.animate([
+    { height: '0px', paddingTop: '0px', paddingBottom: '0px', marginBottom: '0px', opacity: 0, transform: 'translateY(6px)', easing: 'cubic-bezier(.25,.1,.25,1)' },
+    { height: `${h}px`, opacity: 0, transform: 'translateY(6px)', offset: .55, easing: 'cubic-bezier(.2,.7,.2,1)' },
+    { height: `${h}px`, opacity: 1, transform: 'none' }], { duration: 1000 })
+    .finished.then(() => { el.style.overflow = ''; }, () => { el.style.overflow = ''; });
 }
-
-/* A block that appears inside a card or above the list opens its space first
-   and shows its content second, so nothing around it jumps. */
 function growBox(el) {
   el.hidden = false;
   if (!motion() || !el.animate) return;
   const h = el.getBoundingClientRect().height;
-  el.animate(
-    [{ height: '0px', marginTop: '0px', opacity: 0, easing: 'cubic-bezier(.25, .1, .25, 1)' },
-     { height: `${h}px`, opacity: 0, offset: .6, easing: 'ease-out' },
-     { height: `${h}px`, opacity: 1 }],
-    { duration: 600 });
+  el.style.overflow = 'hidden';
+  el.animate([{ height: '0px', opacity: 0 }, { height: `${h}px`, opacity: 0, offset: .6 }, { height: `${h}px`, opacity: 1 }],
+    { duration: 600, easing: 'ease-out' })
+    .finished.then(() => { el.style.overflow = ''; }, () => { el.style.overflow = ''; });
+}
+function leave(el) {
+  if (!motion() || !el.animate) return Promise.resolve();
+  const h = el.getBoundingClientRect().height;
+  el.style.overflow = 'hidden';
+  return el.animate([
+    { height: `${h}px`, opacity: 1, transform: 'none' },
+    { height: `${h}px`, opacity: 0, transform: 'translateY(10px) scale(.98)', offset: .4 },
+    { height: '0px', paddingTop: '0px', paddingBottom: '0px', marginBottom: '0px', borderWidth: '0px', opacity: 0, transform: 'translateY(10px) scale(.98)' }],
+    { duration: 800, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' }).finished.catch(() => {});
 }
 
-/* A card that lands at the top while the reader is further down would go
-   unseen: count it in a sticky pill that scrolls back up on click. */
+/* ── "N nuevas" when the reader is scrolled away ───────────────────────────
+   Phones: the feed is its own scroller under the fixed video; at the top it
+   follows new cards, scrolled down a pill counts them. Desktop: the page
+   scrolls; the pill shows when the top of the feed is out of view. */
 let newAbove = 0;
+function feedScroller() {
+  const f = document.querySelector('.live-feed');
+  if (!f) return null;
+  const o = getComputedStyle(f).overflowY;
+  return o === 'auto' || o === 'scroll' ? f : null;
+}
+function followNewCard() {
+  const sc = feedScroller();
+  if (sc) {
+    if (sc.scrollTop > 60) noteNewAbove();
+    else sc.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
+  } else if (window.scrollY > $('feed').getBoundingClientRect().top + window.scrollY - 80) noteNewAbove();
+}
 function noteNewAbove() {
   newAbove += 1;
-  const pill = $('feed-new');
-  pill.querySelector('b').textContent = newAbove;
-  pill.querySelector('.n').textContent = newAbove === 1 ? 'nueva afirmación' : 'nuevas afirmaciones';
-  if (pill.hidden) pill.hidden = false; else bumpEl(pill.querySelector('b'));
+  const b = $('feed-new');
+  b.hidden = false;
+  b.innerHTML = `↑ <b>${newAbove}</b> nueva${newAbove > 1 ? 's' : ''}`;
+  pulseClass(b, 'pop', 300);
 }
+function clearNewAbove() { newAbove = 0; $('feed-new').hidden = true; }
 $('feed-new').addEventListener('click', () => {
-  newAbove = 0;
-  $('feed-new').hidden = true;
-  // Own tween rather than behavior:'smooth': it is honoured everywhere and
-  // is not cancelled by the scroll anchoring a landing card triggers.
-  const feed = $('feed');
-  const from = feed.scrollTop;
-  if (reducedMotion || from < 2) { feed.scrollTop = 0; return; }
-  const t0 = performance.now();
-  const step = (now) => {
-    const k = Math.min(1, (now - t0) / 380);
-    feed.scrollTop = from * (1 - (1 - Math.pow(1 - k, 3)));
-    if (k < 1) requestAnimationFrame(step);
-  };
-  requestAnimationFrame(step);
+  clearNewAbove();
+  const sc = feedScroller();
+  if (sc) sc.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
+  else document.querySelector('.live-feed')?.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth' });
 });
-/* "Solo falsas o exageradas": hides the landed cards whose verdict is not
-   Falso / Sobreestimado / Subestimado (CSS on .feed.only-bad). */
-$('feed-filter').addEventListener('change', (e) => {
-  $('feed').classList.toggle('only-bad', e.target.value === 'bad');
-});
-
-$('feed').addEventListener('scroll', () => {
-  if ($('feed').scrollTop < 30 && newAbove) { newAbove = 0; $('feed-new').hidden = true; }
+document.querySelector('.live-feed')?.addEventListener('scroll', (e) => { if (e.currentTarget.scrollTop < 30 && newAbove) clearNewAbove(); }, { passive: true });
+addEventListener('scroll', () => {
+  if (!newAbove || feedScroller()) return;
+  if ($('feed').getBoundingClientRect().top > 60) clearNewAbove();
 }, { passive: true });
 
 function addClaim(ev) {
@@ -1270,9 +1229,8 @@ function addClaim(ev) {
 function markPending(claimId) {
   const entry = claims.get(claimId);
   if (!entry) return;
-  const badge = entry.el.querySelector('.resultado-badge');
-  badge.className = 'resultado-badge resultado-pending vtag vtag-pending';
-  badge.textContent = 'Verificando 0 s';
+  const txt = entry.el.querySelector('.pend-txt');
+  if (txt) txt.textContent = 'Verificando 0 s';
 }
 
 /* A ticking counter on every in-flight verification. Verification takes tens of
@@ -1283,14 +1241,18 @@ function tickPending() {
     const { el, startedAt, done } = entry;
     if (done) continue;
     if (entry.held && clock >= entry.verdictAt) { const h = entry.held; entry.held = null; applyVerdict(h); continue; }
-    const badge = el.querySelector('.resultado-badge');
-    if (badge?.classList.contains('resultado-pending')) {
+    const txt = el.querySelector('.pend-txt');
+    if (txt) {
       const secs = replayMode ? clock - (entry.t ?? clock) : (now - startedAt) / 1000;
-      badge.textContent = `Verificando ${Math.max(0, Math.round(secs))} s`;
+      txt.textContent = `Verificando ${Math.max(0, Math.round(secs))} s`;
     }
   }
   renderStats();
 }
+
+const BAD = new Set(['FALSO', 'SOBREESTIMADO', 'SUBESTIMADO']);
+const WEAK_HOLD_MS = 2200;   // an unverifiable verdict is shown this long before it leaves
+const FILL_DELAY_MS = 650;   // the actions row fills after the stamp
 
 function applyVerdict(ev) {
   const { claim_id, verdict, cache_hit, latency_seconds } = ev.payload;
@@ -1307,152 +1269,98 @@ function applyVerdict(ev) {
   }
   entry.held = null;
   entry.done = true;
-
-  // NO_VERIFICABLE is never a finding about the world — only about the
-  // pipeline — so it always goes to the drawer, never dropped: the claim was
-  // still made, and hiding it would misrepresent the debate.
-  //
-  // This used to be gated on confidence, on the theory that a *confident*
-  // NO_VERIFICABLE meant something substantive ("no official source exists").
-  // The scores don't carry that distinction: a bare "no se pudo verificar"
-  // with two sources came back at 0.55, while one with three sources and real
-  // content scored 0.45. Since confidence can't separate the two, the verdict
-  // type alone decides.
-  const weak = verdict.resultado === 'NO_VERIFICABLE';
-  entry.el.dataset.weak = weak ? '1' : '';
   bump('verdicts');
 
+  // NO_VERIFICABLE is a finding about the pipeline, not the world: the claim
+  // was still made, so it is kept — in the drawer under the feed.
   const { el } = entry;
-  const cls = resultadoToClass(verdict.resultado);
-  el.dataset.state = 'done';
-  // Unverifiable claims go to the folded drawer under the list: verdict
-  // shown, a hold, a fade, and the drawer lights up as it takes the card.
-  const toDrawer = weak;
-  el.dataset.resultado = cls;
-
   const vk = verdictKey(verdict.resultado);
-  el.style.setProperty('--c', VKEY[vk][4]);
+  const color = VKEY[vk][4];
+  el.dataset.state = 'done';
   el.dataset.v = vk;
-  const badge = el.querySelector('.resultado-badge');
-  badge.className = `resultado-badge resultado-${cls} vtag stamped`;
-  badge.style.setProperty('--c', VKEY[vk][4]);
-  badge.innerHTML = vtagInner(vk);
-  if (motion() && !toDrawer) el.classList.add('reveal');
+  el.style.setProperty('--c', color);
+  if (BAD.has(vk)) el.dataset.bad = '';
+  const pendingTag = el.querySelector('.vtag-pending');
+  if (pendingTag) pendingTag.outerHTML = `<span class="vtag stamped" style="--c:${color}">${vtagInner(vk)}</span>`;
+  const animate = motion();
+  if (animate) el.classList.add('reveal');
+  countVerdict(vk);
 
-  // Unfolded, the same sections and wording as the claim page on facthem.es:
-  // the confidence bar as the separator, what the data says, errors, missing
-  // context, sources (primary first, in the verifier's order within a tier).
+  if (vk === 'NO_VERIFICABLE') {
+    const park = () => {
+      el.remove(); el.classList.remove('reveal');
+      el.getAnimations().forEach((a) => a.cancel()); el.style.overflow = '';
+      insertByTime($('weak-list'), el);
+      const d = $('weak-drawer'); d.hidden = false;
+      $('weak-count').textContent = $('weak-list').children.length;
+      bumpEl($('weak-count'));
+      pulseClass(d, 'received', 2000);
+    };
+    if (!animate) park();
+    else setTimeout(async () => { await leave(el); park(); }, WEAK_HOLD_MS);
+    return;
+  }
+
+  // After the stamp: one button that unfolds the full verification, in the
+  // claim page's sections and wording, the confidence bar as the separator.
   const tierRank = (f) => ({ primaria: 0, primary: 0, academica: 1, academic: 1, secundaria: 2, secondary: 2, terciaria: 3, tertiary: 3 }[foldKey(f.tipo || '')] ?? 4);
   const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return ''; } };
-  const srcs = (verdict.fuentes || [])
-    .filter((f) => f.url || f.nombre)
-    .map((f, i) => [f, i])
-    .sort((a, b) => tierRank(a[0]) - tierRank(b[0]) || a[1] - b[1])
-    .map(([f]) => f);
-  const sources = srcs.map((f) => {
-    const prim = tierRank(f) === 0;
-    const name = f.url ? `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.nombre || host(f.url))}</a>` : `<span class="src-name">${esc(f.nombre)}</span>`;
-    const meta = [f.url ? esc(host(f.url)) : '', prim ? '<span class="prim">fuente primaria</span>' : esc(String(f.tipo || '').toLowerCase())].filter(Boolean).join(' · ');
-    return `<li>${name}${meta ? `<span class="meta">${meta}</span>` : ''}${f.dato_especifico ? `<span class="dato">${esc(f.dato_especifico)}</span>` : ''}</li>`;
-  }).join('');
-  const list = (arr, color) => `<ul class="c-list" style="--b:${color}">${arr.map((x) => `<li>${esc(typeof x === 'string' ? x : x?.descripcion || '')}</li>`).join('')}</ul>`;
-  const errs = (verdict.errores || []).filter(Boolean);
-  const oms = (verdict.omisiones || []).filter(Boolean);
+  const srcs = (verdict.fuentes || []).filter((f) => f.url || f.nombre)
+    .map((f, i) => [f, i]).sort((a, b) => tierRank(a[0]) - tierRank(b[0]) || a[1] - b[1]).map(([f]) => f);
+  const txt = (x) => (typeof x === 'string' ? x : x?.descripcion || '');
+  const errs = (verdict.errores || []).map(txt).filter(Boolean);
+  const oms = (verdict.omisiones || []).map(txt).filter(Boolean);
   const conf = Math.round(100 * (verdict.confidence_score || 0));
-  const headline = verdict.afirmacion_correcta || '';
-
-  const box = el.querySelector('.verdict');
-  box.innerHTML = `
-    <div class="claim-actions">
-      <button class="detail-toggle" aria-expanded="false">Ver verificación completa</button>
-      ${shareButton(el, verdict)}
-    </div>
-    <div class="verdict-detail"><div class="vd-inner"><div class="vd-pad">
-      <div class="c-conf" style="--c:${VKEY[vk][4]};--p:${conf}%" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${conf}" aria-label="Confianza de la verificación">
+  const list = (arr, c) => `<ul class="c-list" style="--b:${c}">${arr.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
+  const block = `
+    <div class="f-detail" hidden>
+      <div class="c-conf" style="--c:${color};--p:${conf}%" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${conf}" aria-label="Confianza de la verificación">
         <div class="c-conf-track"><span></span></div>
         <span class="c-conf-lbl">Confianza de la verificación <b>${conf}%</b></span>
       </div>
-      ${headline ? `<section class="c-sec"><h4>Lo que dicen los datos</h4><p>${esc(headline)}</p></section>` : ''}
-      ${errs.length ? `<section class="c-sec"><h4>Errores <span class="n">· ${errs.length}</span></h4>${list(errs, 'var(--v-falso)')}</section>` : ''}
-      ${oms.length ? `<section class="c-sec"><h4>Contexto que falta <span class="n">· ${oms.length}</span></h4>${list(oms, 'var(--v-sobre)')}</section>` : ''}
-      ${sources ? `<section class="c-sec"><h4>Fuentes <span class="n">· ${srcs.length}</span></h4><ol class="c-sources">${sources}</ol></section>` : ''}
-      ${window.LIVE_ADMIN && (latency_seconds != null || cache_hit) ? `<p class="claim-foot">${latency_seconds != null ? `verificado en ${Math.round(latency_seconds)} s` : ''}${cache_hit ? ' · ⚡ caché' : ''}</p>` : ''}
-    </div></div></div>`;
-
-  countVerdict(verdict.resultado);
-  // The actions row was reserved while the claim was in verification (a
-  // disabled placeholder of the same size), so landing the verdict changes
-  // nothing in the card's height: the buttons only fade in.
-  if (motion() && el.animate) box.querySelector('.claim-actions')?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 350 });
-  if (toDrawer) {
-    if (!motion()) parkInDrawer(el);
-    else setTimeout(() => relocateCard(el, () => parkInDrawer(el)), DEMOTE_HOLD_MS);
-  }
-}
-const DEMOTE_HOLD_MS = 4000;
-
-function parkInDrawer(el) {
-  const drawer = $('weak-drawer');
-  // Newest first, like the main list.
-  const list = $('weak-list');
-  const before = [...list.querySelectorAll('.claim-card')].find((c) => +c.dataset.t < +el.dataset.t);
-  if (before) list.insertBefore(el, before); else list.appendChild(el);
-  drawer.hidden = false;
-  $('weak-count').textContent = $('weak-list').childElementCount;
-  bumpEl($('weak-count'));
-  pulseClass(drawer, 'received', 2200);
+      ${verdict.afirmacion_correcta ? `<section class="c-sec"><h2>Lo que dicen los datos</h2><p>${esc(verdict.afirmacion_correcta)}</p></section>` : ''}
+      ${errs.length ? `<section class="c-sec"><h2>Errores <span class="n">· ${errs.length}</span></h2>${list(errs, 'var(--v-falso)')}</section>` : ''}
+      ${oms.length ? `<section class="c-sec"><h2>Contexto que falta <span class="n">· ${oms.length}</span></h2>${list(oms, 'var(--v-sobre)')}</section>` : ''}
+      ${srcs.length ? `<section class="c-sec"><h2>Fuentes <span class="n">· ${srcs.length}</span></h2><ol class="c-sources">${srcs.map((f) => `<li>${f.url
+        ? `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.nombre || host(f.url))}</a>` : `<span class="src-name">${esc(f.nombre)}</span>`}
+        <span class="meta">${esc(f.url ? host(f.url) : '')}${tierRank(f) === 0 ? `${f.url ? ' · ' : ''}<span class="prim">fuente primaria</span>` : ''}</span>${f.dato_especifico ? `<span class="dato">${esc(f.dato_especifico)}</span>` : ''}</li>`).join('')}</ol></section>` : ''}
+      ${window.LIVE_ADMIN && (latency_seconds != null || cache_hit) ? `<p class="f-foot">${latency_seconds != null ? `verificado en ${Math.round(latency_seconds)} s` : ''}${cache_hit ? ' · ⚡ caché' : ''}</p>` : ''}
+    </div>`;
+  const fill = () => {
+    // Fill the row that was reserved while verifying: no height change.
+    const row = el.querySelector('.f-actions');
+    if (!row) return;
+    row.classList.remove('is-empty'); row.removeAttribute('aria-hidden');
+    row.innerHTML = `<button type="button" class="f-more" aria-expanded="false">Ver verificación completa</button>${shareButton(el, verdict)}`;
+    row.classList.add('filled');
+    row.insertAdjacentHTML('afterend', block);
+  };
+  if (!animate) fill(); else setTimeout(fill, FILL_DELAY_MS);
 }
 
-const isMobile = () => !!(window.matchMedia && matchMedia('(max-width: 760px)').matches);
+/* Unfold / fold the full verification with a height tween. */
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.f-more'); if (!btn) return;
+  const box = btn.closest('.f-item').querySelector('.f-detail');
+  const open = box.hidden;
+  btn.setAttribute('aria-expanded', String(open));
+  btn.textContent = open ? 'Ocultar verificación' : 'Ver verificación completa';
+  if (open) { growBox(box); return; }
+  if (!motion() || !box.animate) { box.hidden = true; return; }
+  const h = box.getBoundingClientRect().height;
+  box.style.overflow = 'hidden';
+  box.animate([{ height: `${h}px`, opacity: 1 }, { height: '0px', opacity: 0 }], { duration: 300, easing: 'ease-in' })
+    .finished.then(() => { box.hidden = true; box.style.overflow = ''; });
+});
+/* "Solo falsas o exageradas" */
+$('feed-f').addEventListener('change', (e) => { $('feed').classList.toggle('only-bad', e.target.value === 'bad'); });
+
+const isMobile = () => !!(window.matchMedia && matchMedia('(max-width: 860px)').matches);
 
 const mobileLive = () => isMobile() && !window.LIVE_ADMIN;
 
-/* Fade out in place, close the space, move (the callback), reopen. */
-/* A card leaving the list is growIn in reverse, phase by phase: the card
-   fades out where it is (nothing else moves), its empty slot stays for a
-   beat, then the slot closes and the cards below glide up over it.
-   The card itself is never resized: once faded it is swapped for a plain
-   spacer of the same outer height, and only the spacer's height (and the
-   flex gap it carries) is animated. Two properties, present in every
-   keyframe, so nothing can creep while the slot is meant to stand still. */
-const LEAVE_FADE_MS = 440;
-const LEAVE_HOLD_MS = 700;
-const LEAVE_CLOSE_MS = 700;
-function relocateCard(el, move) {
-  const h = el.getBoundingClientRect().height;
-  if (!motion() || !el.animate || !h) { move(); return; }
-  const fade = el.animate([{ opacity: 1 }, { opacity: 0 }],
-    { duration: LEAVE_FADE_MS, easing: 'cubic-bezier(.45, 0, .55, 1)', fill: 'forwards' });
-  let done = false;
-  let spacer = null;
-  const finish = () => {
-    if (done) return;
-    done = true;
-    fade.cancel();
-    spacer?.remove();
-    move();
-    growIn(el);
-  };
-  setTimeout(() => {
-    if (done) return;
-    spacer = document.createElement('div');
-    spacer.className = 'claim-slot';
-    spacer.style.height = `${h}px`;
-    el.replaceWith(spacer);
-    const hold = LEAVE_HOLD_MS / (LEAVE_HOLD_MS + LEAVE_CLOSE_MS);
-    spacer.animate(
-      [{ height: `${h}px`, marginBottom: '0px' },
-       { height: `${h}px`, marginBottom: '0px', offset: hold, easing: 'cubic-bezier(.2, .7, .2, 1)' },
-       { height: '0px', marginBottom: '-0.75rem' }],
-      { duration: LEAVE_HOLD_MS + LEAVE_CLOSE_MS, fill: 'forwards' });
-    setTimeout(finish, LEAVE_HOLD_MS + LEAVE_CLOSE_MS);
-  }, LEAVE_FADE_MS);
-  setTimeout(finish, LEAVE_FADE_MS + LEAVE_HOLD_MS + LEAVE_CLOSE_MS + 1000);
-}
-
 /* ── verdict breakdown (left column) ────────────────────────────────────── */
-// Every verdict but "no verificable": those are counted on the drawer, not here.
-const VB_ORDER = VERDICTS.filter((v) => v[0] !== 'NO_VERIFICABLE');
+// Every verdict, "no verificable" included (it is counted, and its cards sit in the drawer).
 const verdictCounts = {};
 
 function countVerdict(resultado) {
@@ -1489,37 +1397,22 @@ function renderCost(cost) {
 /* One stacked bar, not five. At the counts a live debate produces (a dozen or
    two), five separate tracks are mostly empty rails; a single bar shows the
    mix at a glance and reads as a summary of the feed it sits above. */
+/* "Hasta ahora": one stacked bar whose segments resize as verdicts land,
+   and its legend. Built once, then updated in place. */
 function renderBreakdown() {
-  const total = VB_ORDER.reduce((a, [k]) => a + (verdictCounts[k] || 0), 0);
-  const bar = $('summary-bar');
-  // The bar is on the page from the start, with its space reserved: an
-  // empty track and a waiting line, so the first verdict fills it in place
-  // instead of pushing the list down.
-  bar.hidden = false;
-
-  // Built once, then updated in place: the segments' flex values tween and
-  // a changed count bumps, instead of the whole bar being rebuilt.
-  if (!bar.firstElementChild) {
-    bar.innerHTML = `
-    <div class="sb-track">
-      ${VB_ORDER.map(([k, , long, , c]) => `<span class="sb-seg${k === 'SUBESTIMADO' ? ' hatch' : ''} empty" data-k="${k}" style="--c:${c};flex:0" title="${esc(long)}"></span>`).join('')}
-    </div>
-    <div class="sb-legend">
-      <span class="sb-key sb-waiting">Esperando la primera verificación</span>
-      ${VB_ORDER.map(([k, label, , , c]) => `<span class="sb-key" data-k="${k}" style="--c:${c}" hidden><span class="dot"></span>${esc(label)} <b>0</b></span>`).join('')}
-    </div>`;
+  const box = $('live-dist');
+  if (!box.firstElementChild) {
+    box.innerHTML = `<h2>Hasta ahora</h2><div class="stack stack-live">${VERDICTS.map(([k, , long, , c]) =>
+      `<span class="${k === 'SUBESTIMADO' ? 'hatch' : ''}" data-k="${k}" style="--c:${c};flex:0" title="${esc(long)}"></span>`).join('')}</div>`
+      + '<ul class="legend" id="live-legend"></ul>';
   }
-  bar.querySelector('.sb-waiting').hidden = total > 0;
-  for (const [k] of VB_ORDER) {
-    const n = verdictCounts[k] || 0;
-    const seg = bar.querySelector(`.sb-seg[data-k="${k}"]`);
-    seg.style.flex = String(n);
-    seg.classList.toggle('empty', !n);
-    const key = bar.querySelector(`.sb-key[data-k="${k}"]`);
-    key.hidden = !n;
-    const b = key.querySelector('b');
-    if (b.textContent !== String(n)) { b.textContent = n; bumpEl(b); }
-  }
+  const total = VERDICTS.reduce((a, [k]) => a + (verdictCounts[k] || 0), 0);
+  box.querySelectorAll('.stack-live span').forEach((el) => { el.style.flex = String(verdictCounts[el.dataset.k] || 0); });
+  const legend = $('live-legend');
+  legend.innerHTML = total
+    ? VERDICTS.filter(([k]) => verdictCounts[k]).map(([k, label, , , c]) =>
+      `<li style="--c:${c}"><span class="dot"></span>${esc(label)} <span class="num">${verdictCounts[k]}</span></li>`).join('')
+    : '<li class="legend-wait">Esperando la primera verificación</li>';
 }
 
 /* ── Share ──────────────────────────────────────────────────────────────────
@@ -1619,7 +1512,7 @@ function shareParts(el, verdict) {
   const twitter = String(entry?.twitter || '').replace(/^@/, '');
   const claim = el._claim || {};
   const texto = String(claim.texto_normalizado || claim.texto_original
-    || el.querySelector('.claim-text')?.textContent || '').trim();
+    || el.querySelector('.f-claim')?.textContent || '').trim();
   const key = String(verdict.resultado || '').toUpperCase();
   const emoji = RESULTADO_EMOJIS[key] ?? '🔍';
   const label = RESULTADO_LABELS[key] || verdict.resultado || 'Sin verificar';
@@ -1669,69 +1562,61 @@ function tweetText(el, verdict, url) {
   return head + p.texto.slice(0, Math.max(0, room)).trimEnd() + '…' + f;
 }
 
+const shareMenu = (url, text, tweet, label = '') => {
+  const enc = encodeURIComponent;
+  return `<div class="share"><button type="button" class="share-btn${label ? ' has-label' : ''}" aria-haspopup="true" aria-expanded="false" aria-label="Compartir" data-url="${esc(url)}" data-text="${esc(text)}">${SHARE_ICON}${label}</button>`
+    + '<div class="share-pop" role="menu" hidden>'
+    + `<button type="button" role="menuitem" data-copy="${esc(url)}">Copiar enlace</button>`
+    + `<a role="menuitem" href="https://twitter.com/intent/tweet?text=${enc(tweet)}${tweet.includes(url) ? '' : `&url=${enc(url)}`}&via=${SHARE_VIA}" target="_blank" rel="noopener">X</a>`
+    + `<a role="menuitem" href="https://wa.me/?text=${enc(`${text} ${url}`)}" target="_blank" rel="noopener">WhatsApp</a>`
+    + `<a role="menuitem" href="https://t.me/share/url?url=${enc(url)}&text=${enc(text)}" target="_blank" rel="noopener">Telegram</a>`
+    + '</div></div>';
+};
+
 function shareButton(el, verdict) {
   const url = liveShareUrl();
-  const text = shareText(el, verdict);
-  const wa = encodeURIComponent(`${text}\n\n${liveCallout()} ${url}`);
-  const tw = encodeURIComponent(tweetText(el, verdict, url));
-  return `
-    <span class="share-wrapper">
-      <button class="share-btn" aria-label="Compartir afirmación" data-url="${esc(url)}" data-text="${esc(`${text}\n\n${liveCallout()}`)}">${SHARE_ICON}</button>
-      <span class="share-menu" hidden>
-        <button type="button" class="share-option" data-copy="${esc(url)}">Copiar enlace</button>
-        <a class="share-option" href="https://wa.me/?text=${wa}" target="_blank" rel="noopener">WhatsApp</a>
-        <a class="share-option" href="https://twitter.com/intent/tweet?text=${tw}&via=${SHARE_VIA}"
-           target="_blank" rel="noopener">X / Twitter</a>
-        <a class="share-option" href="https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(`${text}\n\n${liveCallout()}`)}"
-           target="_blank" rel="noopener">Telegram</a>
-      </span>
-    </span>`;
+  return shareMenu(url, `${shareText(el, verdict)}\n\n${liveCallout()}`, tweetText(el, verdict, url));
 }
 
-/* One delegated listener for every card, present and future. */
+/* Phones and tablets: the system share sheet; elsewhere our menu, opening
+   upwards when there is no room below (screen edge or the feed's scroller). */
+const NATIVE_SHARE = !!navigator.share && !!window.matchMedia && matchMedia('(pointer: coarse)').matches;
+const closeShares = (except) => document.querySelectorAll('.share-pop:not([hidden])').forEach((p) => {
+  if (p === except) return;
+  p.hidden = true; p.previousElementSibling.setAttribute('aria-expanded', 'false');
+  p.closest('.f-item')?.classList.remove('menu-open');
+});
 document.addEventListener('click', (e) => {
-  const toggle = e.target.closest('.detail-toggle');
-  if (toggle) {
-    const panel = toggle.closest('.verdict').querySelector('.verdict-detail');
-    const open = !panel.classList.contains('open');
-    panel.classList.toggle('open', open);
-    toggle.setAttribute('aria-expanded', String(open));
-    toggle.textContent = open ? 'Ocultar verificación' : 'Ver verificación completa';
-    return;
-  }
-
   const btn = e.target.closest('.share-btn');
-
+  const copy = e.target.closest('[data-copy]');
   if (btn) {
-    e.stopPropagation();
-    // Phones and tablets: the system share sheet, as everywhere on facthem.es.
-    if (navigator.share && window.matchMedia && matchMedia('(pointer: coarse)').matches) {
-      navigator.share({ title: 'Facthem', text: btn.dataset.text || '', url: btn.dataset.url || liveShareUrl() }).catch(() => {});
-      return;
+    e.preventDefault(); e.stopPropagation();
+    if (NATIVE_SHARE) { navigator.share({ title: 'Facthem', text: btn.dataset.text, url: btn.dataset.url }).catch(() => {}); return; }
+    const pop = btn.nextElementSibling; closeShares(pop);
+    pop.hidden = !pop.hidden; btn.setAttribute('aria-expanded', String(!pop.hidden));
+    if (!pop.hidden) {
+      pop.classList.remove('up');
+      let limit = innerHeight, n = pop.parentElement;
+      while (n && n !== document.body) {
+        const o = getComputedStyle(n).overflowY;
+        if (o === 'auto' || o === 'scroll') { limit = Math.min(limit, n.getBoundingClientRect().bottom); break; }
+        n = n.parentElement;
+      }
+      if (pop.getBoundingClientRect().bottom > limit - 8) pop.classList.add('up');
     }
-    const menu = btn.closest('.share-wrapper').querySelector('.share-menu');
-    // Open upwards when the menu would fall below the feed's scroll box.
-    menu.classList.remove('up');
-    const wasHidden = menu.hidden;
-    document.querySelectorAll('.share-menu').forEach((m) => { m.hidden = true; });
-    menu.hidden = !wasHidden;
-    if (!menu.hidden) {
-      const box = btn.closest('.feed')?.getBoundingClientRect();
-      const limit = box ? Math.min(innerHeight, box.bottom) : innerHeight;
-      if (menu.getBoundingClientRect().bottom > limit - 8) menu.classList.add('up');
-    }
+    btn.closest('.f-item')?.classList.toggle('menu-open', !pop.hidden);
     return;
   }
-  const copy = e.target.closest('[data-copy]');
   if (copy) {
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     navigator.clipboard?.writeText(copy.dataset.copy).catch(() => {});
     copy.textContent = 'Enlace copiado ✓';
-    setTimeout(() => { copy.textContent = 'Copiar enlace'; document.querySelectorAll('.share-menu').forEach((m) => { m.hidden = true; }); }, 900);
+    setTimeout(() => { copy.textContent = 'Copiar enlace'; closeShares(); }, 900);
     return;
   }
-  document.querySelectorAll('.share-menu').forEach((m) => { m.hidden = true; });
-});
+  if (!e.target.closest('.share-pop')) closeShares();
+}, true);
+addEventListener('keydown', (e) => { if (e.key === 'Escape') closeShares(); });
 
 /* ── debug: text processing ──────────────────────────────────────────────
    What each transcript window looked like when it was handed to the model,
@@ -2398,6 +2283,17 @@ player.addEventListener('seeked', () => {
   videoSeekBy = null;
 });
 
+/* Phones: one header. The session title (and whether it is live or a
+   replay) is mirrored into the site's top bar; the live header row is hidden. */
+function syncTopbar() {
+  const onair = $('onair');
+  $('tb-live').textContent = $('session-title').textContent;
+  $('tb-live').classList.toggle('off', onair.hidden || onair.classList.contains('diferido') || onair.classList.contains('paused'));
+}
+new MutationObserver(syncTopbar).observe($('session-title'), { childList: true, characterData: true, subtree: true });
+new MutationObserver(syncTopbar).observe($('onair'), { attributes: true, childList: true });
+
 setInterval(tickClock, 250);
 renderStats();
+renderBreakdown();
 boot();
