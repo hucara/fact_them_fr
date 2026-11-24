@@ -119,6 +119,10 @@ body.admin .brand-tag { display: inline; margin-left: -20px; }
 .live-head h1 { margin: 0; font-size: clamp(28px, 3.2vw, 40px); font-weight: 800; letter-spacing: -.035em; line-height: 1.1; }
 /* the status sits right of the title: En directo (pulsing) / Diferido / En pausa */
 .live-id { display: flex; align-items: center; gap: 14px; min-width: 0; }
+/* centre the tag on the title's capitals, not on its line box (which keeps
+   room for descenders "Debate a 8" doesn't have) */
+.live-id h1 { text-box: trim-both cap alphabetic; }
+@supports not (text-box: trim-both cap alphabetic) { .live-id .live-status { transform: translateY(-3px); } }
 .live-status { display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 11px; flex: none; border-radius: var(--r-sm);
   font-size: 13px; font-weight: 600; color: #ffd9e1; background: rgba(226, 86, 111, .12); border: 1px solid rgba(226, 86, 111, .3); }
 .live-status::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--v-falso); animation: ping-dot 1.8s ease-out infinite; }
@@ -217,13 +221,6 @@ body.admin .brand-tag { display: inline; margin-left: -20px; }
 .spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(217, 112, 138, .25); border-top-color: var(--accent); animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* weak drawer */
-.weak { margin-top: 16px; border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; font-size: 13px; color: var(--text-2); transition: border-color .3s; }
-.weak summary { cursor: pointer; display: flex; gap: 8px; align-items: center; }
-.weak summary .num { color: var(--muted); }
-.weak .weak-list { padding-top: 12px; }
-.weak .f-item { opacity: .75; }
-
 .feed-new { position: sticky; top: 150px; z-index: 7; display: block; margin: 8px auto; padding: 6px 14px; border-radius: 99px; border: 0; background: var(--text); color: var(--accent-ink); font-size: 13px; font-weight: 600; cursor: pointer; }
 .past { margin-top: 64px; padding-top: 32px; border-top: 1px solid var(--line); }
 .past-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
@@ -262,8 +259,6 @@ body.admin .brand-tag { display: inline; margin-left: -20px; }
   .bump { display: inline-block; animation: bump .4s cubic-bezier(.2, 1.4, .4, 1); }
   @keyframes bump { 40% { transform: scale(1.3); } }
   .feed-new.pop { animation: pop .2s cubic-bezier(.2,.9,.3,1.2); transform-origin: top center; }
-  .weak.received { animation: drawer-received 2s ease-out; }
-  @keyframes drawer-received { 0% { border-color: rgba(217,112,138,.7); box-shadow: 0 4px 24px rgba(217,112,138,.15); } 100% { border-color: var(--line); box-shadow: none; } }
   .stack-live span { transition: flex .8s var(--ease-out); }
 }
 
@@ -455,7 +450,6 @@ button.btn.admin.on { background: rgba(217, 112, 138, .12); }
   .live-dist .legend button { padding: 2px 6px; }
   body:not(.admin) .live-feed { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 16px 24px; position: relative; }
   .feed-new { top: 76px; }
-  .weak { margin: 16px 0 0; }
   body:not(.admin) .past { display: none; }
   body.replay-picker .live { position: static; display: block; padding: 16px; }
   body.replay-picker.live-body { overflow: auto; }

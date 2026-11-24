@@ -318,7 +318,7 @@ function showIdle() {
   document.title = 'Facthem directo';
   $('onair').hidden = true;
   document.body.classList.add('idle');
-  for (const sel of ['.live-stage', '#live-dist', '#weak-drawer', '#debug-current']) {
+  for (const sel of ['.live-stage', '#live-dist', '#debug-current']) {
     const el = document.querySelector(sel);
     if (el) el.hidden = true;
   }
@@ -606,9 +606,6 @@ function replayRebuild(t) {
   captionParts = [];
   $('caption').textContent = '';
   $('feed').querySelectorAll(':scope > .f-item').forEach((el) => el.remove());
-  $('weak-list').replaceChildren();
-  $('weak-drawer').hidden = true;
-  $('weak-count').textContent = '0';
   clearNewAbove();
   $('feed-empty').hidden = false;
   clock = t;
@@ -1249,7 +1246,6 @@ function tickPending() {
 }
 
 const BAD = new Set(['FALSO', 'SOBREESTIMADO', 'SUBESTIMADO']);
-const WEAK_HOLD_MS = 2200;   // an unverifiable verdict is shown this long before it leaves
 const FILL_DELAY_MS = 650;   // the actions row fills after the stamp
 
 function applyVerdict(ev) {
@@ -1269,10 +1265,17 @@ function applyVerdict(ev) {
   entry.done = true;
   bump('verdicts');
 
-  // NO_VERIFICABLE is a finding about the pipeline, not the world: the claim
-  // was still made, so it is kept — in the drawer under the feed.
+  // NO_VERIFICABLE says nothing about the world, only that the verifier found
+  // no data: it is not shown on the live page. The card that was waiting for
+  // it leaves (fades, then its space closes) and nothing is counted.
   const { el } = entry;
   const vk = verdictKey(verdict.resultado);
+  if (vk === 'NO_VERIFICABLE') {
+    entry.dropped = true;
+    const drop = () => { el.remove(); if (!$('feed').querySelector(':scope > .f-item')) $('feed-empty').hidden = false; };
+    if (!motion()) drop(); else leave(el).then(drop);
+    return;
+  }
   const color = VKEY[vk][4];
   el.dataset.state = 'done';
   el.dataset.v = vk;
@@ -1284,21 +1287,6 @@ function applyVerdict(ev) {
   if (animate) el.classList.add('reveal');
   countVerdict(vk);
   if (feedFilter.size) el.classList.toggle('filtered', !feedFilter.has(vk));
-
-  if (vk === 'NO_VERIFICABLE') {
-    const park = () => {
-      el.remove(); el.classList.remove('reveal');
-      el.getAnimations().forEach((a) => a.cancel()); el.style.overflow = '';
-      insertByTime($('weak-list'), el);
-      const d = $('weak-drawer'); d.hidden = false;
-      $('weak-count').textContent = $('weak-list').children.length;
-      bumpEl($('weak-count'));
-      pulseClass(d, 'received', 2000);
-    };
-    if (!animate) park();
-    else setTimeout(async () => { await leave(el); park(); }, WEAK_HOLD_MS);
-    return;
-  }
 
   // After the stamp: one button that unfolds the full verification, in the
   // claim page's sections and wording, the confidence bar as the separator.
@@ -1399,14 +1387,15 @@ function renderCost(cost) {
    shows only that verdict (several can be on); pending cards always show.
    Built once, then updated in place. */
 const feedFilter = new Set();
+const SHOWN_VERDICTS = VERDICTS.filter(([k]) => k !== 'NO_VERIFICABLE');   // not shown live (see applyVerdict)
 function renderBreakdown() {
   const box = $('live-dist');
   if (!box.firstElementChild) {
-    box.innerHTML = `<div class="stack stack-live" role="group" aria-label="Filtrar por veredicto">${VERDICTS.map(([k, , long, , c]) =>
+    box.innerHTML = `<div class="stack stack-live" role="group" aria-label="Filtrar por veredicto">${SHOWN_VERDICTS.map(([k, , long, , c]) =>
         `<button type="button" class="${k === 'SUBESTIMADO' ? 'hatch' : ''}" data-k="${k}" style="--c:${c};flex:0" title="${esc(long)}" aria-label="${esc(long)}" aria-pressed="false"></button>`).join('')}</div>`
       + '<ul class="legend" id="live-legend"></ul>';
   }
-  const total = VERDICTS.reduce((a, [k]) => a + (verdictCounts[k] || 0), 0);
+  const total = SHOWN_VERDICTS.reduce((a, [k]) => a + (verdictCounts[k] || 0), 0);
   box.querySelectorAll('.stack-live [data-k]').forEach((el) => {
     const k = el.dataset.k;
     el.style.flex = String(verdictCounts[k] || 0);
@@ -1415,12 +1404,12 @@ function renderBreakdown() {
   });
   box.classList.toggle('filtering', feedFilter.size > 0);
   $('live-legend').innerHTML = total
-    ? VERDICTS.filter(([k]) => verdictCounts[k] || feedFilter.has(k)).map(([k, label, , , c]) =>
+    ? SHOWN_VERDICTS.filter(([k]) => verdictCounts[k] || feedFilter.has(k)).map(([k, label, , , c]) =>
       `<li><button type="button" data-k="${k}" style="--c:${c}" aria-pressed="${feedFilter.has(k)}"><span class="dot"></span>${esc(label)} <span class="num">${verdictCounts[k] || 0}</span></button></li>`).join('')
     : '<li class="legend-wait">Esperando la primera verificación</li>';
 }
 function applyFeedFilter() {
-  for (const el of document.querySelectorAll('#feed > .f-item, #weak-list > .f-item')) {
+  for (const el of document.querySelectorAll('#feed > .f-item')) {
     el.classList.toggle('filtered', feedFilter.size > 0 && el.dataset.state === 'done' && !feedFilter.has(el.dataset.v));
   }
 }
