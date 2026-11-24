@@ -21,6 +21,8 @@ import urllib.parse
 from datetime import date, datetime
 from pathlib import Path
 
+import site_chrome
+
 # ── Config ────────────────────────────────────────────────────────────────────
 DEBUG_DB_PATH = os.environ.get("DEBUG_DB_PATH")
 if not DEBUG_DB_PATH:
@@ -2131,6 +2133,10 @@ def main():
 
     print("Generando página de archivo…")
     generate_archive(claims_with_slugs)
+
+    # Hand-written pages: shared top bar/footer + content-hashed asset URLs.
+    changed = site_chrome.render_static_pages()
+    print(f"  chrome actualizado en: {', '.join(changed) if changed else 'ninguna página'}")
 
     print("Hecho.")
 
