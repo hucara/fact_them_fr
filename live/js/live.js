@@ -1283,26 +1283,6 @@ function applyVerdict(ev) {
   if (pendingTag) pendingTag.outerHTML = `<span class="vtag stamped" style="--c:${color}">${vtagInner(vk)}</span>`;
   const animate = motion();
   if (animate) el.classList.add('reveal');
-  if (vk === 'NO_VERIFICABLE') {
-    // Nothing to unfold or share: drop the reserved (shimmering) actions row,
-    // or the card would look as if it were still verifying.
-    el.querySelector('.f-actions')?.remove();
-    // Verdict shown, a hold, then it leaves for the drawer, which lights up.
-    const park = () => {
-      el.remove(); el.classList.remove('reveal');
-      el.getAnimations().forEach((a) => a.cancel()); el.style.overflow = '';
-      insertByTime($('weak-list'), el);
-      const d = $('weak-drawer'); d.hidden = false;
-      $('weak-count').textContent = $('weak-list').children.length;
-      bumpEl($('weak-count'));
-      pulseClass(d, 'received', 2000);
-    };
-    if (!animate) park();
-    else setTimeout(async () => { await leave(el); park(); }, WEAK_HOLD_MS);
-    return;
-  }
-  countVerdict(vk);
-  if (feedFilter.size) el.classList.toggle('filtered', !feedFilter.has(vk));
 
   // After the stamp: one button that unfolds the full verification, in the
   // claim page's sections and wording, the confidence bar as the separator.
@@ -1338,6 +1318,26 @@ function applyVerdict(ev) {
     row.classList.add('filled');
     row.insertAdjacentHTML('afterend', block);
   };
+  if (vk === 'NO_VERIFICABLE') {
+    // Same full verification as any claim (why it could not be checked, what
+    // the data do say, sources), filled before it leaves for the drawer.
+    fill();
+    // Verdict shown, a hold, then it leaves for the drawer, which lights up.
+    const park = () => {
+      el.remove(); el.classList.remove('reveal');
+      el.getAnimations().forEach((a) => a.cancel()); el.style.overflow = '';
+      insertByTime($('weak-list'), el);
+      const d = $('weak-drawer'); d.hidden = false;
+      $('weak-count').textContent = $('weak-list').children.length;
+      bumpEl($('weak-count'));
+      pulseClass(d, 'received', 2000);
+    };
+    if (!animate) park();
+    else setTimeout(async () => { await leave(el); park(); }, WEAK_HOLD_MS);
+    return;
+  }
+  countVerdict(vk);
+  if (feedFilter.size) el.classList.toggle('filtered', !feedFilter.has(vk));
   if (!animate) fill(); else setTimeout(fill, FILL_DELAY_MS);
 }
 

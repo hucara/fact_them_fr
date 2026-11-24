@@ -231,7 +231,6 @@ body.admin .brand-tag { display: inline; margin-left: -20px; }
 .weak[open] .weak-chev { transform: rotate(-135deg) translate(-2px, -2px); }
 .weak .weak-list { padding: 0 12px 12px; }
 .weak .f-item { opacity: .85; }
-.weak .f-item .f-actions { display: none; }
 .feed-new { position: sticky; top: 150px; z-index: 7; display: block; margin: 8px auto; padding: 6px 14px; border-radius: 99px; border: 0; background: var(--text); color: var(--accent-ink); font-size: 13px; font-weight: 600; cursor: pointer; }
 .past { margin-top: 64px; padding-top: 32px; border-top: 1px solid var(--line); }
 .past-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
