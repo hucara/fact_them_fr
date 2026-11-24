@@ -998,7 +998,8 @@ function renderClaims(claims) {
     const orderedIds = currentSessionIds
       .map(id => sessionsMap.get(id))
       .filter(Boolean)
-      .sort((a, b) => (a.numero ?? 0) - (b.numero ?? 0))
+      // By date: numero restarts at 1 in every legislature.
+      .sort((a, b) => (a.fecha ?? '').localeCompare(b.fecha ?? '') || (a.numero ?? 0) - (b.numero ?? 0))
       .map(s => s.id);
 
     const grouped = new Map();
@@ -2716,7 +2717,11 @@ function renderSearchResults(claims, politicianName, { politician = null, salary
     grouped.get(key).claims.push(claim);
   }
 
-  const groupsHtml = [...grouped.values()].map(({ session, claims: sessionClaims }) => {
+  // Newest sitting first. The query orders by session_id as text, which puts
+  // DS-PL-XVI-9 after DS-PL-XVI-10.
+  const groups = [...grouped.values()].sort((a, b) =>
+    (b.session?.fecha ?? '').localeCompare(a.session?.fecha ?? ''));
+  const groupsHtml = groups.map(({ session, claims: sessionClaims }) => {
     const fecha = session?.fecha
       ? new Date(session.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
       : 'Sesión desconocida';

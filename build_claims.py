@@ -377,13 +377,17 @@ def build_claim_review_schema(claim, slug, pol_name, session_date):
         item = {"@type": "Claim", "author": author}
         if session_date:
             item["datePublished"] = str(session_date)[:10]
-        leg, tipo, num = sess.get("legislatura"), sess.get("tipo"), sess.get("numero")
+        # The PDF is named by the Diario number, the last part of the session id
+        # (DS-PL-210, DS-PL-XVI-1); `numero` is the sitting number and differs.
+        leg, tipo, sitting = sess.get("legislatura"), sess.get("tipo"), sess.get("numero")
+        dscd = str(sess.get("id") or "").rsplit("-", 1)[-1]
+        num = int(dscd) if dscd.isdigit() else None
         if leg and tipo and num:
             appearance = {
                 "@type": "CreativeWork",
                 "name": (
                     f"Diario de Sesiones del Congreso de los Diputados — "
-                    f"{sess.get('organo') or 'Pleno'} núm. {num}"
+                    f"{sess.get('organo') or 'Pleno'} núm. {sitting or num}"
                 ),
                 "url": f"https://www.congreso.es/public_oficiales/L{leg}/CONG/DS/{tipo}/DSCD-{leg}-{tipo}-{num}.PDF",
             }
