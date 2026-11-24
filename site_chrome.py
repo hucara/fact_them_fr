@@ -93,7 +93,7 @@ def verdict_key(resultado):
     return k if k in VK else "NO_VERIFICABLE"
 
 
-# Share text as on the old site (emoji, ≤200 chars of claim, verdict, facthem.es).
+# Share text as on the old site (emoji, ≤200 chars of claim, verdict); the link goes after it.
 VERDICT_EMOJI = {"CONFIRMADO": "✅", "CONFIRMADO_CON_MATIZ": "⚠️", "FALSO": "❌", "DESCONTEXTUALIZADO": "🟠",
                  "IMPRECISO": "🔸", "NO_VERIFICABLE": "❓", "SOBREESTIMADO": "🟠", "SUBESTIMADO": "🟠"}
 
@@ -103,7 +103,7 @@ def share_text(name, party, text, verdict, verb="ha afirmado"):
     text = str(text or "").strip()
     t = text[:200] + ("…" if len(text) > 200 else "")
     who = (name or "Un político") + (f" ({party})" if party else "")
-    return f'🔍 {who} {verb}: "{t}"\n{VERDICT_EMOJI.get(k, "🔍")} {VK[k][2]} | facthem.es'
+    return f'🔍 {who} {verb}: "{t}"\n{VERDICT_EMOJI.get(k, "🔍")} {VK[k][2]}'
 
 
 def tema_label(t):
@@ -240,7 +240,6 @@ def topbar(active=""):
         '<span></span><span></span><span></span></button>'
         '</div></header>'
         f'<nav class="mnav" id="mnav" aria-label="Menú" hidden>{mlinks}'
-        '<a href="/live/" class="mnav-live" data-live hidden><span class="pulse" aria-hidden="true"></span>En directo</a>'
         '</nav>')
 
 

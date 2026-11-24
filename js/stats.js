@@ -1,4 +1,4 @@
-/* Estadísticas: the old site's dashboard (renderDashboard in the former
+/* Estadísticas: the old site's dashboard (renderDashboard in the old
    js/app.js), card for card: same titles, wording and data, restyled.
 
    renderStats(stats) is pure (string in, HTML out). The build runs it under

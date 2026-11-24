@@ -61,10 +61,9 @@ LLMS_FULL_PATH = Path(__file__).parent / "llms-full.txt"
 INDEX_PATH    = Path(__file__).parent / "index.html"
 INDEX_TEMPLATE = Path(__file__).parent / "templates" / "index.html"
 SITEMAP_PATH  = Path(__file__).parent / "sitemap.xml"
-SALARY_DATA_PATH = Path(__file__).parent / "assets" / "salary-data.js"
 TODAY         = date.today().isoformat()
 
-# ── Label maps (mirror app.js) ────────────────────────────────────────────────
+# ── Label maps (mirror js/ui.js) ────────────────────────────────────────────────
 TEMATICO_LABELS = {
     "agriculture":             "Agricultura",
     "defence":                 "Defensa",
@@ -162,7 +161,7 @@ def slugify_politician(nombre_completo, partido=""):
     return slug or "desconocido"
 
 
-# ── HTML renderers (mirror app.js) ────────────────────────────────────────────
+# ── HTML renderers (mirror js/ui.js) ────────────────────────────────────────────
 
 def to_list_items(text):
     return [s.strip() for s in re.split(r"\n|;", re.sub(r"^[\s\-•*\d.]+", "", text))
@@ -840,27 +839,6 @@ def fetch_salaries_sqlite():
     return {r["politician_id"]: dict(r) for r in rows if r["politician_id"]}
 
 
-def generate_salary_data(salaries):
-    """Generated frontend fallback: salary facts from DB, photo paths from assets."""
-    keys = [
-        "politician_id", "nombre_completo", "grupo_parlamentario", "partido",
-        "circunscripcion", "cod_parlamentario", "base_monthly_eur",
-        "indemnizacion_monthly_eur", "complements_monthly_eur",
-        "total_monthly_eur", "total_annual_eur", "breakdown",
-        "government_role",
-    ]
-    rows = []
-    for row in salaries.values():
-        item = {k: row.get(k) for k in keys if row.get(k) not in (None, "")}
-        if item.get("politician_id") and item.get("nombre_completo"):
-            rows.append(item)
-    rows.sort(key=lambda r: str(r.get("nombre_completo", "")))
-    SALARY_DATA_PATH.parent.mkdir(exist_ok=True)
-    payload = json.dumps(rows, ensure_ascii=False, separators=(",", ":"))
-    SALARY_DATA_PATH.write_text(f"window.FACTHEM_SALARIES={payload};\n", encoding="utf-8")
-    print(f"  {SALARY_DATA_PATH.relative_to(Path(__file__).parent)} generado — {len(rows)} retribuciones")
-
-
 # ── Sitemap ───────────────────────────────────────────────────────────────────
 
 STATIC_URLS = [
@@ -1046,7 +1024,7 @@ def generate_archive(claims_data):
 
 # ── Politician pages ──────────────────────────────────────────────────────────
 
-# ── Salary panel helpers (mirror js/app.js renderPoliticianPanel) ─────────────
+# ── Salary panel helpers ─────────────
 
 GOVERNMENT_ROLE_LABELS = {
     "presidente_gobierno":     "Presidente del Gobierno",
@@ -1997,8 +1975,6 @@ def main():
         salaries = fetch_salaries(supabase)
         print(f"  {len(salaries)} retribuciones obtenidas")
         stats = fetch_dashboard_stats(supabase)
-
-    generate_salary_data(salaries)
 
     OUT_DIR.mkdir(exist_ok=True)
     for f in OUT_DIR.glob("*.html"):

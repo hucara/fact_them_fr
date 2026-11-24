@@ -95,7 +95,7 @@ window.FT = (() => {
   const shareTextOf = (name, party, text, verdict, verb = 'ha afirmado') => {
     const k = verdictKey(verdict), x = String(text || '').trim();
     const t = x.slice(0, 200) + (x.length > 200 ? '…' : '');
-    return `🔍 ${name || 'Un político'}${party ? ` (${party})` : ''} ${verb}: "${t}"\n${EMOJI[k] || '🔍'} ${VK[k].long} | facthem.es`;
+    return `🔍 ${name || 'Un político'}${party ? ` (${party})` : ''} ${verb}: "${t}"\n${EMOJI[k] || '🔍'} ${VK[k].long}`;
   };
   const shareMenu = (url, text, label = '') => {
     const u = encodeURIComponent(url), t = encodeURIComponent(text);
@@ -223,7 +223,13 @@ window.FT = (() => {
   }
   async function initLive() {
     const els = document.querySelectorAll('[data-live]'); if (!els.length) return;
-    if (await isLive()) els.forEach(el => { el.hidden = false; });
+    if (!(await isLive())) return;
+    els.forEach(el => { el.hidden = false; });
+    // "Directos" always points at /live/ (the running directo, or the diferidos
+    // grid when nothing is on air); while one runs it carries the pulse.
+    document.querySelectorAll('.nav a[href="/live/"], .mnav a[href="/live/"]').forEach(a => {
+      a.classList.add('is-on'); a.insertAdjacentHTML('afterbegin', '<span class="pulse" aria-hidden="true"></span>');
+    });
   }
 
   // ── Politician search: name → profile, over /assets/people.json ──────────
