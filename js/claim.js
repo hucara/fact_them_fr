@@ -17,6 +17,16 @@
     pager.innerHTML = (prev ? `<a class="icon-btn" href="${prev}" rel="prev" aria-label="Afirmación anterior">←</a>` : '')
       + (next ? `<a class="icon-btn" href="${next}" rel="next" aria-label="Afirmación siguiente">→</a>` : '');
   }
+  // Clicking the verdict stamps it again (once the previous stamp has landed).
+  const badge = main.querySelector('.c-verdict .stamped');
+  let stampBusy = performance.now() + 1500;   // the load-time stamp: .35 s delay + ring
+  badge?.addEventListener('click', () => {
+    if (performance.now() < stampBusy || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    main.classList.remove('stamp-on-load', 'restamp');
+    void main.offsetWidth;   // restart the animations
+    main.classList.add('stamp-on-load', 'restamp');
+    stampBusy = performance.now() + 800;
+  });
   const back = document.querySelector('.crumb-session')?.getAttribute('href') || '/';
   addEventListener('keydown', e => {
     if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest('input, textarea, select, [contenteditable]')) return;

@@ -1,21 +1,34 @@
 /* Salary figures land like a slot machine: each digit spins down its reel and
-   settles, left to right. The text stays the same for readers (aria-label). */
+   settles, left to right. The text stays the same for readers (aria-label).
+   Clicking a figure spins them again (not while a spin is running). The
+   breakdown table never spins. */
 (() => {
   const box = document.querySelector('.sum-sal'); if (!box) return;
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const REEL = '0123456789'.repeat(3).split('').map(d => `<span>${d}</span>`).join('');
-  function roll(el, delay = 0) {
-    const text = el.textContent; let i = 0;
-    el.setAttribute('aria-label', text); el.classList.add('roll');
-    el.innerHTML = [...text].map(ch => /\d/.test(ch)
-      ? `<span class="rd" aria-hidden="true"><span class="rd-reel" style="--n:${20 + +ch};--i:${i++};--w:${delay}ms">${REEL}</span><span class="rd-sz">${ch}</span></span>`
-      : `<span aria-hidden="true">${ch}</span>`).join('');
+  const SPIN = 700, STEP = 110, GAP = 120;   // ms: first reel, each next reel, second figure
+  const figs = [...box.querySelectorAll('.sum-line b')];
+  const texts = figs.map(b => b.textContent);
+  let busyUntil = 0;
+  function roll() {
+    let longest = 0;
+    figs.forEach((el, k) => {
+      let i = 0;
+      el.setAttribute('aria-label', texts[k]); el.classList.add('roll');
+      el.innerHTML = [...texts[k]].map(ch => /\d/.test(ch)
+        ? `<span class="rd" aria-hidden="true"><span class="rd-reel" style="--n:${20 + +ch};--d:${SPIN + i++ * STEP}ms;--w:${k * GAP}ms">${REEL}</span><span class="rd-sz">${ch}</span></span>`
+        : `<span aria-hidden="true">${ch}</span>`).join('');
+      longest = Math.max(longest, k * GAP + SPIN + Math.max(0, i - 1) * STEP);
+    });
+    busyUntil = performance.now() + longest;
   }
-  box.querySelectorAll('.sum-line b').forEach((b, k) => roll(b, 250 + k * 180));
-  let rolled = false;
-  box.addEventListener('toggle', () => {
-    if (!box.open || rolled) return; rolled = true;
-    box.querySelectorAll('.sal-table td').forEach((td, k) => roll(td, 60 + k * 35));
+  roll();
+  figs.forEach(b => {
+    b.style.cursor = 'pointer'; b.title = 'Girar otra vez';
+    b.addEventListener('click', e => {
+      e.preventDefault();   // a figure spins; the rest of the row opens the breakdown
+      if (performance.now() >= busyUntil) roll();
+    });
   });
 })();
 
