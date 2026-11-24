@@ -14,3 +14,5 @@ archive-*.html
 assets/people.json
 representantes.html
 assets/claim-ids/
+assets/sessions/
+index.html

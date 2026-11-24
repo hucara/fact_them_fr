@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!--#redirects--><!--/redirects-->
+  <title>Facthem — salarios y verificaciones de políticos del Congreso</title>
+  <meta name="description" content="Consulta afirmaciones verificadas y salarios públicos de políticos del Congreso: sueldo mensual, salario anual, complementos e indemnizaciones de diputados y representantes." />
+  <link rel="canonical" href="https://facthem.es/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://facthem.es/" />
+  <meta property="og:title" content="Facthem — salarios y verificaciones de políticos del Congreso" />
+  <meta property="og:description" content="Afirmaciones verificadas y salarios públicos de políticos del Congreso: sueldo mensual, salario anual, complementos e indemnizaciones." />
+  <meta property="og:image" content="https://facthem.es/assets/portada_opt.png" />
+  <meta property="og:locale" content="es_ES" />
+  <meta property="og:site_name" content="Facthem" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@facthem_ES" />
+  <meta name="twitter:title" content="Facthem — salarios y verificaciones del Congreso" />
+  <meta name="twitter:description" content="Consulta afirmaciones verificadas y salarios públicos de políticos del Congreso." />
+  <meta name="twitter:image" content="https://facthem.es/assets/portada_opt.png" />
+  <link rel="preload" as="image" href="/assets/portada.webp" fetchpriority="high" />
+  <!--#head-common--><!--/head-common-->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Facthem",
+    "url": "https://facthem.es/",
+    "description": "Verificador de afirmaciones y salarios públicos de parlamentarios españoles",
+    "inLanguage": "es",
+    "publisher": {
+      "@type": "Organization",
+      "name": "Facthem",
+      "url": "https://facthem.es",
+      "logo": "https://facthem.es/assets/android-chrome-512x512.png",
+      "sameAs": ["https://twitter.com/facthem_ES", "https://www.youtube.com/@facthem_es"]
+    },
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": "https://facthem.es/representantes.html?q={search_term_string}"
+      },
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
+</head>
+<body class="home">
+  <!--#gtm-body--><!--/gtm-body-->
+  <!--#topbar active="sesiones"--><!--/topbar-->
+
+  <!-- Hero: compact, Lady Justice mirrored to the right, mist along the bottom (js/mist.js) -->
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero-art" aria-hidden="true"><img src="/assets/portada.webp" alt="" fetchpriority="high" /></div>
+    <div class="hero-inner">
+      <p class="eyebrow">Verificador parlamentario</p>
+      <h1 id="hero-title" class="logo">Facthem</h1>
+      <p class="hero-sub">Verificaciones y sueldos del Congreso.<br><strong>Neutralidad de verdad.</strong></p>
+      <div class="hero-ctas">
+        <a class="btn btn-live" href="/live/" data-live hidden><span class="pulse" aria-hidden="true"></span>En directo</a>
+        <a class="btn btn-primary" href="#main">Ver la última sesión <span aria-hidden="true">→</span></a>
+        <a class="btn btn-ghost" href="/metodologia.html">Cómo verificamos</a>
+      </div>
+      <!--#home-stats--><!--/home-stats-->
+    </div>
+  </section>
+
+  <main id="main">
+    <section class="rail-wrap" aria-label="Sesiones">
+      <div class="rail-head">
+        <h2 class="section-label">Sesiones recientes</h2>
+        <div class="rail-nav">
+          <button type="button" class="icon-btn" data-rail="-1" aria-label="Anteriores">←</button>
+          <button type="button" class="icon-btn" data-rail="1" aria-label="Siguientes">→</button>
+          <button type="button" class="btn btn-ghost btn-sm cal-btn" id="cal-btn" aria-expanded="false" aria-controls="cal"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Calendario</button>
+          <div class="cal" id="cal" hidden></div>
+        </div>
+      </div>
+      <!--#home-rail--><!--/home-rail-->
+    </section>
+
+    <!--#home-session--><!--/home-session-->
+  </main>
+
+  <!--#footer--><!--/footer-->
+  <!--#home-data--><!--/home-data-->
+  <script src="/js/ui.js?v=" defer></script>
+  <script src="/js/home.js?v=" defer></script>
+  <script src="/js/mist.js?v=" defer></script>
+</body>
+</html>

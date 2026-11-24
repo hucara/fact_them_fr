@@ -1230,3 +1230,8 @@ ul.dir { list-style: none; margin: 0; padding: 0; }
 .dir-bar .search-lg input::-webkit-search-cancel-button { filter: invert(.6); }
 @media (max-width: 639px) { .dir { grid-template-columns: minmax(0, 1fr); } .dir-bar .quiet-filters { width: 100%; } .dir-bar .panel-count { width: 100%; } }
 .dir { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+
+/* ── Home: rail mini bars (same segments as .stack) ─────────────────── */
+.mini-stack > span { height: 100%; background: var(--c); }
+.mini-stack > span.hatch { background: repeating-linear-gradient(-45deg, var(--c) 0 3px, color-mix(in oklab, var(--c) 60%, var(--bg)) 3px 5px); }
+#grid[aria-busy="true"] { opacity: .5; transition: opacity .2s; }

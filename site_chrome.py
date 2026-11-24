@@ -283,12 +283,18 @@ def head(*, title, description, canonical, og_type="website", og_title=None, og_
         f'<meta name="twitter:title" content="{esc(twitter_title or og_title or title)}" />'
         f'<meta name="twitter:description" content="{esc(twitter_description or og_description or description)}" />'
         f'<meta name="twitter:image" content="{esc(og_image)}" />'
-        '<link rel="icon" href="/assets/favicon.ico" sizes="any" />'
-        '<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png" />'
-        '<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />'
-        '<link rel="manifest" href="/assets/site.webmanifest" />'
-        '<meta name="theme-color" content="#120c0f" />'
-        f'{FONTS}<link rel="stylesheet" href="{asset("css/site.css")}" />{ld}{extra}{GTM_HEAD}')
+        f'{head_common()}{ld}{extra}')
+
+
+def head_common():
+    """Favicons, theme colour, font preload, stylesheet, Tag Manager: the part of
+    <head> every page shares (hand-written pages get it via <!--#head-common-->)."""
+    return ('<link rel="icon" href="/assets/favicon.ico" sizes="any" />'
+            '<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png" />'
+            '<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />'
+            '<link rel="manifest" href="/assets/site.webmanifest" />'
+            '<meta name="theme-color" content="#120c0f" />'
+            f'{FONTS}<link rel="stylesheet" href="{asset("css/site.css")}" />{GTM_HEAD}')
 
 
 def page(*, body, active="", body_class="", scripts=("js/ui.js",), **head_kw):
@@ -335,6 +341,8 @@ STATIC_PAGES = ["index.html", "metodologia.html", "acerca.html", "aviso.html", "
 _TOP = re.compile(r'<!--#topbar(?: active="([a-z]*)")?-->.*?<!--/topbar-->', re.S)
 _FOOT = re.compile(r'<!--#footer-->.*?<!--/footer-->', re.S)
 _REDIR = re.compile(r'<!--#redirects-->.*?<!--/redirects-->', re.S)
+_HEADC = re.compile(r'<!--#head-common-->.*?<!--/head-common-->', re.S)
+_GTMB = re.compile(r'<!--#gtm-body-->.*?<!--/gtm-body-->', re.S)
 _ASSET = re.compile(r'((?:href|src)=")(/(?:css|js|assets)/[^"?#]+)\?v=[^"]*(")')
 
 
@@ -344,6 +352,8 @@ def refresh_static(text):
         return f'<!--#topbar active="{act}"-->{topbar(act)}<!--/topbar-->'
     text = _TOP.sub(top, text)
     text = _FOOT.sub(lambda m: f"<!--#footer-->{footer()}<!--/footer-->", text)
+    text = _HEADC.sub(lambda m: f"<!--#head-common-->{head_common()}<!--/head-common-->", text)
+    text = _GTMB.sub(lambda m: f"<!--#gtm-body-->{GTM_BODY}<!--/gtm-body-->", text)
     text = _REDIR.sub(lambda m: f"<!--#redirects--><script>{REDIRECT_JS}</script><!--/redirects-->", text)
     return _ASSET.sub(lambda m: f"{m.group(1)}{asset(m.group(2))}{m.group(3)}", text)
 

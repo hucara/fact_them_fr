@@ -53,6 +53,9 @@ POL_OUT_DIR   = Path(__file__).parent / "politician"
 PEOPLE_JSON   = Path(__file__).parent / "assets" / "people.json"
 DIRECTORY_PATH = Path(__file__).parent / "representantes.html"
 CLAIM_IDS_DIR = Path(__file__).parent / "assets" / "claim-ids"
+SESSIONS_DIR  = Path(__file__).parent / "assets" / "sessions"
+INDEX_PATH    = Path(__file__).parent / "index.html"
+INDEX_TEMPLATE = Path(__file__).parent / "templates" / "index.html"
 SITEMAP_PATH  = Path(__file__).parent / "sitemap.xml"
 SALARY_DATA_PATH = Path(__file__).parent / "assets" / "salary-data.js"
 TODAY         = date.today().isoformat()
@@ -606,7 +609,7 @@ def make_photo_resolver(salaries):
 # ── Supabase fetch ────────────────────────────────────────────────────────────
 
 CLAIM_FIELDS = (
-    "id, session_id, politician_id, texto_normalizado, texto_original, "
+    "id, session_id, politician_id, intervention_id, texto_normalizado, texto_original, "
     "ambito_geografico, ambito_tematico"
 )
 POLITICIAN_FIELDS = "id, nombre_completo, partido, grupo_parlamentario"
@@ -628,7 +631,7 @@ def fetch_all_claims_sqlite():
     print(f"  SQLite reporta {total} afirmaciones en la tabla claim")
     rows = con.execute("""
         SELECT c.id, c.session_id, c.texto_normalizado, c.texto_original,
-               c.ambito_geografico, c.ambito_tematico,
+               c.ambito_geografico, c.ambito_tematico, i.orden AS orden,
                p.id AS pol_id,
                p.nombre_completo AS pol_nombre, p.partido AS pol_partido,
                p.grupo_parlamentario AS pol_grupo,
@@ -641,6 +644,7 @@ def fetch_all_claims_sqlite():
         LEFT JOIN politician p ON p.id = c.politician_id
         LEFT JOIN session s ON s.id = c.session_id
         LEFT JOIN verification v ON v.claim_id = c.id
+        LEFT JOIN intervention i ON i.id = c.intervention_id
         ORDER BY c.session_id DESC
     """).fetchall()
     con.close()
@@ -666,6 +670,7 @@ def fetch_all_claims_sqlite():
             "texto_original": r["texto_original"],
             "ambito_geografico": r["ambito_geografico"],
             "ambito_tematico": r["ambito_tematico"],
+            "orden": r["orden"],
             "politician": pol,
             "session": {
                 "id": r["session_id"],
@@ -758,6 +763,8 @@ def fetch_all_claims(supabase):
         })
 
     raw_claims = _paginate_table(supabase, "claim", CLAIM_FIELDS, "afirmaciones", page_size=500)
+    orden = {i["id"]: i.get("orden") for i in
+             _paginate_table(supabase, "intervention", "id, orden", "intervenciones", page_size=1000)}
 
     claims = []
     for c in raw_claims:
@@ -768,6 +775,7 @@ def fetch_all_claims(supabase):
             "texto_original": c.get("texto_original"),
             "ambito_geografico": c.get("ambito_geografico"),
             "ambito_tematico": c.get("ambito_tematico"),
+            "orden": orden.get(c.get("intervention_id")),
             "politician": politicians.get(c.get("politician_id")),
             "session": sessions.get(c.get("session_id")),
             "verification": verifications.get(c["id"], []),
@@ -1621,11 +1629,206 @@ def generate_directory(people):
            "isPartOf": {"@type": "WebSite", "name": "Facthem", "url": BASE_URL},
            "mainEntity": {"@type": "ItemList", "numberOfItems": len(people), "itemListElement": [
                {"@type": "ListItem", "position": i + 1, "url": f"{BASE_URL}/politician/{p['s']}.html", "name": p["n"]}
-               for i, p in enumerate(people)]}}]
+               for i, p in enumerate(people)]}},
+          # was on the old home page (url ?tab=parlamentarios, now this page)
+          {"@context": "https://schema.org", "@type": "Dataset",
+           "name": "Salarios de políticos del Congreso de los Diputados",
+           "description": "Sueldo mensual, salario anual, salario base, complementos e indemnizaciones de los "
+                          "diputados del Congreso y los miembros del Gobierno incluidos en Facthem.",
+           "url": url, "inLanguage": "es",
+           "keywords": ["salario políticos Congreso", "sueldo diputados", "salario anual políticos",
+                        "retribuciones Congreso", "complementos diputados", "indemnizaciones parlamentarias"],
+           "publisher": {"@type": "Organization", "name": "Facthem", "url": BASE_URL},
+           "variableMeasured": ["sueldo mensual total", "salario anual", "salario base mensual",
+                                "complementos", "indemnización"]}]
     DIRECTORY_PATH.write_text(site_chrome.page(
         body=body, active="representantes", scripts=("js/ui.js", "js/directory.js"),
         title=title, description=desc, canonical=url, jsonld=ld), encoding="utf-8")
     print(f"  representantes.html generado — {len(people)} personas")
+
+
+# ── Sittings: data files, rail, session block, home page ──────────────────────
+# The home page is static: the build writes one JSON per sitting
+# (assets/sessions/<id>.json) and prerenders the latest sitting into index.html.
+# js/home.js renders other sittings from those files with the same markup
+# (site_chrome.card ↔ FT.cardHTML), so nothing at runtime talks to Supabase.
+
+ROMAN = {"10": "X", "11": "XI", "12": "XII", "13": "XIII", "14": "XIV", "15": "XV", "16": "XVI", "17": "XVII"}
+MONTHS_SHORT = ["", "ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sept", "oct", "nov", "dic"]
+
+
+def claim_record(slug, claim, photo_for):
+    """Compact claim for the session JSON and the cards (keys kept short: ~7.6k claims)."""
+    pol = claim.get("politician") or {}
+    v = (claim.get("verification") or [{}])[0] or {}
+    return {
+        "i": claim.get("id"), "u": slug,
+        "t": capitalize(str(claim.get("texto_normalizado") or "").strip()),
+        "v": site_chrome.verdict_key(v.get("resultado")),
+        "n": format_nombre(pol.get("nombre_completo", "")), "p": pol.get("partido") or "",
+        "f": photo_for(pol) if pol else "",
+        "tm": claim.get("ambito_tematico") or "",
+        "g": snake_to_label(claim.get("ambito_geografico")) if claim.get("ambito_geografico") else "",
+    }
+
+
+def record_card(r, index=0):
+    return site_chrome.card({"url": f"/claim/{r['u']}.html", "text": r["t"], "verdict": r["v"], "name": r["n"],
+                             "party": r["p"], "photo": r["f"], "tema": r["tm"], "geo": r["g"], "id": r["i"]},
+                            index=index)
+
+
+def session_pdf_url(sess):
+    leg, tipo = sess.get("legislatura"), sess.get("tipo")
+    dscd = str(sess.get("id") or "").rsplit("-", 1)[-1]
+    if leg and tipo == "PL" and dscd.isdigit():
+        return f"https://www.congreso.es/public_oficiales/L{leg}/CONG/DS/{tipo}/DSCD-{leg}-{tipo}-{int(dscd)}.PDF"
+    return ""
+
+
+def session_title(sess):
+    when = _format_session_date_es(sess.get("fecha")).lstrip("0")
+    if (sess.get("tipo") or "PL") == "PL":
+        return f"Pleno del {when}"
+    return f"{sess.get('organo') or 'Debate'} · {when}"
+
+
+def write_session_data(claims_with_slugs, photo_for):
+    """assets/sessions/<id>.json for every sitting; returns (index newest first, {id: records})."""
+    by = {}
+    for slug, c in claims_with_slugs:
+        if c.get("verification") and c.get("session_id") and c.get("session"):
+            by.setdefault(c["session_id"], []).append((slug, c))
+    SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
+    for f in SESSIONS_DIR.glob("*.json"):
+        f.unlink()
+    index, recs_by = [], {}
+    for sid, items in by.items():
+        # speaking order: intervention order, then claim id (stable)
+        items.sort(key=lambda t: (t[1].get("orden") if t[1].get("orden") is not None else 10**9, str(t[1].get("id"))))
+        recs = [claim_record(slug, c, photo_for) for slug, c in items]
+        sess = items[0][1]["session"]
+        d = {k: 0 for k, *_ in site_chrome.VERDICTS}
+        for r in recs:
+            d[r["v"]] += 1
+        index.append({"id": sid, "fecha": str(sess.get("fecha") or "")[:10], "tipo": sess.get("tipo") or "PL",
+                      "organo": sess.get("organo") or "", "leg": ROMAN.get(str(sess.get("legislatura")), ""),
+                      "title": session_title(sess), "pdf": session_pdf_url(sess),
+                      "n": len(recs), "d": {k: n for k, n in d.items() if n}})
+        recs_by[sid] = recs
+        (SESSIONS_DIR / f"{_safe_id(sid)}.json").write_text(
+            json.dumps(recs, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    index.sort(key=lambda s: (s["fecha"], s["id"]), reverse=True)
+    (SESSIONS_DIR / "index.json").write_text(json.dumps(index, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    print(f"  assets/sessions/ — {len(index)} sesiones")
+    return index, recs_by
+
+
+def _safe_id(sid):
+    return re.sub(r"[^A-Za-z0-9_-]", "_", str(sid))
+
+
+def render_rail(index, current):
+    lis = []
+    for s in index:
+        y, m, d = (s["fecha"].split("-") + ["", "", ""])[:3]
+        deb = s["tipo"] != "PL"
+        cnt = {k: s["d"].get(k, 0) for k, *_ in site_chrome.VERDICTS}
+        cur = ' aria-current="page"' if s["id"] == current else ""
+        day = str(int(d)) if d.isdigit() else ""
+        mon = f'{MONTHS_SHORT[int(m)]} {y}' if m.isdigit() else ""
+        kind = "Debate" if deb else "Pleno · Congreso"
+        org = s["organo"] if deb else "Sesión plenaria"
+        lis.append(
+            f'<li><a href="/?session={esc(s["id"])}" data-s="{esc(s["id"])}"{cur}>'
+            f'<span class="r-type{" deb" if deb else ""}">{kind}</span>'
+            f'<span class="r-date"><span class="r-day">{day}</span><span class="r-mon">{mon}</span></span>'
+            f'<span class="r-org">{esc(org)}</span>{site_chrome.stack(cnt, "mini-stack")}'
+            f'<span class="r-n">{s["n"]} afirmaciones</span></a></li>')
+    return f'<ol class="rail" id="rail">{"".join(lis)}</ol>'
+
+
+def session_eyebrow(s):
+    return f'Congreso de los Diputados · {s["leg"]} Legislatura' if s["tipo"] == "PL" and s["leg"] else \
+        ("Congreso de los Diputados" if s["tipo"] == "PL" else "Debate electoral")
+
+
+def session_actions(s):
+    url = f"{BASE_URL}/?session={s['id']}"
+    pdf = (f'<a class="btn btn-ghost btn-sm" href="{esc(s["pdf"])}" target="_blank" rel="noopener">'
+           f'Diario de sesiones ↗</a>') if s.get("pdf") else ""
+    return pdf + site_chrome.share(url, f"{s['title']}: {s['n']} afirmaciones verificadas en Facthem",
+                                   "<span>Compartir</span>")
+
+
+CHEV = ('<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" '
+        'stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>')
+
+
+def render_session_block(s, recs):
+    """Session head + filter panel + card grid. js/home.js fills the same ids."""
+    cnt = {k: 0 for k, *_ in site_chrome.VERDICTS}
+    temas, parties = {}, {}
+    for r in recs:
+        cnt[r["v"]] += 1
+        temas[r["tm"] or "other"] = temas.get(r["tm"] or "other", 0) + 1
+        if r["p"]:
+            parties[r["p"]] = parties.get(r["p"], 0) + 1
+    topts = "".join(f'<option value="{esc(t)}">{esc(site_chrome.tema_label(t))} ({n})</option>'
+                    for t, n in sorted(temas.items(), key=lambda kv: -kv[1]))
+    popts = "".join(f'<option value="{esc(p)}">{esc(p)} ({n})</option>'
+                    for p, n in sorted(parties.items(), key=lambda kv: -kv[1]))
+    total = len(recs) or 1
+    stack = "".join(
+        f'<button type="button" class="{"hatch" if k in site_chrome.HATCH else ""}" style="--c:{c};--w:{cnt[k]}" '
+        f'data-v="{k}" aria-label="{esc(lg)}" title="{esc(lg)}: {cnt[k]}"></button>'
+        for k, _s, lg, _i, c in site_chrome.VERDICTS)
+    cards = "".join(record_card(r, i) for i, r in enumerate(recs))
+    return f"""<section class="session" id="session" aria-labelledby="session-title" data-ids="{esc(s['id'])}">
+<header class="session-head"><div><p class="eyebrow" id="s-eyebrow">{esc(session_eyebrow(s))}</p>
+<h2 id="session-title">{esc(s['title'])}</h2></div>
+<div class="session-actions" id="s-actions">{session_actions(s)}</div></header>
+<div class="panel" id="panel">
+<div class="panel-toggle-row"><button type="button" class="filters-toggle" id="filters-toggle" aria-expanded="false" aria-controls="panel-controls"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 6h16M8 12h12M12 18h8"/></svg>Filtros<span class="ft-badge" id="ft-badge" hidden></span><svg class="chev" viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button><span class="ft-count" id="ft-count"><strong>{len(recs)}</strong> afirmaciones</span></div>
+<div class="panel-controls" id="panel-controls">
+<div class="msel" id="f-res"><button type="button" class="msel-btn" aria-haspopup="true" aria-expanded="false"><span class="msel-label">Resultado</span><span class="msel-n" hidden></span>{CHEV}</button><div class="msel-pop" role="group" aria-label="Filtrar por resultado" hidden></div></div>
+<label class="select"><span class="sr">Temática</span><select id="f-tema"><option value="">Temática</option>{topts}</select></label>
+<label class="select"><span class="sr">Partido</span><select id="f-party"><option value="">Partido</option>{popts}</select></label>
+<label class="search">{site_chrome.ICON_SEARCH}<input id="f-q" type="search" placeholder="Buscar" aria-label="Buscar en esta sesión" /></label>
+<button type="button" class="link-btn" id="f-clear" hidden>Limpiar</button>
+<p class="panel-count" id="count-line" aria-live="polite"><strong>{len(recs)}</strong> afirmaciones</p>
+</div>
+<div class="stack" id="x-stack" role="img">{stack}</div>
+{site_chrome.legend(cnt).replace('<ul class="legend">', '<ul class="legend" id="x-legend">', 1)}
+</div>
+<div class="grid" id="grid">{cards}</div>
+</section>"""
+
+
+def render_home(index, recs_by, n_people):
+    """Fill index.html's markers: hero counters, rail, latest sitting, sitting index JSON."""
+    if not index or not INDEX_TEMPLATE.exists():
+        return
+    latest = index[0]
+    total = sum(s["n"] for s in index)
+    stats = (f'<dl class="hero-stats"><div><dt>Afirmaciones verificadas</dt><dd data-count="{total}">{total:,}</dd></div>'
+             f'<div><dt>Sesiones</dt><dd data-count="{len(index)}">{len(index)}</dd></div>'
+             f'<div><dt>Representantes</dt><dd data-count="{n_people}">{n_people}</dd></div></dl>').replace(",", ".")
+    data = json.dumps(index, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+    parts = {
+        "home-stats": stats,
+        "home-rail": render_rail(index, latest["id"]),
+        "home-session": render_session_block(latest, recs_by[latest["id"]]),
+        "home-data": f'<script type="application/json" id="sessions-index">{data}</script>',
+    }
+    html_ = INDEX_TEMPLATE.read_text(encoding="utf-8")
+    for name, inner in parts.items():
+        html_, n = re.subn(rf"<!--#{name}-->.*?<!--/{name}-->", lambda m, i=inner, k=name: f"<!--#{k}-->{i}<!--/{k}-->",
+                           html_, flags=re.S)
+        if not n:
+            print(f"  aviso: marcador {name} no encontrado en index.html")
+    INDEX_PATH.write_text(site_chrome.refresh_static(html_), encoding="utf-8")
+    print(f"  index.html — última sesión {latest['id']} ({latest['n']} afirmaciones) prerenderizada")
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -1695,6 +1898,10 @@ def main():
 
     print("Actualizando sitemap…")
     update_sitemap(generated, politician_dates)
+
+    print("Generando portada y datos de sesiones…")
+    index, recs_by = write_session_data(claims_with_slugs, photo_for)
+    render_home(index, recs_by, n_people=len(politician_dates))
 
     print("Generando página de archivo…")
     generate_archive(claims_with_slugs)
