@@ -306,9 +306,14 @@ body.admin .rail { display: flex; flex-wrap: wrap; gap: 6px; }
 .replay-banner .rb-live { margin-top: 6px; font-weight: 600; color: #ffd9e1; }
 .replay-banner .donate-btn { display: inline-block; margin-left: 4px; padding: 1px 9px; border-radius: 99px; border: 1px solid var(--line-2); font-size: 12px; font-weight: 500; }
 .rb-back { display: inline-block; margin-right: 12px; font-size: 13px; }
+.live-back { flex-basis: 100%; font-size: 13px; color: var(--text-2); text-decoration: none; }
+.live-back:hover { color: var(--text); }
+body.replay .replay-banner { padding-right: 16px; }
+body.replay .replay-banner .rb-live { margin: 0; }
 .rb-close { position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer; }
 .rb-close:hover { background: var(--surface-2); color: var(--text); }
 body.replay-picker .past { margin-top: 0; padding-top: 0; border-top: 0; }
+body.replay-picker .clocks { display: none; }
 
 /* idle: nothing on air and nothing to replay */
 body.idle .live-cols { display: block; max-width: 720px; margin: 0 auto; }

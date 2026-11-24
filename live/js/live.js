@@ -446,7 +446,7 @@ async function bootReplay() {
   document.title = `${session.title} (diferido) · Facthem`;
   showDiferidoBadge();
   $('feed-empty').textContent = 'Las afirmaciones aparecerán a medida que se pronuncien en el vídeo.';
-  showReplayBanner(ptr, data);
+  showReplayBanner();
   sessionEnded = true;
   delaySeconds = 0;
   ytOffset = ptr.vod_offset || 0;
@@ -531,19 +531,17 @@ function fmtDateEs(iso) {
   return isNaN(d) ? iso : d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-function showReplayBanner(ptr, data) {
+/* While a replay plays there is no "¡Llegas tarde!" note (that belongs to the
+   picker grid): only the way back to the grid, in the session header, and —
+   if a sitting goes live meanwhile — a one-line notice (checkLiveFromReplay). */
+function showReplayBanner() {
+  if (replayHasGrid && !document.querySelector('.live-back')) {
+    document.querySelector('.live-head')?.insertAdjacentHTML('afterbegin',
+      `<a class="live-back" href="${esc(diferidoHref(''))}">← Directos anteriores</a>`);
+  }
   const el = $('replay-banner');
-  const when = [fmtDateEs(data.session_date || ptr.session_date), ptr.label].filter(Boolean).join(' · ');
-  el.innerHTML =
-    (replayHasGrid ? `<a class="rb-back" href="${esc(diferidoHref(''))}">← Directos anteriores</a>` : '') +
-    '<p class="rb-late">¡Llegas tarde, Ana Pasteur!</p>' +
-    '<p class="rb-msg">Ahora mismo no estamos verificando nada en directo. Mientras tanto, revive en diferido ' +
-    `<b>${esc(session.title)}</b>${when ? ` (${esc(when)})` : ''}: ` +
-    'las afirmaciones se verifican a medida que avanza el vídeo.</p>' +
-    '<p class="rb-links">Para el próximo directo, ' + IDLE_FOLLOW + ' <span class="rb-donate">' + IDLE_DONATE + '</span></p>' +
-    '<p class="rb-live" id="rb-live" hidden></p>';
-  el.hidden = false;
-  closableBanner(el);
+  el.innerHTML = '<p class="rb-live" id="rb-live" hidden></p>';
+  el.hidden = true;   // shown only if the live notice fills it
 }
 
 /* The "¡Llegas tarde!" banner can be dismissed; it stays closed for the rest
@@ -569,6 +567,7 @@ async function checkLiveFromReplay() {
   if (!el.hidden) return;
   el.innerHTML = `● Ahora estamos en directo: <a href="${esc(location.pathname)}">${esc(cfg.title || 'ver el directo')}</a>`;
   el.hidden = false;
+  if (replayMode) $('replay-banner').hidden = false;
 }
 
 /* The video drives the clock. A position the passage of time cannot explain
@@ -1212,6 +1211,10 @@ addEventListener('scroll', () => {
 
 function addClaim(ev) {
   const { claim_id, claim } = ev.payload;
+  // A claim nobody could be attributed to is never shown to viewers: without a
+  // speaker it says nothing about anyone. (The operator page keeps it, to see
+  // the attribution failing.) Its verdict, if it comes, finds no card and waits.
+  if (!ev.payload.speaker?.name && !window.LIVE_ADMIN) return;
   const el = makeCard(ev.payload, 'pending');
   claims.set(claim_id, { el, claim, startedAt: Date.now(), t: ev.t ?? ev.payload.t_end ?? null });
   markPending(claim_id);
