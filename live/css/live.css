@@ -394,9 +394,33 @@ button.btn.admin.on { background: rgba(217, 112, 138, .12); }
 
 /* ── Responsive (mock.css) ───────────────────────────────────────────────── */
 @media (max-width: 1100px) { .past-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ── Desktop and tablet: the live / diferido page is one screen, no page
+   scroll. Header, video, speaker and transcript fit the window height; the
+   video is as wide as that height allows (16:9 above ≈ 21rem of header,
+   speaker and transcript); the claims column scrolls inside, the verdict
+   bar fixed at its top. The picker grid and the operator page scroll as usual. */
+@media (min-width: 861px) {
+  body.live-body:not(.admin):not(.replay-picker) { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+  body.live-body:not(.admin):not(.replay-picker) .footer { display: none; }
+  body:not(.admin):not(.replay-picker) .live { flex: 1; min-height: 0; width: 100%; max-width: 1680px; display: flex; flex-direction: column; padding-top: 8px; padding-bottom: 16px; }
+  body:not(.admin):not(.replay-picker) .live-head { flex: none; padding: 6px 0 16px; }
+  body:not(.admin):not(.replay-picker) .live-cols { flex: 1; min-height: 0; align-items: stretch;
+    grid-template-columns: minmax(0, min(62%, calc((100vh - 21rem) * 16 / 9))) minmax(300px, 1fr); gap: 28px; }
+  body:not(.admin):not(.replay-picker) .live-stage { position: static; align-content: start; min-height: 0; }
+  body:not(.admin):not(.replay-picker) .live-feed { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 6px;
+    scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
+  body:not(.admin):not(.replay-picker) .live-dist { top: 0; }
+  body:not(.admin):not(.replay-picker) .feed-new { top: 84px; }
+  body:not(.admin):not(.replay-picker) .replay-banner { flex: none; margin-bottom: 14px; }
+}
+@media (min-width: 861px) and (max-width: 1023px) {
+  body:not(.admin):not(.replay-picker) .live-cols { grid-template-columns: minmax(0, min(56%, calc((100vh - 21rem) * 16 / 9))) minmax(280px, 1fr); gap: 20px; }
+}
+/* the operator page keeps the stacked layout on narrow screens */
 @media (max-width: 1023px) {
-  .live-cols { grid-template-columns: minmax(0, 1fr); gap: 40px; }
-  .live-stage { position: static; }
+  body.admin .live-cols { grid-template-columns: minmax(0, 1fr); gap: 40px; }
+  body.admin .live-stage { position: static; }
 }
 
 /* ── Live on phones: video fixed on top, the bar, then a feed that scrolls

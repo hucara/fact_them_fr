@@ -420,8 +420,7 @@ async function bootReplay() {
     if (!list.length) return false;
     ptr = want ? list.find((s) => s.session_id === want) : null;
     if (!ptr) { showReplayGrid(list); return true; }
-    replayHasGrid = true;
-    showPast(list.filter((s) => s.session_id !== want));
+    replayHasGrid = true;   // "← Directos anteriores" leads back to the grid
   }
   if (!ptr || !ptr.youtube_id || !ptr.events) return false;
   if (q.has('offset')) ptr.vod_offset = parseFloat(q.get('offset')) || 0;
@@ -507,9 +506,8 @@ function showPast(list) {
 function showReplayGrid(list) {
   sessionEnded = true;
   document.body.classList.add('replay-picker');
-  $('session-title').textContent = 'Directos anteriores';
+  $('session-title').textContent = 'Directos anteriores';   // the page's only heading: no status tag here
   document.title = 'Facthem directo · diferido';
-  showDiferidoBadge();
   document.querySelector('.live-cols').hidden = true;
   const ban = $('replay-banner');
   ban.innerHTML =
