@@ -320,6 +320,7 @@ async function bootBuckets() {
     stages: bucketCfg.stages || {},
     youtube_id: bucketCfg.youtube_id,
     tv: bucketCfg.tv || null,
+    hashtags: bucketCfg.hashtags || [],
   };
   applySession();
   delaySeconds = bucketCfg.delay_recommended ?? delaySeconds;
@@ -410,6 +411,7 @@ async function bootReplay() {
     roster: ptr.roster || [],
     stages: {},
     youtube_id: ptr.youtube_id,
+    hashtags: ptr.hashtags || [],
   };
   applySession();
   document.body.classList.add('replay');
@@ -1088,6 +1090,8 @@ function makeCard(payload, state) {
   el.className = 'claim-card';
   el.dataset.state = state;
   el.innerHTML = cardHTML(payload.claim, payload.speaker, payload.t_start ?? 0);
+  el._claim = payload.claim;  // what the share text is built from
+  el._speaker = payload.speaker;
   el.querySelector('.claim-at').addEventListener('click', (e) => {
     if (replayMode) {
       const at = parseFloat(e.currentTarget.dataset.seek) - 3 + ytOffset;
@@ -1465,11 +1469,13 @@ function renderBreakdown() {
 
 
 /* ── Share ──────────────────────────────────────────────────────────────────
-   Same menu as the rest of Facthem (see fact_them_fr/js/app.js). The one
-   difference is what gets shared: a live claim has no permalink yet — the
-   archive page is written after the session — so the shared text stands on its
-   own (speaker, claim, verdict) and links to the site rather than to a claim
-   page that would 404. */
+   Same menu as the rest of Facthem (see fact_them_fr/js/app.js). A live claim
+   has no permalink yet — the archive page is written after the session — so
+   the link is the live page itself (the TV runner's ?c=, a replay's ?s=), and
+   the text stands on its own. On X it is built like a tweet of the session
+   thread (scripts/archive/generate_twitter_thread.py): the speaker's @handle,
+   the party as a hashtag, topic / region hashtags plus the debate's own one
+   (`--hashtag` on the runner), shortened step by step until it fits 280. */
 const SHARE_ICON =
   '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
   'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/>' +
@@ -1487,31 +1493,141 @@ const RESULTADO_EMOJIS = {
   SUBESTIMADO: '🟠',
 };
 
-const SHARE_URL = 'https://facthem.es';
+const LIVE_URL = 'https://facthem.es/live/';
+const SHARE_VIA = 'facthem_ES';
 
-function shareText(el, verdict) {
-  const name = el.querySelector('.politician-name')?.textContent?.trim() || 'Un político';
-  const claimText = el.querySelector('.claim-text')?.textContent?.trim() || '';
-  const truncated = claimText.length > 200 ? claimText.slice(0, 200) + '…' : claimText;
+/* The page as a reader should open it: the TV runner's channel, or the
+   replayed session — never the admin token or debug flags. */
+function liveShareUrl() {
+  const q = new URLSearchParams(location.search);
+  const p = new URLSearchParams();
+  const channel = (q.get('c') || window.LIVE_CHANNEL || '').toLowerCase().replace(/[^a-z0-9-]/g, '');
+  if (replayMode && session?.session_id) p.set('s', session.session_id);
+  else if (channel) p.set('c', channel);
+  const qs = p.toString();
+  return LIVE_URL + (qs ? `?${qs}` : '');
+}
+
+/* Keys of vocabularies.yaml → ambito_tematico; one tag each, a tweet has little room. */
+const TOPIC_HASHTAGS = {
+  'economía': ['#Economía'],
+  'industria_y_trabajo': ['#Empleo'],
+  'sanidad': ['#Sanidad'],
+  'educación': ['#Educación'],
+  'igualdad': ['#Igualdad'],
+  'interior': ['#Seguridad'],
+  'vivienda': ['#Vivienda'],
+  'inmigración': ['#Inmigración'],
+  'medio_ambiente': ['#MedioAmbiente'],
+  'defensa': ['#Defensa'],
+  'relaciones_internacionales': ['#PolíticaExterior'],
+  'justicia_y_corrupción': ['#Justicia'],
+  'política_social': ['#PolíticaSocial'],
+  'transporte': ['#Transporte'],
+  'agricultura': ['#Agricultura'],
+};
+const REGION_SKIP = new Set(['', 'no especificado', 'no especificada', 'sin especificar', 'ue', 'unión europea', 'union europea']);
+const REGION_STOPWORDS = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'el']);
+const HASHTAG_CHARS = /[^0-9A-Za-zÁÉÍÓÚÜÑáéíóúüñ_]/g;
+
+function hashtagOf(words) {
+  const token = String(words || '').replace(HASHTAG_CHARS, '');
+  return token ? `#${token}` : '';
+}
+function regionHashtag(scope) {
+  const raw = String(scope || '').replace(/\(.*?\)/g, '').trim();
+  if (REGION_SKIP.has(raw.toLowerCase())) return '';
+  const words = raw.split(/\s+/).filter((w) => w && !REGION_STOPWORDS.has(w.toLowerCase()));
+  return hashtagOf(words.map((w) => w[0].toUpperCase() + w.slice(1)).join(''));
+}
+/* The debate's hashtags first (the one a reader follows), then topic, region. */
+function shareHashtags(claim) {
+  const topic = String(claim?.ambito_tematico || '').toLowerCase().replace(/\s+/g, '_');
+  const tags = [
+    ...(session?.hashtags || []),
+    ...(TOPIC_HASHTAGS[topic] || []),
+    regionHashtag(claim?.ambito_geografico),
+  ].filter(Boolean);
+  const seen = new Set();
+  return tags.filter((t) => !seen.has(t.toLowerCase()) && seen.add(t.toLowerCase()));
+}
+
+/* X counts every link as 23 chars (t.co) and most emoji as 2; `via` adds
+   " via @facthem_ES". Keep a margin so a tweet that "fits" never overflows. */
+const TWEET_LIMIT = 280 - 8 - (` via @${SHARE_VIA}`).length;
+const tweetLen = (s) => s.replace(/https?:\/\/\S+/g, 'u'.repeat(23)).length;
+
+function shareParts(el, verdict) {
+  const sp = el._speaker;
+  const entry = sp ? rosterByKey.get(sp.politician_id) || rosterByKey.get(sp.name) : null;
+  const short = sp?.name ? shortName(sp) : 'Un político';
+  const party = entry?.party || '';
+  const twitter = String(entry?.twitter || '').replace(/^@/, '');
+  const claim = el._claim || {};
+  const texto = String(claim.texto_normalizado || claim.texto_original
+    || el.querySelector('.claim-text')?.textContent || '').trim();
   const key = String(verdict.resultado || '').toUpperCase();
   const emoji = RESULTADO_EMOJIS[key] ?? '🔍';
   const label = RESULTADO_LABELS[key] || verdict.resultado || 'Sin verificar';
-  return `🔍 ${name} ha afirmado: "${truncated}"\n${emoji} ${label} | facthem.es`;
+  return { short, party, twitter, texto, emoji, label, tags: shareHashtags(claim) };
+}
+
+/* The line in front of the link: what the reader finds behind it. */
+const liveCallout = () => (replayMode
+  ? '▶️ Revívelo verificado en diferido 👉'
+  : '🔴 Estamos verificando en directo 👉');
+
+/* WhatsApp / Telegram: name, party, claim, verdict, hashtags — no @handle,
+   it means nothing outside X. */
+function shareText(el, verdict) {
+  const p = shareParts(el, verdict);
+  const texto = p.texto.length > 220 ? p.texto.slice(0, 220).trimEnd() + '…' : p.texto;
+  const who = p.party ? `${p.short} (${p.party})` : p.short;
+  return `🔍 ${who} ha afirmado: "${texto}"\n${p.emoji} ${p.label}` + (p.tags.length ? `\n${p.tags.join(' ')}` : '');
+}
+
+/* X: when the tweet does not fit, drop in this order — the topic / region
+   hashtags (#Empleo #España, never the debate's), then the party with its
+   brackets, then "ha afirmado" — and only then cut the claim. The speaker's
+   @mention is never dropped: it is what puts the claim in front of their
+   audience. Always first name + first surname ("Pedro Sánchez"). */
+function tweetText(el, verdict, url) {
+  const p = shareParts(el, verdict);
+  const party = hashtagOf(p.party) || p.party;
+  const who = `🔍 ${p.short}${p.twitter ? ` (@${p.twitter})` : ''}`;
+  const pt = party ? ` (${party})` : '';
+  const debate = new Set((session?.hashtags || []).map((t) => t.toLowerCase()));
+  const own = p.tags.filter((t) => debate.has(t.toLowerCase()));
+  const foot = (tags) => `"\n${p.emoji} ${p.label}\n` + (tags.length ? `${tags.join(' ')}\n` : '') + `${liveCallout()} ${url}`;
+  const steps = [
+    [`${who}${pt} ha afirmado: "`, p.tags],
+    [`${who}${pt} ha afirmado: "`, own],
+    [`${who} ha afirmado: "`, own],
+    [`${who}: "`, own],
+  ];
+  for (const [head, tags] of steps) {
+    const t = head + p.texto + foot(tags);
+    if (tweetLen(t) <= TWEET_LIMIT) return t;
+  }
+  const [head, tags] = steps[steps.length - 1];
+  const f = foot(tags);
+  const room = TWEET_LIMIT - tweetLen(head) - tweetLen(f) - 1;
+  return head + p.texto.slice(0, Math.max(0, room)).trimEnd() + '…' + f;
 }
 
 function shareButton(el, verdict) {
+  const url = liveShareUrl();
   const text = shareText(el, verdict);
-  const full = text + '\n\n' + SHARE_URL;
-  const u = encodeURIComponent(full);
-  const url = encodeURIComponent(SHARE_URL);
+  const wa = encodeURIComponent(`${text}\n\n${liveCallout()} ${url}`);
+  const tw = encodeURIComponent(tweetText(el, verdict, url));
   return `
     <span class="share-wrapper">
       <button class="share-btn" aria-label="Compartir afirmación">${SHARE_ICON}</button>
       <span class="share-menu" hidden>
-        <a class="share-option" href="https://wa.me/?text=${u}" target="_blank" rel="noopener">WhatsApp</a>
-        <a class="share-option" href="https://twitter.com/intent/tweet?text=${u}&via=facthem_ES"
+        <a class="share-option" href="https://wa.me/?text=${wa}" target="_blank" rel="noopener">WhatsApp</a>
+        <a class="share-option" href="https://twitter.com/intent/tweet?text=${tw}&via=${SHARE_VIA}"
            target="_blank" rel="noopener">X / Twitter</a>
-        <a class="share-option" href="https://t.me/share/url?url=${url}&text=${encodeURIComponent(text)}"
+        <a class="share-option" href="https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(`${text}\n\n${liveCallout()}`)}"
            target="_blank" rel="noopener">Telegram</a>
       </span>
     </span>`;
