@@ -55,6 +55,7 @@ DIRECTORY_PATH = Path(__file__).parent / "representantes.html"
 CLAIM_IDS_DIR = Path(__file__).parent / "assets" / "claim-ids"
 SESSIONS_DIR  = Path(__file__).parent / "assets" / "sessions"
 SESION_DIR    = Path(__file__).parent / "sesion"
+STATS_PATH    = Path(__file__).parent / "estadisticas.html"
 INDEX_PATH    = Path(__file__).parent / "index.html"
 INDEX_TEMPLATE = Path(__file__).parent / "templates" / "index.html"
 SITEMAP_PATH  = Path(__file__).parent / "sitemap.xml"
@@ -843,6 +844,7 @@ def generate_salary_data(salaries):
 STATIC_URLS = [
     ("https://facthem.es/",                  "2026-03-11T00:00:00+00:00", "weekly",  "1.0"),
     ("https://facthem.es/representantes.html", TODAY,                       "weekly",  "0.8"),
+    ("https://facthem.es/estadisticas.html",   TODAY,                       "weekly",  "0.6"),
     ("https://facthem.es/aviso.html",        "2026-03-11T00:00:00+00:00", "yearly",  "0.3"),
     ("https://facthem.es/metodologia.html",  "2026-05-05T00:00:00+00:00", "yearly",  "0.4"),
     ("https://facthem.es/acerca.html",       "2026-05-05T00:00:00+00:00", "yearly",  "0.4"),
@@ -1857,6 +1859,57 @@ def generate_session_pages(index, recs_by):
     return dates
 
 
+def fetch_dashboard_stats(supabase=None):
+    """The dashboard_stats row the old dashboard read ({} if unavailable)."""
+    try:
+        if supabase is not None:
+            row = supabase.from_("dashboard_stats").select("stats").eq("id", 1).single().execute().data or {}
+        else:
+            con = _sqlite_conn()
+            r = con.execute("SELECT stats FROM dashboard_stats WHERE id = 1").fetchone()
+            con.close()
+            row = {"stats": r["stats"]} if r else {}
+        st = row.get("stats") or {}
+        return json.loads(st) if isinstance(st, str) else st
+    except Exception as exc:
+        print(f"  aviso: no se pudo leer dashboard_stats ({exc})")
+        return {}
+
+
+def generate_stats_page(stats):
+    """estadisticas.html: the dashboard prerendered by js/stats.js under Node
+    (same function the browser uses). Without Node the page still works: the
+    stats JSON is embedded and the browser renders it."""
+    import subprocess
+    inner = ""
+    if stats:
+        try:
+            res = subprocess.run(
+                ["node", "-e", "const {renderStats}=require(process.argv[1]);let d='';"
+                 "process.stdin.on('data',c=>d+=c).on('end',()=>process.stdout.write(renderStats(JSON.parse(d))))",
+                 str(Path(__file__).parent / "js" / "stats.js")],
+                input=json.dumps(stats), capture_output=True, text=True, timeout=60, check=True)
+            inner = res.stdout
+        except Exception as exc:
+            print(f"  aviso: estadísticas sin prerenderizar ({exc}); se pintan en el navegador")
+    total, sessions = stats.get("total_claims") or 0, stats.get("total_sessions") or 0
+    data = json.dumps(stats, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+    body = (f'<main class="page" id="main"><div id="stats">{inner}</div></main>'
+            f'<script type="application/json" id="stats-data">{data}</script>')
+    url = f"{BASE_URL}/estadisticas.html"
+    title = "Estadísticas de las verificaciones del Congreso | Facthem"
+    desc = (f"{total:,} afirmaciones verificadas en {sessions} sesiones del Congreso: qué partido y qué diputado "
+            "acumulan más falsedades, exageraciones y verdades a medias, por tema y por pleno.").replace(",", ".")
+    ld = [{"@context": "https://schema.org", "@type": "WebPage", "url": url, "name": title, "description": desc,
+           "inLanguage": "es", "isPartOf": {"@type": "WebSite", "name": "Facthem", "url": BASE_URL}},
+          {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+              {"@type": "ListItem", "position": 1, "name": "Inicio", "item": f"{BASE_URL}/"},
+              {"@type": "ListItem", "position": 2, "name": "Estadísticas"}]}]
+    STATS_PATH.write_text(site_chrome.page(body=body, active="estadisticas", scripts=("js/ui.js", "js/stats.js"),
+                                           title=title, description=desc, canonical=url, jsonld=ld), encoding="utf-8")
+    print(f"  estadisticas.html — {'prerenderizada' if inner else 'sin prerenderizar'}")
+
+
 def render_home(index, recs_by, n_people):
     """Fill index.html's markers: hero counters, rail, latest sitting, sitting index JSON."""
     if not index or not INDEX_TEMPLATE.exists():
@@ -1894,6 +1947,7 @@ def main():
         print("Obteniendo fechas de sesión…")
         session_dates = fetch_session_dates_sqlite()
         salaries = fetch_salaries_sqlite()
+        stats = fetch_dashboard_stats()
     else:
         print("Conectando a Supabase…")
         supabase = create_client(SUPABASE_URL, SUPABASE_ANON)
@@ -1905,6 +1959,7 @@ def main():
         print("Obteniendo retribuciones…")
         salaries = fetch_salaries(supabase)
         print(f"  {len(salaries)} retribuciones obtenidas")
+        stats = fetch_dashboard_stats(supabase)
 
     generate_salary_data(salaries)
 
@@ -1952,6 +2007,7 @@ def main():
     index, recs_by = write_session_data(claims_with_slugs, photo_for)
     render_home(index, recs_by, n_people=len(politician_dates))
     session_dates = generate_session_pages(index, recs_by)
+    generate_stats_page(stats)
 
     print("Actualizando sitemap…")
     update_sitemap(generated, politician_dates, session_dates)
