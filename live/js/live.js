@@ -318,7 +318,7 @@ function showIdle() {
   document.title = 'Facthem directo';
   $('onair').hidden = true;
   document.body.classList.add('idle');
-  for (const sel of ['.live-stage', '.feed-head', '#weak-drawer', '#debug-current']) {
+  for (const sel of ['.live-stage', '#live-dist', '#weak-drawer', '#debug-current']) {
     const el = document.querySelector(sel);
     if (el) el.hidden = true;
   }
@@ -1288,6 +1288,7 @@ function applyVerdict(ev) {
   const animate = motion();
   if (animate) el.classList.add('reveal');
   countVerdict(vk);
+  if (feedFilter.size) el.classList.toggle('filtered', !feedFilter.has(vk));
 
   if (vk === 'NO_VERIFICABLE') {
     const park = () => {
@@ -1355,8 +1356,6 @@ document.addEventListener('click', (e) => {
   box.animate([{ height: `${h}px`, opacity: 1 }, { height: '0px', opacity: 0 }], { duration: 300, easing: 'ease-in' })
     .finished.then(() => { box.hidden = true; box.style.overflow = ''; });
 });
-/* "Solo falsas o exageradas" */
-$('feed-f').addEventListener('change', (e) => { $('feed').classList.toggle('only-bad', e.target.value === 'bad'); });
 
 const isMobile = () => !!(window.matchMedia && matchMedia('(max-width: 860px)').matches);
 
@@ -1400,23 +1399,49 @@ function renderCost(cost) {
 /* One stacked bar, not five. At the counts a live debate produces (a dozen or
    two), five separate tracks are mostly empty rails; a single bar shows the
    mix at a glance and reads as a summary of the feed it sits above. */
-/* "Hasta ahora": one stacked bar whose segments resize as verdicts land,
-   and its legend. Built once, then updated in place. */
+/* The feed's header: the count, one stacked bar whose segments resize as
+   verdicts land, and its legend. Bar and legend are also the filter: a click
+   shows only that verdict (several can be on); pending cards always show.
+   Built once, then updated in place. */
+const feedFilter = new Set();
 function renderBreakdown() {
   const box = $('live-dist');
   if (!box.firstElementChild) {
-    box.innerHTML = `<h2>Hasta ahora</h2><div class="stack stack-live">${VERDICTS.map(([k, , long, , c]) =>
-      `<span class="${k === 'SUBESTIMADO' ? 'hatch' : ''}" data-k="${k}" style="--c:${c};flex:0" title="${esc(long)}"></span>`).join('')}</div>`
+    box.innerHTML = `<div class="dist-head"><span><b class="num" id="claim-count">0</b> afirmaciones</span>`
+      + '<button type="button" class="dist-clear" id="dist-clear" hidden>Quitar filtro</button></div>'
+      + `<div class="stack stack-live" role="group" aria-label="Filtrar por veredicto">${VERDICTS.map(([k, , long, , c]) =>
+        `<button type="button" class="${k === 'SUBESTIMADO' ? 'hatch' : ''}" data-k="${k}" style="--c:${c};flex:0" title="${esc(long)}" aria-label="${esc(long)}" aria-pressed="false"></button>`).join('')}</div>`
       + '<ul class="legend" id="live-legend"></ul>';
   }
   const total = VERDICTS.reduce((a, [k]) => a + (verdictCounts[k] || 0), 0);
-  box.querySelectorAll('.stack-live span').forEach((el) => { el.style.flex = String(verdictCounts[el.dataset.k] || 0); });
-  const legend = $('live-legend');
-  legend.innerHTML = total
-    ? VERDICTS.filter(([k]) => verdictCounts[k]).map(([k, label, , , c]) =>
-      `<li style="--c:${c}"><span class="dot"></span>${esc(label)} <span class="num">${verdictCounts[k]}</span></li>`).join('')
+  box.querySelectorAll('.stack-live [data-k]').forEach((el) => {
+    const k = el.dataset.k;
+    el.style.flex = String(verdictCounts[k] || 0);
+    el.title = `${VKEY[k][2]}: ${verdictCounts[k] || 0}`;
+    el.setAttribute('aria-pressed', String(feedFilter.has(k)));
+  });
+  box.classList.toggle('filtering', feedFilter.size > 0);
+  $('live-legend').innerHTML = total
+    ? VERDICTS.filter(([k]) => verdictCounts[k] || feedFilter.has(k)).map(([k, label, , , c]) =>
+      `<li><button type="button" data-k="${k}" style="--c:${c}" aria-pressed="${feedFilter.has(k)}"><span class="dot"></span>${esc(label)} <span class="num">${verdictCounts[k] || 0}</span></button></li>`).join('')
     : '<li class="legend-wait">Esperando la primera verificación</li>';
+  $('dist-clear').hidden = !feedFilter.size;
 }
+function applyFeedFilter() {
+  for (const el of document.querySelectorAll('#feed > .f-item, #weak-list > .f-item')) {
+    el.classList.toggle('filtered', feedFilter.size > 0 && el.dataset.state === 'done' && !feedFilter.has(el.dataset.v));
+  }
+}
+$('live-dist').addEventListener('click', (e) => {
+  if (e.target.closest('#dist-clear')) { feedFilter.clear(); }
+  else {
+    const b = e.target.closest('[data-k]'); if (!b) return;
+    const k = b.dataset.k;
+    if (feedFilter.has(k)) feedFilter.delete(k); else feedFilter.add(k);
+  }
+  renderBreakdown();
+  applyFeedFilter();
+});
 
 /* ── Share ──────────────────────────────────────────────────────────────────
    Same menu as the rest of Facthem (see fact_them_fr/js/app.js). A live claim

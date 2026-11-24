@@ -25,7 +25,7 @@
   <!-- Inter is self-hosted by facthem.es (/assets/fonts); elsewhere (the runner's
        own page) the system font stands in. -->
   <link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="css/live.css?v=37109a4216" />
+  <link rel="stylesheet" href="css/live.css?v=e02b872c43" />
 </head>
 <body class="live-body">
   <!-- Structure, class names and motion follow fact_them_fr/mockup/live.html. -->
@@ -69,15 +69,13 @@
         <!-- The participants' rail: operator page only (see live.css). -->
         <div class="rail" id="rail"></div>
         <p class="caption" id="caption"></p>
-        <div class="live-dist" id="live-dist"></div>
 
       </section>
 
       <section class="live-feed" aria-label="Afirmaciones verificadas">
-        <div class="feed-head">
-          <h2>Afirmaciones verificadas <span class="num" id="claim-count">0</span></h2>
-          <label class="select"><span class="sr">Filtrar</span><select id="feed-f"><option value="">Todas</option><option value="bad">Solo falsas o exageradas</option></select></label>
-        </div>
+        <!-- The tally is the feed's header: the count, and a filter (click a
+             verdict in the bar or the legend). Built by renderBreakdown(). -->
+        <div class="live-dist" id="live-dist"></div>
         <button class="feed-new" id="feed-new" type="button" hidden></button>
         <div class="feed" id="feed">
           <p class="feed-empty" id="feed-empty">Escuchando el debate. Las afirmaciones aparecen en cuanto se pronuncian.</p>
@@ -107,6 +105,6 @@
        Set to the R2 custom domain (e.g. https://live-data.facthem.es/) when the
        page is hosted elsewhere. `?data=` on the URL overrides it. -->
   <script>window.LIVE_DATA_BASE = window.LIVE_DATA_BASE || 'https://pub-4b0592b162234f079cbe05777d9aa1f2.r2.dev/';</script>
-  <script src="js/live.js?v=b93fe31183"></script>
+  <script src="js/live.js?v=7c1da0416d"></script>
 </body>
 </html>

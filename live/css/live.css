@@ -154,17 +154,28 @@ body.admin .brand-tag { display: inline; margin-left: -20px; }
   font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); line-height: 1; }
 .caption .cap-sep::before, .caption .cap-sep::after { content: ''; flex: 1; height: 1px; background: var(--line); }
 .caption.paused { justify-content: center; text-align: center; color: var(--muted); -webkit-mask-image: none; mask-image: none; }
-.live-dist { padding-top: 16px; border-top: 1px solid var(--line); }
-.live-dist h2, .past h2 { margin: 0 0 16px; font-size: 13px; font-weight: 600; color: var(--muted); }
-.live-dist .legend { margin-top: 10px; font-size: 12px; color: var(--muted); }
-.stack-live { height: 8px; border-radius: 4px; }
-.feed-head { display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
-.feed-head h2 { margin: 0; font-size: 15px; font-weight: 600; }
-.feed-head h2 .num { margin-left: 6px; color: var(--muted); font-weight: 500; }
-.feed-head select { border-color: transparent; background-color: transparent; color: var(--text-2); }
+.past h2 { margin: 0 0 16px; font-size: 13px; font-weight: 600; color: var(--muted); }
+/* The feed's header: count, the verdict bar and its legend — both also the
+   filter (renderBreakdown / applyFeedFilter in live.js). Stays in view. */
+.live-dist { position: sticky; top: 60px; z-index: 6; padding: 4px 0 14px; background: var(--bg); border-bottom: 1px solid var(--line); }
+.dist-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; font-size: 15px; font-weight: 600; }
+.dist-head .num { font-weight: 700; }
+.dist-clear { border: 0; padding: 0; background: none; font-size: 13px; font-weight: 500; color: var(--text-2); cursor: pointer; }
+.dist-clear:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+.stack-live { height: 10px; border-radius: 5px; }
+.stack-live > button { all: unset; height: 100%; background: var(--c); cursor: pointer; transition: flex .8s var(--ease-out), opacity .2s, filter .2s; }
+.stack-live > button.hatch { background: repeating-linear-gradient(-45deg, var(--c) 0 4px, color-mix(in oklab, var(--c) 60%, var(--bg)) 4px 7px); }
+.stack-live > button:hover { filter: brightness(1.2); }
+.live-dist.filtering .stack-live > button[aria-pressed="false"] { opacity: .25; }
+.live-dist .legend { margin-top: 10px; gap: 4px 6px; font-size: 12px; }
+.live-dist .legend button { all: unset; display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 99px; color: var(--text-2); cursor: pointer; transition: background .15s, color .15s; }
+.live-dist .legend button:hover { background: var(--surface); color: var(--text); }
+.live-dist .legend button[aria-pressed="true"] { background: color-mix(in oklab, var(--c) 18%, transparent); color: var(--text); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--c) 55%, transparent); }
+.live-dist .legend button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.live-dist .legend li { color: inherit; }
+.f-item.filtered { display: none; }
 .feed { margin: 0; padding: 14px 0 0; display: grid; gap: 10px; overflow-anchor: none; grid-template-columns: minmax(0, 1fr); }
 .feed-empty { padding: 40px 0; text-align: center; color: var(--muted); font-size: 14px; }
-.feed.only-bad .f-item[data-state="done"]:not([data-bad]) { display: none; }
 
 /* live card: same surface as the session cards */
 .f-item { position: relative; display: grid; gap: 10px; padding: 16px 18px; border-radius: var(--r); border: 1px solid var(--line); background: var(--bg-2); min-width: 0; grid-template-columns: minmax(0, 1fr); }
@@ -217,7 +228,7 @@ body.admin .brand-tag { display: inline; margin-left: -20px; }
 .weak .weak-list { padding-top: 12px; }
 .weak .f-item { opacity: .75; }
 
-.feed-new { position: sticky; top: 76px; z-index: 5; display: block; margin: 8px auto; padding: 6px 14px; border-radius: 99px; border: 0; background: var(--text); color: var(--accent-ink); font-size: 13px; font-weight: 600; cursor: pointer; }
+.feed-new { position: sticky; top: 172px; z-index: 7; display: block; margin: 8px auto; padding: 6px 14px; border-radius: 99px; border: 0; background: var(--text); color: var(--accent-ink); font-size: 13px; font-weight: 600; cursor: pointer; }
 .past { margin-top: 64px; padding-top: 32px; border-top: 1px solid var(--line); }
 .past-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .past-card { display: grid; gap: 8px; padding: 18px; border-radius: var(--r); border: 1px solid var(--line); background: var(--bg-2); text-decoration: none; color: inherit; font-size: 13px; transition: background .15s, border-color .15s; }
@@ -419,12 +430,12 @@ button.btn.admin.on { background: rgba(217, 112, 138, .12); }
   .live-stage { position: static; flex: none; gap: 0; }
   .player { border-radius: 0; border-left: 0; border-right: 0; }
   body:not(.admin) .now, body:not(.admin) .caption { display: none; }
-  .live-dist { padding: 10px 16px; border-top: 0; border-bottom: 1px solid var(--line); }
-  .live-dist h2 { display: none; }
-  .live-dist .legend { margin-top: 6px; gap: 2px 12px; font-size: 11px; }
+  .live-dist { top: 0; margin: 0 -16px; padding: 10px 16px 10px; }
+  .dist-head { display: none; }
+  .live-dist .legend { margin-top: 6px; gap: 2px 2px; font-size: 11px; }
+  .live-dist .legend button { padding: 2px 6px; }
   body:not(.admin) .live-feed { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 16px 24px; position: relative; }
-  .feed-head { display: none; }
-  .feed-new { top: 8px; }
+  .feed-new { top: 76px; }
   .weak { margin: 16px 0 0; }
   body:not(.admin) .past { display: none; }
   body.replay-picker .live { position: static; display: block; padding: 16px; }
