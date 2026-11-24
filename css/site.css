@@ -554,7 +554,7 @@ mark { background: color-mix(in oklab, var(--accent) 30%, transparent); color: i
 .footer { border-top: 1px solid var(--line); }
 .footer-inner { max-width: var(--max); margin: 0 auto; padding: 40px var(--gutter) 32px; display: grid; grid-template-columns: auto 1fr auto; gap: 24px 40px; align-items: center; font-size: 13px; }
 /* the disclaimer: its own row across the whole footer */
-.footer-note { grid-column: 1 / -1; margin: 0; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); }
+.footer-note { grid-column: 1 / -1; margin: 0; color: var(--muted); }
 .footer nav { display: flex; flex-wrap: wrap; gap: 8px 20px; }
 .footer nav a, .footer-social a { color: var(--text-2); text-decoration: none; }
 .footer nav a:hover, .footer-social a:hover { color: var(--text); }
