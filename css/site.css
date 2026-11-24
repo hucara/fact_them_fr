@@ -1215,3 +1215,9 @@ span.avatar { display: inline-block; }
 @media (max-width: 860px) { .c-photo-none { font-size: 22px; } }
 /* three related lists make the side column taller than the screen: no sticky */
 .c-side { position: static; }
+
+/* ── Profile: panel without data (no claims yet / no salary row) ─────── */
+.sum-empty { display: grid; align-content: center; min-height: 74px; padding: 14px 16px; }
+.sum-empty .sum-dim { white-space: normal; }
+.p-head .c-photo-none { width: 132px; height: 164px; border-radius: 12px; font-size: 40px; }
+@media (max-width: 860px) { .p-head .c-photo-none { width: 88px; height: 110px; font-size: 28px; } }

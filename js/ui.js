@@ -122,7 +122,7 @@ window.FT = (() => {
     const meta = esc(temaLabel(c.tema)) + (c.geo ? ` · ${esc(c.geo)}` : '');
     const absUrl = c.url.startsWith('http') ? c.url : BASE_URL + c.url;
     const head = `<article class="card in" style="--c:${color};--i:${Math.min(index, 18)}" data-id="${esc(c.id ?? '')}" `
-      + `data-v="${k}">${tag(k)}`
+      + `data-v="${k}" data-t="${esc(c.tema || '')}">${tag(k)}`
       + `<p class="claim-q"><a class="card-link" href="${esc(c.url)}">${inner ?? esc(c.text || '')}</a></p>`;
     if (withWho) {
       const photo = c.photo ? `<img class="avatar" src="${esc(c.photo)}" alt="" loading="lazy" width="28" height="28" />`

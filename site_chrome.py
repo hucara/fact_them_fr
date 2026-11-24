@@ -180,7 +180,7 @@ def card(c, *, with_who=True, index=0):
     url = c["url"]
     abs_url = url if url.startswith("http") else BASE_URL + url
     head = (f'<article class="card in" style="--c:{color};--i:{min(index, 18)}" data-id="{esc(c.get("id", ""))}" '
-            f'data-v="{k}">{vtag(k)}'
+            f'data-v="{k}" data-t="{esc(c.get("tema") or "")}">{vtag(k)}'
             f'<p class="claim-q"><a class="card-link" href="{esc(url)}">{esc(c.get("text", ""))}</a></p>')
     if with_who:
         photo = (f'<img class="avatar" src="{esc(c["photo"])}" alt="" loading="lazy" width="28" height="28" />'

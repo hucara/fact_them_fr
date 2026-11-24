@@ -11,3 +11,4 @@ __pycache__/
 assets/.DS_Store
 archive-*.html
 .baseline/
+assets/people.json

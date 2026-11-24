@@ -16,6 +16,7 @@ Markup-agnostic on purpose: content is compared as normalised text contained in
 the new page's visible text, so the redesign can change every class and tag.
 Standard library only (runs in CI without extra deps).
 """
+import html
 import json
 import random
 import re
@@ -23,6 +24,7 @@ import sys
 import unicodedata
 from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import urljoin
 
 BASE = "https://facthem.es"
 SKIP_TAGS = {"script", "style", "noscript", "template", "svg"}
@@ -251,9 +253,11 @@ def compare(snap_path, site, sample=None):
         for s in o["items"]:
             if squash(s) not in text:
                 fails.append(f"{u}: content missing: {s[:90]!r}")
-        hrefs = p.links | {h for h in re.findall(r'href="([^"]+)"', new_urls[u].read_text(encoding="utf-8"))}
+        # resolve relative links (old profiles used ../claim/…) against the page URL
+        raw = p.links | set(re.findall(r'href="([^"]+)"', new_urls[u].read_text(encoding="utf-8")))
+        hrefs = {urljoin(u, html.unescape(h)) for h in raw}
         for h in o["links"]:
-            if h not in hrefs and h.replace(BASE, "") not in hrefs:
+            if urljoin(u, h) not in hrefs:
                 fails.append(f"{u}: link missing: {h}")
         if norm(p.title) != o["title"]:
             warns.append(f"{u}: title changed")
