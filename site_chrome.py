@@ -93,6 +93,19 @@ def verdict_key(resultado):
     return k if k in VK else "NO_VERIFICABLE"
 
 
+# Share text as on the old site (emoji, ≤200 chars of claim, verdict, facthem.es).
+VERDICT_EMOJI = {"CONFIRMADO": "✅", "CONFIRMADO_CON_MATIZ": "⚠️", "FALSO": "❌", "DESCONTEXTUALIZADO": "🟠",
+                 "IMPRECISO": "🔸", "NO_VERIFICABLE": "❓", "SOBREESTIMADO": "🟠", "SUBESTIMADO": "🟠"}
+
+
+def share_text(name, party, text, verdict, verb="ha afirmado"):
+    k = verdict_key(verdict)
+    text = str(text or "").strip()
+    t = text[:200] + ("…" if len(text) > 200 else "")
+    who = (name or "Un político") + (f" ({party})" if party else "")
+    return f'🔍 {who} {verb}: "{t}"\n{VERDICT_EMOJI.get(k, "🔍")} {VK[k][2]} | facthem.es'
+
+
 def tema_label(t):
     if not t:
         return ""
@@ -142,8 +155,8 @@ def share(url, text, label=""):
             f'{ICON_SHARE}{label}</button>'
             f'<div class="share-pop" role="menu" hidden>'
             f'<button type="button" role="menuitem" data-copy="{esc(url)}">Copiar enlace</button>'
-            f'<a role="menuitem" href="https://x.com/intent/post?text={t}&amp;url={u}" target="_blank" rel="noopener">X</a>'
-            f'<a role="menuitem" href="https://wa.me/?text={t}%20{u}" target="_blank" rel="noopener">WhatsApp</a>'
+            f'<a role="menuitem" href="https://twitter.com/intent/tweet?text={t}&amp;url={u}&amp;via=facthem_ES" target="_blank" rel="noopener">X</a>'
+            f'<a role="menuitem" href="https://wa.me/?text={t}%0A{u}" target="_blank" rel="noopener">WhatsApp</a>'
             f'<a role="menuitem" href="https://t.me/share/url?url={u}&amp;text={t}" target="_blank" rel="noopener">Telegram</a>'
             f'</div></div>')
 
@@ -174,8 +187,7 @@ def card(c, *, with_who=True, index=0):
     k = verdict_key(c.get("verdict"))
     color = VK[k][4]
     name, party = c.get("name") or "", c.get("party") or ""
-    share_text = f"{name} ({party}): «{c.get('text', '')}» — verificado en Facthem" if name else \
-        f"«{c.get('text', '')}» — verificado en Facthem"
+    share_text = globals()["share_text"](name, party, c.get("text"), c.get("verdict"))
     meta = esc(tema_label(c.get("tema"))) + (f" · {esc(c['geo'])}" if c.get("geo") else "")
     url = c["url"]
     abs_url = url if url.startswith("http") else BASE_URL + url
@@ -226,7 +238,7 @@ def topbar(active=""):
         '<button type="button" class="menu-btn" aria-expanded="false" aria-controls="mnav" aria-label="Menú">'
         '<span></span><span></span><span></span></button>'
         '</div></header>'
-        f'<nav class="mnav" id="mnav" aria-label="Menú" hidden>{_psearch("psearch-menu")}{mlinks}'
+        f'<nav class="mnav" id="mnav" aria-label="Menú" hidden>{mlinks}'
         '<a href="/live/" class="mnav-live" data-live hidden><span class="pulse" aria-hidden="true"></span>En directo</a>'
         '</nav>')
 

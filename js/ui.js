@@ -89,14 +89,22 @@ window.FT = (() => {
   const ICON_SHARE = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>';
   const tag = (key, cls = '') => { const v = VK[verdictKey(key)]; const c = `vtag ${cls}`.trim();
     return `<span class="${c}" style="--c:${v.c}"><span class="vi" aria-hidden="true">${v.i}</span>${esc(v.long)}</span>`; };
+  // Share text as on the old site (= site_chrome.share_text).
+  const EMOJI = { CONFIRMADO: '✅', CONFIRMADO_CON_MATIZ: '⚠️', FALSO: '❌', DESCONTEXTUALIZADO: '🟠',
+    IMPRECISO: '🔸', NO_VERIFICABLE: '❓', SOBREESTIMADO: '🟠', SUBESTIMADO: '🟠' };
+  const shareTextOf = (name, party, text, verdict, verb = 'ha afirmado') => {
+    const k = verdictKey(verdict), x = String(text || '').trim();
+    const t = x.slice(0, 200) + (x.length > 200 ? '…' : '');
+    return `🔍 ${name || 'Un político'}${party ? ` (${party})` : ''} ${verb}: "${t}"\n${EMOJI[k] || '🔍'} ${VK[k].long} | facthem.es`;
+  };
   const shareMenu = (url, text, label = '') => {
     const u = encodeURIComponent(url), t = encodeURIComponent(text);
     return `<div class="share"><button type="button" class="share-btn${label ? ' has-label' : ''}" aria-haspopup="true" `
       + `aria-expanded="false" aria-label="Compartir" data-url="${esc(url)}" data-text="${esc(text)}">${ICON_SHARE}${label}</button>`
       + `<div class="share-pop" role="menu" hidden>`
       + `<button type="button" role="menuitem" data-copy="${esc(url)}">Copiar enlace</button>`
-      + `<a role="menuitem" href="https://x.com/intent/post?text=${t}&amp;url=${u}" target="_blank" rel="noopener">X</a>`
-      + `<a role="menuitem" href="https://wa.me/?text=${t}%20${u}" target="_blank" rel="noopener">WhatsApp</a>`
+      + `<a role="menuitem" href="https://twitter.com/intent/tweet?text=${t}&amp;url=${u}&amp;via=facthem_ES" target="_blank" rel="noopener">X</a>`
+      + `<a role="menuitem" href="https://wa.me/?text=${t}%0A${u}" target="_blank" rel="noopener">WhatsApp</a>`
       + `<a role="menuitem" href="https://t.me/share/url?url=${u}&amp;text=${t}" target="_blank" rel="noopener">Telegram</a>`
       + `</div></div>`;
   };
@@ -118,7 +126,7 @@ window.FT = (() => {
   function cardHTML(c, { withWho = true, index = 0, inner = null } = {}) {
     const k = verdictKey(c.verdict), color = VK[k].c;
     const name = c.name || '', party = c.party || '';
-    const shareText = name ? `${name} (${party}): «${c.text || ''}» — verificado en Facthem` : `«${c.text || ''}» — verificado en Facthem`;
+    const shareText = shareTextOf(name, party, c.text, c.verdict);
     const meta = esc(temaLabel(c.tema)) + (c.geo ? ` · ${esc(c.geo)}` : '');
     const absUrl = c.url.startsWith('http') ? c.url : BASE_URL + c.url;
     const head = `<article class="card in" style="--c:${color};--i:${Math.min(index, 18)}" data-id="${esc(c.id ?? '')}" `

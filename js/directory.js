@@ -16,8 +16,11 @@
     const set = new Set(shown);
     items.forEach(i => { i.li.hidden = !set.has(i); });
     shown.sort(sorters[st.o] || sorters.az).forEach(i => list.appendChild(i.li));
+    // Until the reader searches, filters or reorders, only the featured cards show.
+    const browsing = !!(st.q || st.p || st.o !== 'az');
+    list.hidden = !browsing; $('dir-top').hidden = browsing;
     $('d-n').innerHTML = `<strong>${fmt(shown.length)}</strong> representante${shown.length === 1 ? '' : 's'}`;
-    $('d-empty').hidden = shown.length > 0;
+    $('d-empty').hidden = !browsing || shown.length > 0;
     if (save) sessionStorage.setItem('ft-dir', JSON.stringify(st));
   }
   $('d-q').addEventListener('input', e => { st.q = e.target.value.trim(); apply(); });
@@ -26,5 +29,6 @@
   // ?q= deep link (also the WebSite SearchAction target)
   const q = new URLSearchParams(location.search).get('q');
   if (q) { st.q = q; $('d-q').value = q; }
-  if (st.q || st.p || st.o !== 'az') apply(false);
+  $('d-more').addEventListener('click', () => $('d-q').focus());
+  apply(false);
 })();

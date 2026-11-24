@@ -408,8 +408,8 @@ def render_page(claim, slug, session_date, ctx=None):
         + '<span class="pager" id="pager"></span></nav>')
 
     # ── Header: photo + share, who, claim, verdict ──
-    share_text = (f"{pol_nombre} ({pol_partido}): «{desc_text}» — verificado en Facthem" if pol_nombre
-                  else f"«{desc_text}» — verificado en Facthem")
+    # as on the old claim pages ("afirmó"; cards say "ha afirmado")
+    share_text = site_chrome.share_text(pol_nombre, pol_partido, desc_text, v.get("resultado"), verb="afirmó")
     photo = ctx.get("photo")
     initials = "".join(p[0] for p in pol_nombre.split()[:2]).upper() if pol_nombre else "?"
     photo_html = (f'<img class="c-photo" src="{esc(photo)}" alt="{esc(pol_nombre)}" width="120" height="148" />'
@@ -1308,7 +1308,7 @@ def _salary_panel(sal):
     chev = ('<svg class="chev" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="m6 9 6 6 6-6" '
             'fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>')
     html_ = (
-        '<details class="sum"><summary><span class="sum-line"><span class="sum-k">Salario</span>'
+        '<details class="sum sum-sal"><summary><span class="sum-line"><span class="sum-k">Salario</span>'
         f'<b>{_format_eur(monthly, compact=True)}</b><span class="sum-unit">/mes</span><span class="sum-sep">·</span>'
         f'<b>{_format_eur(annual, compact=True)}</b><span class="sum-unit">/año</span></span>{chev}</summary>'
         '<div class="sum-body"><table class="sal-table"><thead><tr><th scope="col">Concepto</th>'
@@ -1528,6 +1528,26 @@ def generate_directory(people):
             f'<span class="person-txt"><span class="person-name">{esc(p["n"])}</span>'
             f'<span class="person-meta"><span class="pdot" style="--pc:{party_color(p["p"])}"></span>{meta}</span></span>'
             f'<span class="person-stats">{"".join(stats)}</span></a></li>')
+    # Featured (shown until the reader searches): the head of Government, then the
+    # most-verified person of each party — one per party, so the pick is neutral.
+    top, seen = [], set()
+    for p in sorted(people, key=lambda p: (p["c"] != "Presidente del Gobierno", -p["k"], _sort_key(p["o"]))):
+        if p["k"] and p["p"] and p["p"] not in seen:
+            seen.add(p["p"]); top.append(p)
+    vips = []
+    for p in top:
+        photo = (f'<img src="{esc(p["f"])}" alt="" width="88" height="88" />' if p["f"]
+                 else f'<span class="person-ph" aria-hidden="true">{esc("".join(w[0] for w in p["n"].split()[:2]).upper())}</span>')
+        role = re.sub(r"^Diputado/a por .*$", "Diputado/a", p["c"]) or ""
+        stats = [f'{p["k"]} afirmaci{"ón" if p["k"] == 1 else "ones"}']
+        if p["m"]:
+            stats.append(f'{_format_eur(p["m"], compact=True)}/mes')
+        vips.append(
+            f'<li><a class="vip" href="/politician/{esc(p["s"])}.html">{photo}'
+            f'<span class="vip-name">{esc(p["n"])}</span>'
+            f'<span class="vip-meta"><span class="pdot" style="--pc:{party_color(p["p"])}"></span>{esc(p["p"])}'
+            f'{" · " + esc(role) if role else ""}</span>'
+            f'<span class="vip-stats">{"".join(f"<span>{x}</span>" for x in stats)}</span></a></li>')
     popts = "".join(f'<option value="{esc(k)}">{esc(k)} ({n})</option>'
                     for k, n in sorted(parties.items(), key=lambda kv: -kv[1]))
     n_dip = sum(1 for p in people if p["c"].startswith("Diputado"))
@@ -1544,7 +1564,11 @@ def generate_directory(people):
 </div>
 <p class="panel-count" id="d-n" aria-live="polite"><strong>{len(people)}</strong> representantes</p>
 </div>
-<ul class="dir" id="dir">{''.join(items)}</ul>
+<section class="dir-top" id="dir-top" aria-labelledby="dir-top-h"><h2 id="dir-top-h" class="dir-top-h">Los más verificados de cada partido</h2>
+<ul class="vips">{''.join(vips)}</ul>
+<p class="dir-more"><button type="button" class="btn btn-ghost" id="d-more">Busca para mostrar más <span class="muted">· {len(people)} representantes</span></button></p></section>
+<ul class="dir" id="dir" hidden>{''.join(items)}</ul>
+<noscript><style>#dir[hidden] {{ display: grid !important; }} .dir-more {{ display: none; }}</style></noscript>
 <p class="empty" id="d-empty" hidden>Nadie coincide con la búsqueda.</p>
 </main>"""
     url = f"{BASE_URL}/representantes.html"
