@@ -200,6 +200,7 @@ window.FT = (() => {
   const LIVE_STALE_S = 15 * 60;
   async function isLive() {
     if (new URLSearchParams(location.search).get('live') === 'demo') return true;
+    if (location.hostname !== 'facthem.es') return false;   // R2 CORS allows facthem.es only
     const one = async key => {
       try {
         const r = await fetch(`${LIVE_BASE}sessions/${key}.json`, { cache: 'no-store' });

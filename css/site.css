@@ -1206,3 +1206,12 @@ span.avatar { display: inline-block; }
   .mnav .psearch-list { position: static; box-shadow: none; margin-top: 6px; max-height: 50vh; min-width: 0; }
   .mnav .psearch-list li a { padding: 10px 4px; border-bottom: 0; font-size: 15px; }
 }
+
+/* ── Claim page: no photo, sources without a link ───────────────────── */
+.c-photo-none { display: grid; place-items: center; font-size: 32px; font-weight: 800; letter-spacing: -.03em; color: var(--muted); background: var(--surface-2); }
+.c-sources .src-name { color: var(--text); font-weight: 500; }
+.c-sources li > * { grid-column: 2; }
+.c-who time { white-space: nowrap; }
+@media (max-width: 860px) { .c-photo-none { font-size: 22px; } }
+/* three related lists make the side column taller than the screen: no sticky */
+.c-side { position: static; }

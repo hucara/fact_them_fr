@@ -211,8 +211,17 @@ def snapshot(site, out):
     print(f"snapshot: {len(data)} pages {kinds} → {out}")
 
 
+EXPECTED = Path(__file__).with_name("expected_changes.json")
+
+
 def compare(snap_path, site, sample=None):
     old = json.loads(Path(snap_path).read_text())
+    exp = json.loads(EXPECTED.read_text()) if EXPECTED.exists() else {}
+    allowed_lost = {}   # url -> set of @types whose loss is intended
+    for t, spec in (exp.get("ld_types_lost") or {}).items():
+        for u in spec["urls"]:
+            allowed_lost.setdefault(u, set()).add(t)
+    seen_allowed = set()
     new_urls = dict(pages(site))
     fails, warns = [], []
     missing = sorted(set(old) - set(new_urls))
@@ -232,6 +241,9 @@ def compare(snap_path, site, sample=None):
         if p.canonical != o["canonical"]:
             fails.append(f"{u}: canonical {o['canonical']!r} → {p.canonical!r}")
         lost = set(o["ld_types"]) - set(ld_types(ld))
+        if lost & allowed_lost.get(u, set()):
+            seen_allowed.add(u)
+        lost -= allowed_lost.get(u, set())
         if lost:
             fails.append(f"{u}: JSON-LD types lost {sorted(lost)}")
         if o["claim_review"] and claim_review(ld) != o["claim_review"]:
@@ -249,11 +261,19 @@ def compare(snap_path, site, sample=None):
             warns.append(f"{u}: description changed")
         if (p.meta.get("robots") or None) != (o["robots"] or None):
             fails.append(f"{u}: robots {o['robots']!r} → {p.meta.get('robots')!r}")
-    print(f"compare: {len(urls)} pages checked, {len(missing)} removed, {len(added)} added")
+    if not sample:
+        unused = set(allowed_lost) - seen_allowed
+        for u in sorted(unused):
+            fails.append(f"{u}: listed in expected_changes.json but the change did not happen")
+    print(f"compare: {len(urls)} pages checked, {len(missing)} removed, {len(added)} added, "
+          f"{len(seen_allowed)} expected change(s) seen")
     for w in warns[:20]:
         print("  warn", w)
     if len(warns) > 20:
         print(f"  … {len(warns) - 20} more warnings")
+    if "--all" in sys.argv:
+        for f in fails[60:]:
+            print("  FAIL", f)
     for f in fails[:60]:
         print("  FAIL", f)
     if len(fails) > 60:

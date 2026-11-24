@@ -109,18 +109,6 @@ CLAIM_REVIEW_RATINGS = {
     "SUBESTIMADO":           (2, "Underestimated"),
 }
 
-RESULTADO_EMOJIS = {
-    "CONFIRMADO":            "✅",
-    "CONFIRMADO CON MATIZ":  "⚠️",
-    "FALSO":                 "❌",
-    "DESCONTEXTUALIZADO":    "🟠",
-    "IMPRECISO":             "🔸",
-    "NO VERIFICABLE":        "❓",
-    "SOBREESTIMADO":         "🟠",
-    "SUBESTIMADO":           "🟠",
-}
-
-
 def normalize_resultado_key(resultado):
     return str(resultado or "").strip().upper().replace("_", " ")
 
@@ -205,90 +193,6 @@ def to_list_items(text):
             if s.strip()]
 
 
-def render_errores(raw):
-    if not is_valid(raw):
-        return ""
-    try:
-        parsed = json.loads(raw)
-        items = [str(i) for i in (parsed if isinstance(parsed, list) else [parsed]) if i]
-    except (json.JSONDecodeError, TypeError):
-        items = [raw.strip()] if raw and raw.strip() else []
-    if not items:
-        return ""
-    inner = "<br><br>".join(f"<em>{esc(capitalize(i))}</em>" for i in items)
-    return (
-        f'<div class="detail-row detail-errores">\n'
-        f'    <dt>Error detectado</dt>\n'
-        f'    <dd>{inner}</dd>\n'
-        f'  </div>'
-    )
-
-
-def render_omisiones(raw):
-    if not is_valid(raw):
-        return ""
-    try:
-        items = json.loads(raw)
-    except (json.JSONDecodeError, TypeError):
-        items = to_list_items(raw)
-    if not isinstance(items, list) or not items:
-        return ""
-    lis = "".join(f"<li>{esc(capitalize(str(i)))}</li>" for i in items)
-    return (
-        f'<div class="detail-row">\n'
-        f'    <dt>Omisiones</dt>\n'
-        f'    <dd><ul class="detail-list omisiones">{lis}</ul></dd>\n'
-        f'  </div>'
-    )
-
-
-def render_fuentes(raw):
-    if not is_valid(raw):
-        return ""
-    try:
-        items = json.loads(raw)
-    except (json.JSONDecodeError, TypeError):
-        plain = to_list_items(raw)
-        if not plain:
-            return ""
-        lis = "".join(f"<li>{esc(i)}</li>" for i in plain)
-        return (
-            f'<div class="detail-row">\n'
-            f'    <dt>Fuentes</dt>\n'
-            f'    <dd><ul class="detail-list fuentes">{lis}</ul></dd>\n'
-            f'  </div>'
-        )
-    if not isinstance(items, list) or not items:
-        return ""
-
-    sorted_items = sorted(items, key=lambda s: FUENTE_TIPO_ORDER.get(s.get("tipo", ""), 9))
-
-    bullets = []
-    for s in sorted_items:
-        tipo       = s.get("tipo", "")
-        is_primary = tipo in ("Primaria", "Primary")
-        tipo_label = FUENTE_TIPO_LABELS.get(tipo, tipo or "")
-        tipo_key   = re.sub(r"[^a-z]", "", tipo_label.lower()) or "other"
-        name       = esc(s.get("nombre") or "Fuente")
-        url        = s.get("url", "")
-        link       = (f'<a class="source-link" href="{esc(url)}" target="_blank" rel="noopener">{name}</a>'
-                      if url else f"<span>{name}</span>")
-        tipo_badge = (f'<span class="source-tipo source-tipo--{tipo_key}">{esc(tipo_label)}</span>'
-                      if tipo_label else "")
-        dato       = s.get("dato_especifico", "")
-        dato_html  = f'<span class="source-dato">{esc(dato)}</span>' if dato else ""
-        css_class  = "fuente-item fuente-item--primary" if is_primary else "fuente-item"
-        bullets.append(f'<li class="{css_class}">{tipo_badge}{link}{dato_html}</li>')
-
-    lis = "".join(bullets)
-    return (
-        f'<div class="detail-row">\n'
-        f'    <dt>Fuentes</dt>\n'
-        f'    <dd><ul class="detail-list fuentes">{lis}</ul></dd>\n'
-        f'  </div>'
-    )
-
-
 MONTHS_ES_ABBR = [
     "", "ene", "feb", "mar", "abr", "may", "jun",
     "jul", "ago", "sep", "oct", "nov", "dic",
@@ -316,7 +220,7 @@ def _truncate_words(text, limit):
 
 
 def _omisiones_items(raw):
-    """Lista de omisiones (mismo parseo que render_omisiones)."""
+    """Lista de omisiones (JSON list, or plain text split into items)."""
     if not is_valid(raw):
         return []
     try:
@@ -350,7 +254,7 @@ def build_claim_review_schema(claim, slug, pol_name, session_date):
             "@type": "Organization",
             "name": "Facthem",
             "url": BASE_URL,
-            "logo": {"@type": "ImageObject", "url": f"{BASE_URL}/assets/logo.svg"},
+            "logo": {"@type": "ImageObject", "url": f"{BASE_URL}/assets/android-chrome-512x512.png"},
             "sameAs": [
                 "https://twitter.com/facthem_ES",
                 "https://www.youtube.com/@facthem_es",
@@ -384,7 +288,9 @@ def build_claim_review_schema(claim, slug, pol_name, session_date):
         leg, tipo, sitting = sess.get("legislatura"), sess.get("tipo"), sess.get("numero")
         dscd = str(sess.get("id") or "").rsplit("-", 1)[-1]
         num = int(dscd) if dscd.isdigit() else None
-        if leg and tipo and num:
+        # Only plenary sittings have a Diario de Sesiones PDF. TV debates
+        # (DEB-2026-11-23-debate-a-8) would otherwise get a made-up DSCD URL.
+        if leg and tipo == "PL" and num:
             appearance = {
                 "@type": "CreativeWork",
                 "name": (
@@ -402,517 +308,215 @@ def build_claim_review_schema(claim, slug, pol_name, session_date):
 
 
 # ── Page renderer ─────────────────────────────────────────────────────────────
+# Claim page (redesign 2026): static, readable without JS. Layout from
+# mockup/claim.html; chrome from site_chrome. URL, canonical, title,
+# description, OG and JSON-LD are the same as before (tools/site_check.py).
 
-def render_page(claim, slug, session_date, related_session=None, related_pol=None):
+def _errores_items(raw):
+    if not is_valid(raw):
+        return []
+    try:
+        parsed = json.loads(raw)
+        items = parsed if isinstance(parsed, list) else [parsed]
+    except (json.JSONDecodeError, TypeError):
+        items = [raw]
+    return [capitalize(str(i).strip()) for i in items if i and str(i).strip()]
+
+
+def _fuentes_items(raw):
+    """[(name, url, tipo_label, is_primary, dato)] sorted primary first."""
+    if not is_valid(raw):
+        return []
+    try:
+        items = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return [(i, "", "", False, "") for i in to_list_items(raw)]
+    if not isinstance(items, list):
+        return []
+    out = []
+    for s in sorted((s for s in items if isinstance(s, dict)),
+                    key=lambda s: FUENTE_TIPO_ORDER.get(s.get("tipo", ""), 9)):
+        tipo = s.get("tipo", "")
+        out.append((s.get("nombre") or "Fuente", s.get("url") or "",
+                    FUENTE_TIPO_LABELS.get(tipo, tipo or ""), tipo in ("Primaria", "Primary"),
+                    s.get("dato_especifico") or ""))
+    return out
+
+
+def _host(url):
+    try:
+        return urllib.parse.urlparse(url).hostname.removeprefix("www.")
+    except Exception:
+        return ""
+
+
+def session_label(sess, short=False):
+    """'Pleno del Congreso · 12 nov 2026' / 'Debate a 8 · 23 nov 2026'."""
+    sess = sess or {}
+    d = _date_short_es(sess.get("fecha"))
+    name = "Pleno del Congreso" if (sess.get("tipo") or "PL") == "PL" else (sess.get("organo") or "Debate")
+    if short:
+        return name
+    return f"{name} · {d}" if d else name
+
+
+def session_url(session_id):
+    return f"/?session={urllib.parse.quote(str(session_id))}" if session_id else "/"
+
+
+def _more_list(items):
+    lis = []
+    for it in items:
+        color = site_chrome.VK[site_chrome.verdict_key(it["verdict"])][4]
+        small = f'<small>{esc(it["meta"])}</small>' if it.get("meta") else ""
+        lis.append(f'<li><a href="{esc(it["url"])}" style="--c:{color}"><span class="dot"></span>'
+                   f'<span>{esc(it["text"])}{small}</span></a></li>')
+    return f'<ul class="c-more">{"".join(lis)}</ul>'
+
+
+def render_page(claim, slug, session_date, ctx=None):
+    """ctx: photo, pol_slug, pol_total, same_session_pol, other_sessions_pol, same_session_others."""
+    ctx = ctx or {}
     v = claim.get("verification") or []
     v = v[0] if isinstance(v, list) and v else (v if isinstance(v, dict) else {})
     pol = claim.get("politician") or {}
+    sess = claim.get("session") or {}
 
-    resultado_class = resultado_to_class(v.get("resultado"))
-    resultado_label = format_resultado(v.get("resultado"))
-    score_raw       = v.get("confidence_score")
-    score           = round(float(score_raw) * 100) if score_raw is not None else None
+    vkey = site_chrome.verdict_key(v.get("resultado"))
+    vcolor = site_chrome.VK[vkey][4]
+    score_raw = v.get("confidence_score")
+    score = round(float(score_raw) * 100) if score_raw is not None else None
 
-    pol_nombre       = format_nombre(pol.get("nombre_completo", ""))
-    pol_partido      = pol.get("partido", "")
-    pol_grupo        = pol.get("grupo_parlamentario", "")
-    is_gobierno      = pol_grupo == "Cargo de Gobierno"
+    pol_nombre = format_nombre(pol.get("nombre_completo", ""))
+    pol_partido = pol.get("partido", "")
+    is_gobierno = pol.get("grupo_parlamentario", "") == "Cargo de Gobierno"
+    first_name = pol_nombre.split(" ")[0] if pol_nombre else ""
 
     texto_norm = capitalize(str(claim.get("texto_normalizado") or "").strip())
     texto_orig = str(claim.get("texto_original") or "").strip()
 
-    # ── Meta (forma de cita, sin veredicto: preserva el clic) ──
+    # ── Meta: quote form without the verdict (keeps the click) — unchanged ──
     desc_text = str(claim.get("texto_normalizado") or "").strip()
-    who = (f"{pol_nombre} ({pol_partido})" if pol_nombre and pol_partido
-           else pol_nombre)
+    who = f"{pol_nombre} ({pol_partido})" if pol_nombre and pol_partido else pol_nombre
     quote_title = _truncate_words(desc_text, 60).rstrip(" .")
-    quote_desc  = _truncate_words(desc_text, 130).rstrip(" .")
-    title = (f"{who}: «{quote_title}» | Facthem" if who
-             else f"«{quote_title}» | Facthem")
-    desc  = (f"{who}: «{quote_desc}». Lo verificamos en Facthem." if who
-             else f"«{quote_desc}». Lo verificamos en Facthem.")
+    quote_desc = _truncate_words(desc_text, 130).rstrip(" .")
+    title = f"{who}: «{quote_title}» | Facthem" if who else f"«{quote_title}» | Facthem"
+    desc = (f"{who}: «{quote_desc}». Lo verificamos en Facthem." if who
+            else f"«{quote_desc}». Lo verificamos en Facthem.")
     canon_url = f"{BASE_URL}/claim/{slug}.html"
-    schema_ld = build_claim_review_schema(claim, slug, pol_nombre, session_date)
 
-    # ── Back URL ──
-    session_id = claim.get("session_id", "")
-    back_url   = f"{BASE_URL}/?session={session_id}" if session_id else f"{BASE_URL}/"
+    pol_slug = ctx.get("pol_slug") or (
+        slugify_politician(pol.get("nombre_completo", ""), pol_partido) if pol_nombre else None)
+    pol_url = f"/politician/{pol_slug}.html" if pol_slug else None
 
-    # ── Share text ──
-    resultado_key  = normalize_resultado_key(v.get("resultado"))
-    verdict_emoji  = RESULTADO_EMOJIS.get(resultado_key, "🔍")
-    nombre_share   = pol_nombre or "Un político"
-    partido_share  = f" ({pol_partido})" if pol_partido else ""
-    texto_share    = desc_text[:200] + ("…" if len(desc_text) > 200 else "")
-    share_text     = (
-        f'🔍 {nombre_share}{partido_share} afirmó: "{texto_share}"\n'
-        f'{verdict_emoji} {resultado_label} | facthem.es'
-    )
-
-    # ── Share URLs ──
-    enc_url     = urllib.parse.quote(canon_url)
-    enc_text    = urllib.parse.quote(share_text)
-    enc_wa      = urllib.parse.quote(f"{share_text}\n{canon_url}")
-    url_twitter = f"https://twitter.com/intent/tweet?text={enc_text}&url={enc_url}&via=facthem_ES"
-    url_wa      = f"https://wa.me/?text={enc_wa}"
-    url_tg      = f"https://t.me/share/url?url={enc_url}&text={enc_text}"
-
-    # ── Politician line ──
-    pol_slug     = slugify_politician(pol.get("nombre_completo", ""), pol_partido) if pol_nombre else None
-    pol_page_url = f"{BASE_URL}/politician/{pol_slug}.html" if pol_slug else None
-
-    if pol_nombre:
-        name_inner = (
-            f'<a href="{pol_page_url}" class="politician-link">{esc(pol_nombre)}</a>'
-            if pol_page_url else esc(pol_nombre)
-        )
-        if is_gobierno:
-            pol_html = (
-                f'<span class="politician-name" style="font-size:1.05rem">'
-                f'{name_inner}'
-                f'<span class="politician-gobierno" title="Gobierno de España">🏛️</span>'
-                f'</span>'
-            )
-        elif pol_partido:
-            pol_html = (
-                f'<span class="politician-name" style="font-size:1.05rem">'
-                f'{name_inner}'
-                f'<span class="politician-partido">· {esc(pol_partido)}</span>'
-                f'</span>'
-            )
-        else:
-            pol_html = (
-                f'<span class="politician-name" style="font-size:1.05rem">'
-                f'{name_inner}</span>'
-            )
-    else:
-        pol_html = '<span class="politician-name unknown">Político desconocido</span>'
-
-    # ── Tags ──
-    tag_parts = []
-    tematico = claim.get("ambito_tematico", "")
-    geo      = claim.get("ambito_geografico", "")
-    if tematico:
-        label = TEMATICO_LABELS.get(tematico, snake_to_label(tematico))
-        tag_parts.append(f'<span class="tag tag-tematico">{esc(label)}</span>')
-    if geo:
-        tag_parts.append(f'<span class="tag tag-geo">{esc(snake_to_label(geo))}</span>')
-    tags_html = (
-        f'<div class="claim-tags" style="margin-bottom:1.25rem">{"".join(tag_parts)}</div>'
-        if tag_parts else ""
-    )
-
-    # ── Confidence bar ──
-    confidence_html = ""
-    if score is not None:
-        confidence_html = (
-            f'<div class="confidence-bar" style="margin-bottom:1rem" '
-            f'title="Confianza del modelo: {score}%">\n'
-            f'      <div class="confidence-track">\n'
-            f'        <div class="confidence-fill confidence-{resultado_class}" '
-            f'style="width:{score}%"></div>\n'
-            f'      </div>\n'
-            f'      <span class="confidence-label">{score}% confianza</span>\n'
-            f'    </div>'
-        )
-
-    # ── Detail list ──
-    detail_parts = [
-        render_errores(v.get("errores")),
-        render_omisiones(v.get("omisiones")),
-        render_fuentes(v.get("fuentes")),
-    ]
-    detail_inner = "\n  ".join(p for p in detail_parts if p)
-    details_html = f'<dl class="modal-detail-list">\n  {detail_inner}\n</dl>' if detail_inner else ""
-
-    # ── Fecha de sesión (inline junto al nombre) ──
-    sess_iso   = str(session_date or "")[:10]
-    sess_short = _date_short_es(sess_iso)
-    session_time_html = (
-        f'<time class="claim-session-date" datetime="{sess_iso}">{sess_short}</time>'
-        if sess_short else ""
-    )
-
-    # ── Miga de pan (visible + BreadcrumbList JSON-LD) ──
+    # ── Breadcrumb (visible + JSON-LD; same JSON-LD items as before) ──
     crumbs = [{"@type": "ListItem", "position": 1, "name": "Inicio", "item": f"{BASE_URL}/"}]
-    crumb_parts = [f'<a href="{BASE_URL}/">Inicio</a>']
-    if pol_nombre and pol_page_url:
-        crumbs.append({"@type": "ListItem", "position": 2, "name": pol_nombre, "item": pol_page_url})
-        crumb_parts.append(f'<a class="crumb-pol" href="{pol_page_url}">{esc(pol_nombre)}</a>')
-    crumbs.append({
-        "@type": "ListItem",
-        "position": len(crumbs) + 1,
-        "name": f"«{_truncate_words(desc_text, 60)}»",
-    })
-    crumb_parts.append(f'<span class="current">«{esc(_truncate_words(texto_norm, 48))}»</span>')
-    breadcrumb_ld = json.dumps(
-        {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": crumbs},
-        ensure_ascii=False, indent=2,
-    )
-    sep = '\n      <span class="sep">›</span>\n      '
-    breadcrumb_html = (
-        '<nav class="cp-breadcrumb" aria-label="Miga de pan">\n      '
-        + sep.join(crumb_parts)
-        + "\n    </nav>"
-    )
+    if pol_nombre and pol_url:
+        crumbs.append({"@type": "ListItem", "position": 2, "name": pol_nombre, "item": BASE_URL + pol_url})
+    crumbs.append({"@type": "ListItem", "position": len(crumbs) + 1, "name": f"«{_truncate_words(desc_text, 60)}»"})
+    breadcrumb_ld = {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": crumbs}
+    claim_ld = json.loads(build_claim_review_schema(claim, slug, pol_nombre, session_date))
 
-    # ── Bloques de afirmaciones relacionadas ──
-    def _rel_block(header_html, items):
-        if not items:
-            return ""
-        lis = "".join(
-            f'<li><a class="rel-claim" href="{esc(it["url"])}">«{esc(it["text"])}»'
-            f'<span class="rel-meta">{esc(it["meta"])}</span></a></li>'
-            for it in items
-        )
-        return f"<h2>{header_html}</h2>\n    <ul>{lis}</ul>"
+    sid = claim.get("session_id")
+    crumb_html = (
+        '<nav class="crumbs" aria-label="Ruta"><a href="/">Sesiones</a><span>/</span>'
+        + (f'<a class="crumb-session" href="{esc(session_url(sid))}">{esc(session_label(sess))}</a>'
+           f'<span class="crumb-session">/</span>' if sid else "")
+        + (f'<a href="{esc(pol_url)}">{esc(pol_nombre)}</a>' if pol_nombre and pol_url else
+           f'<span>{esc(pol_nombre or "Afirmación")}</span>')
+        + '<span class="pager" id="pager"></span></nav>')
 
-    sess_obj = claim.get("session") or {}
-    sess_label = (sess_obj.get("organo") or "Pleno")
-    if sess_obj.get("numero"):
-        sess_label += f" núm. {sess_obj['numero']}"
-    if sess_iso:
-        sess_label += f", {_format_session_date_es(sess_iso)}"
-    session_header = (
-        f'Más de la misma sesión — <a href="{esc(back_url)}">{esc(sess_label)}</a>'
-        if claim.get("session_id") else "Más de la misma sesión"
-    )
-    pol_header = (
-        f'Más de <a href="{pol_page_url}">{esc(pol_nombre)}</a>'
-        if pol_nombre and pol_page_url else "Más del mismo diputado"
-    )
-    rel_blocks = [
-        _rel_block(session_header, related_session or []),
-        _rel_block(pol_header, related_pol or []),
-    ]
-    rel_blocks = [b for b in rel_blocks if b]
-    related_html = (
-        '<aside class="cp-related">\n    ' + "\n\n    ".join(rel_blocks) + "\n  </aside>"
-        if rel_blocks else ""
-    )
+    # ── Header: photo + share, who, claim, verdict ──
+    share_text = (f"{pol_nombre} ({pol_partido}): «{desc_text}» — verificado en Facthem" if pol_nombre
+                  else f"«{desc_text}» — verificado en Facthem")
+    photo = ctx.get("photo")
+    initials = "".join(p[0] for p in pol_nombre.split()[:2]).upper() if pol_nombre else "?"
+    photo_html = (f'<img class="c-photo" src="{esc(photo)}" alt="{esc(pol_nombre)}" width="120" height="148" />'
+                  if photo else f'<span class="c-photo c-photo-none" aria-hidden="true">{esc(initials)}</span>')
+    name_html = (f'<a href="{esc(pol_url)}">{esc(pol_nombre)}</a>' if pol_nombre and pol_url
+                 else f'<span>{esc(pol_nombre or "Político desconocido")}</span>')
+    party_bits = [b for b in (pol_partido, "Gobierno de España" if is_gobierno else "") if b]
+    party_html = "".join(f'<span class="who-party">{esc(b)}</span>' for b in party_bits)
+    sess_iso = str(session_date or "")[:10]
+    date_html = (f'<span class="who-party"><time datetime="{sess_iso}">{esc(_date_short_es(sess_iso))}</time></span>'
+                 if sess_iso and _date_short_es(sess_iso) else "")
+    tema = site_chrome.tema_label(claim.get("ambito_tematico"))
+    geo = snake_to_label(claim.get("ambito_geografico")) if claim.get("ambito_geografico") else ""
+    tags = " · ".join(esc(t) for t in (tema, geo) if t)
 
-    return f"""\
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{esc(title)}</title>
-  <meta name="description" content="{esc(desc)}" />
-  <link rel="canonical" href="{esc(canon_url)}" />
+    conf_html = (
+        f'<div class="c-conf" style="--c:{vcolor};--p:{score}%" role="meter" aria-valuemin="0" '
+        f'aria-valuemax="100" aria-valuenow="{score}" aria-label="Confianza de la verificación">'
+        f'<div class="c-conf-track"><span></span></div>'
+        f'<span class="c-conf-lbl">Confianza de la verificación <b>{score}%</b></span></div>'
+        if score is not None else '<div class="c-conf"><div class="c-conf-track"></div></div>')
 
-  <!-- Open Graph -->
-  <meta property="og:type"        content="article" />
-  <meta property="og:url"         content="{esc(canon_url)}" />
-  <meta property="og:title"       content="{esc(title)}" />
-  <meta property="og:description" content="{esc(desc)}" />
-  <meta property="og:image"       content="{BASE_URL}/assets/portada_opt.png" />
-  <meta property="og:locale"      content="es_ES" />
-  <meta property="og:site_name"   content="Facthem" />
+    # ── Body sections ──
+    secs = []
+    correcta = str(v.get("afirmacion_correcta") or "").strip()
+    if is_valid(correcta):
+        secs.append(f'<section class="c-sec c-lead"><h2>Lo que dicen los datos</h2><p>{esc(capitalize(correcta))}</p></section>')
+    err = _errores_items(v.get("errores"))
+    if err:
+        secs.append(f'<section class="c-sec"><h2>Errores <span class="n">· {len(err)}</span></h2>'
+                    f'<ul class="c-list" style="--b:var(--v-falso)">{"".join(f"<li>{esc(e)}</li>" for e in err)}</ul></section>')
+    om = [capitalize(o) for o in _omisiones_items(v.get("omisiones"))]
+    if om:
+        secs.append(f'<section class="c-sec"><h2>Contexto que falta <span class="n">· {len(om)}</span></h2>'
+                    f'<ul class="c-list" style="--b:var(--v-sobre)">{"".join(f"<li>{esc(o)}</li>" for o in om)}</ul></section>')
+    src = _fuentes_items(v.get("fuentes"))
+    if src:
+        lis = []
+        for name, url, tipo, prim, dato in src:
+            link = (f'<a href="{esc(url)}" target="_blank" rel="noopener">{esc(name)}</a>' if url
+                    else f'<span class="src-name">{esc(name)}</span>')
+            kind = '<span class="prim">fuente primaria</span>' if prim else esc(tipo.lower())
+            meta = " · ".join(x for x in (esc(_host(url)) if url else "", kind) if x)
+            meta_html = f'<span class="meta">{meta}</span>' if meta else ""
+            dato_html = f'<span class="dato">{esc(dato)}</span>' if dato else ""
+            lis.append(f"<li>{link}{meta_html}{dato_html}</li>")
+        secs.append(f'<section class="c-sec"><h2>Fuentes <span class="n">· {len(src)}</span></h2>'
+                    f'<ol class="c-sources">{"".join(lis)}</ol></section>')
+    if not secs:
+        secs.append(f'<section class="c-sec c-lead"><h2>Lo que dicen los datos</h2>'
+                    f'<p>{esc(site_chrome.VERDICT_WHAT[vkey])}</p></section>')
 
-  <!-- Twitter / X -->
-  <meta name="twitter:card"        content="summary_large_image" />
-  <meta name="twitter:site"        content="@facthem_ES" />
-  <meta name="twitter:title"       content="{esc(title)}" />
-  <meta name="twitter:description" content="{esc(desc)}" />
-  <meta name="twitter:image"       content="{BASE_URL}/assets/portada_opt.png" />
+    # ── Side: more from this person, then from this sitting ──
+    side = []
+    if ctx.get("same_session_pol"):
+        side.append(f'<section><h2>Más de {esc(first_name)} en este {"pleno" if (sess.get("tipo") or "PL") == "PL" else "debate"}</h2>'
+                    f'{_more_list(ctx["same_session_pol"])}</section>')
+    if ctx.get("other_sessions_pol"):
+        side.append(f'<section><h2>Más de {esc(first_name)} en otras sesiones</h2>{_more_list(ctx["other_sessions_pol"])}</section>')
+    if ctx.get("same_session_others"):
+        side.append(f'<section><h2>Más de esta sesión</h2>{_more_list(ctx["same_session_others"])}</section>')
+    if pol_url:
+        n = ctx.get("pol_total") or 0
+        side.append(f'<a class="all" href="{esc(pol_url)}">Todas sus afirmaciones{f" · {n}" if n else ""} →</a>')
 
-  <!-- Favicon -->
-  <link rel="icon" href="../assets/favicon.ico" sizes="any" />
-  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32x32.png" />
-  <link rel="icon" type="image/png" sizes="16x16" href="../assets/favicon-16x16.png" />
-  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png" />
-  <meta name="theme-color" content="#0f0f0f" />
+    body = f"""<main class="claim-page stamp-on-load" id="main" data-session="{esc(sid or '')}" data-id="{esc(claim.get('id', ''))}">
+{crumb_html}
+<article>
+<header class="c-head" style="--vc:{vcolor}">
+<div class="p-pic">{photo_html}{site_chrome.share(canon_url, share_text, '<span>Compartir</span>')}</div>
+<div>
+<div class="c-who">{name_html}{party_html}{date_html}</div>
+<h1 class="c-claim" title="{esc(texto_orig)}">{esc(texto_norm)}</h1>
+<div class="c-verdict" style="--c:{vcolor}">{site_chrome.vtag(vkey, 'vtag-lg stamped')}{f'<span class="c-tags">{tags}</span>' if tags else ''}</div>
+</div>
+</header>
+{conf_html}
+<div class="c-cols">
+<div class="c-main">{''.join(secs)}</div>
+<aside class="c-side">{''.join(side)}</aside>
+</div>
+</article>
+</main>"""
 
-  <!-- ClaimReview structured data -->
-  <script type="application/ld+json">
-{schema_ld}
-  </script>
-
-  <!-- BreadcrumbList structured data -->
-  <script type="application/ld+json">
-{breadcrumb_ld}
-  </script>
-
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="preload"
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
-        as="style" onload="this.onload=null;this.rel='stylesheet'" />
-  <noscript>
-    <link rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" />
-  </noscript>
-
-  <!-- Google Tag Manager -->
-  <script>(function(w,d,s,l,i){{w[l]=w[l]||[];w[l].push({{'gtm.start':new Date().getTime(),event:'gtm.js'}});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);}})(window,document,'script','dataLayer','GTM-M6ZJVS39');</script>
-
-  <!-- Site styles -->
-  <link rel="stylesheet" href="../css/style.css" />
-
-  <style>
-    body {{
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-      padding: 2.5rem 1.25rem 4rem;
-    }}
-
-    /* ── Card: same as #modal-card but standalone ── */
-    #modal-card {{
-      max-height: none;
-      animation: none;
-    }}
-    #modal-content {{
-      padding-top: 2.5rem;
-    }}
-
-    /* ── Back button — sits where ✕ was ── */
-    .cp-back {{
-      position: absolute;
-      top: 1rem;
-      right: 1rem;
-      background: rgba(255,255,255,.06);
-      border: 1px solid var(--c-border);
-      border-radius: var(--radius-xs);
-      color: var(--c-text-muted);
-      font-size: .78rem;
-      font-weight: 600;
-      font-family: inherit;
-      padding: .35rem .65rem;
-      text-decoration: none;
-      cursor: pointer;
-      transition: background .12s, color .12s;
-      display: inline-flex;
-      align-items: center;
-      gap: .3rem;
-    }}
-    .cp-back:hover {{
-      background: rgba(255,255,255,.12);
-      color: var(--c-text);
-    }}
-
-    /* ── Subtle brand footer ── */
-    .cp-brand {{
-      margin-top: 1.5rem;
-      font-size: .65rem;
-      font-weight: 700;
-      letter-spacing: .1em;
-      text-transform: uppercase;
-      color: var(--c-text-muted);
-      opacity: .35;
-    }}
-
-    /* ── Breadcrumb: en la franja del botón Volver ── */
-    .cp-breadcrumb {{
-      position: absolute;
-      top: 1.35rem;
-      left: 1.75rem;
-      right: 7rem;
-      font-size: .72rem;
-      color: var(--c-text-muted);
-      display: flex;
-      gap: .35rem;
-      align-items: center;
-      white-space: nowrap;
-      overflow: hidden;
-    }}
-    .cp-breadcrumb a {{
-      color: var(--c-text-muted);
-      text-decoration: none;
-      border-bottom: 1px solid transparent;
-      flex-shrink: 0;
-    }}
-    .cp-breadcrumb a:hover {{ color: var(--c-accent); border-color: var(--c-accent); }}
-    .cp-breadcrumb a.crumb-pol {{
-      flex-shrink: 1;
-      min-width: 6ch;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }}
-    .cp-breadcrumb .sep {{ opacity: .5; flex-shrink: 0; }}
-    .cp-breadcrumb .current {{
-      overflow: hidden;
-      text-overflow: ellipsis;
-      opacity: .7;
-    }}
-    @media (max-width: 560px) {{
-      .cp-breadcrumb .current, .cp-breadcrumb .sep:last-of-type {{ display: none; }}
-    }}
-
-    /* ── Fecha de sesión: discreta, inline con el nombre ── */
-    .claim-session-date {{
-      font-size: .78rem;
-      font-weight: 400;
-      color: var(--c-text-muted);
-      white-space: nowrap;
-    }}
-    .claim-session-date::before {{ content: "· "; opacity: .6; }}
-
-    /* ── Afirmaciones relacionadas ── */
-    .cp-related {{
-      max-width: 640px;
-      width: 100%;
-    }}
-    .cp-related h2 {{
-      font-size: .78rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .12em;
-      color: var(--c-text-muted);
-      margin: 1.75rem 0 .75rem;
-    }}
-    .cp-related h2 a {{ color: inherit; text-decoration: none; border-bottom: 1px solid transparent; }}
-    .cp-related h2 a:hover {{ color: var(--c-accent); border-color: var(--c-accent); }}
-    .cp-related ul {{ list-style: none; margin: 0; padding: 0; }}
-    .cp-related li {{ border-bottom: 1px solid var(--c-border); }}
-    .cp-related li:last-child {{ border-bottom: none; }}
-    .cp-related a.rel-claim {{
-      display: block;
-      padding: .6rem .25rem;
-      font-size: .88rem;
-      line-height: 1.5;
-      color: var(--c-text);
-      text-decoration: none;
-      transition: color .12s;
-    }}
-    .cp-related a.rel-claim:hover {{ color: var(--c-accent); }}
-    .cp-related .rel-meta {{
-      display: block;
-      font-size: .7rem;
-      color: var(--c-text-muted);
-      margin-top: .15rem;
-    }}
-  </style>
-</head>
-<body>
-
-  <!-- GTM noscript -->
-  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-M6ZJVS39"
-  height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-
-  <div id="modal-card" data-resultado="{resultado_class}">
-
-    <!-- Back button where ✕ used to be -->
-    <a class="cp-back" href="{back_url}" id="cp-back-btn">
-      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-           stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <polyline points="15 18 9 12 15 6"/>
-      </svg>
-      Volver
-    </a>
-
-    {breadcrumb_html}
-
-    <div id="modal-content">
-
-      <header class="claim-header" style="margin-bottom:1.25rem">
-        <div class="claim-meta-top">
-          {pol_html}{session_time_html}
-        </div>
-        <span class="resultado-badge resultado-{resultado_class}">{esc(resultado_label)}</span>
-      </header>
-
-      <h1 class="claim-text modal-claim-text" title="{esc(texto_orig)}">
-        {esc(texto_norm)}
-      </h1>
-
-      {confidence_html}
-
-      {tags_html}
-
-      {details_html}
-
-      <!-- Share -->
-      <div class="modal-share">
-        <div class="share-wrapper">
-          <button class="share-btn share-btn--labeled" id="cp-share-btn" aria-label="Compartir afirmación">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-            </svg>
-            Compartir
-          </button>
-          <div class="share-menu" id="cp-share-menu" hidden>
-            <a class="share-option" href="{url_wa}" target="_blank" rel="noopener">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.373 0 0 5.373 0 12c0 2.127.557 4.123 1.532 5.856L0 24l6.335-1.652A11.954 11.954 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z"/></svg>
-              WhatsApp
-            </a>
-            <a class="share-option" href="{url_twitter}" target="_blank" rel="noopener">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-              X / Twitter
-            </a>
-            <a class="share-option" href="https://www.facebook.com/sharer/sharer.php?u={enc_url}" target="_blank" rel="noopener">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-              Facebook
-            </a>
-            <a class="share-option" href="{url_tg}" target="_blank" rel="noopener">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
-              Telegram
-            </a>
-            <button class="share-option share-copy-btn" id="cp-copy" data-url="{esc(canon_url)}">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-              <span>Copiar enlace</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  {related_html}
-
-  <p class="cp-brand">
-    <a href="{BASE_URL}/" style="color:inherit;text-decoration:none">facthem.es</a>
-    &nbsp;·&nbsp;
-    <a href="{BASE_URL}/metodologia.html" style="color:inherit;text-decoration:none">Metodología</a>
-    &nbsp;·&nbsp;
-    <a href="{BASE_URL}/acerca.html" style="color:inherit;text-decoration:none">Acerca de</a>
-    &nbsp;·&nbsp;
-    <a href="{BASE_URL}/aviso.html" style="color:inherit;text-decoration:none">Aviso legal</a>
-    &nbsp;·&nbsp;
-    <a href="{BASE_URL}/archive.html" style="color:inherit;text-decoration:none">Todas las afirmaciones</a>
-  </p>
-
-  <script>
-    // Share dropdown toggle
-    document.getElementById('cp-share-btn').addEventListener('click', function (e) {{
-      e.stopPropagation();
-      var menu = document.getElementById('cp-share-menu');
-      menu.hidden = !menu.hidden;
-    }});
-    document.addEventListener('click', function () {{
-      document.getElementById('cp-share-menu').hidden = true;
-    }});
-
-    // Copy link
-    document.getElementById('cp-copy').addEventListener('click', function () {{
-      navigator.clipboard.writeText(this.dataset.url).then(() => {{
-        this.querySelector('span').textContent = '¡Copiado!';
-        setTimeout(() => {{ this.querySelector('span').textContent = 'Copiar enlace'; }}, 2000);
-      }});
-    }});
-
-    (function () {{
-      try {{
-        var ref = document.referrer;
-        if (ref && new URL(ref).origin === location.origin) {{
-          document.getElementById('cp-back-btn').addEventListener('click', function (e) {{
-            e.preventDefault();
-            history.back();
-          }});
-        }}
-      }} catch (e) {{}}
-    }})();
-  </script>
-
-</body>
-</html>
-"""
+    return site_chrome.page(
+        body=body, active="sesiones", scripts=("js/ui.js", "js/claim.js"),
+        title=title, description=desc, canonical=canon_url, og_type="article",
+        jsonld=(claim_ld, breadcrumb_ld))
 
 
 # ── Related claims (internal linking) ─────────────────────────────────────────
@@ -926,63 +530,91 @@ def _related_text(claim):
     )
 
 
+def _pol_key(claim):
+    """Profile slug: groups duplicate politician records (same name + party)."""
+    pol = claim.get("politician") or {}
+    if not pol.get("nombre_completo"):
+        return None
+    return slugify_politician(pol["nombre_completo"], pol.get("partido", ""))
+
+
 def build_related_indexes(claims_with_slugs):
-    """{session_id: [(slug, claim)]}, {pol_id: [(slug, claim)]} — deterministas."""
+    """{session_id: [(slug, claim)]}, {pol_slug: [(slug, claim)]} — deterministic."""
     by_session, by_pol = {}, {}
     for slug, claim in claims_with_slugs:
+        if not claim.get("verification"):
+            continue
         sid = claim.get("session_id")
-        pid = (claim.get("politician") or {}).get("id")
+        pk = _pol_key(claim)
         if sid:
             by_session.setdefault(sid, []).append((slug, claim))
-        if pid:
-            by_pol.setdefault(pid, []).append((slug, claim))
-    # misma sesión: orden estable por slug
+        if pk:
+            by_pol.setdefault(pk, []).append((slug, claim))
     for lst in by_session.values():
         lst.sort(key=lambda t: t[0])
-    # mismo diputado: más reciente primero, desempate por slug
+    # same person: newest sitting first, then slug
     for lst in by_pol.values():
-        lst.sort(key=lambda t: ((t[1].get("session") or {}).get("fecha") or "", t[0]),
-                 reverse=True)
+        lst.sort(key=lambda t: ((t[1].get("session") or {}).get("fecha") or "", t[0]), reverse=True)
     return by_session, by_pol
 
 
-def build_related_blocks(claim, slug, by_session, by_pol):
-    cid     = claim.get("id")
-    sess_id = claim.get("session_id")
-    pol_id  = (claim.get("politician") or {}).get("id")
+def _rel_item(sib_slug, sib, meta=""):
+    v = (sib.get("verification") or [{}])[0] or {}
+    return {"url": f"/claim/{sib_slug}.html", "text": _related_text(sib),
+            "verdict": v.get("resultado"), "meta": meta}
 
-    seen = {slug}
-    session_items = []
-    for sib_slug, sib in by_session.get(sess_id, []):
-        if sib_slug in seen or sib.get("id") == cid:
+
+def build_claim_ctx(claim, slug, by_session, by_pol, photo_for):
+    """Side column + photo for one claim page."""
+    sid, pk = claim.get("session_id"), _pol_key(claim)
+    mine = by_pol.get(pk, []) if pk else []
+    same_pol = [_rel_item(s, c) for s, c in mine if c.get("session_id") == sid and s != slug][:3]
+    other_pol = [_rel_item(s, c, _date_short_es((c.get("session") or {}).get("fecha")))
+                 for s, c in mine if c.get("session_id") != sid][:4]
+    others = []
+    for s, c in by_session.get(sid, []):
+        if _pol_key(c) == pk or s == slug:
             continue
-        sib_pol = sib.get("politician") or {}
-        who     = format_nombre(sib_pol.get("nombre_completo", "")) or "Político desconocido"
-        partido = sib_pol.get("partido", "")
-        session_items.append({
-            "url":  f"{BASE_URL}/claim/{sib_slug}.html",
-            "text": _related_text(sib),
-            "meta": f"{who} · {partido}" if partido else who,
-        })
-        seen.add(sib_slug)
-        if len(session_items) >= RELATED_PER_BLOCK:
+        p = c.get("politician") or {}
+        who = format_nombre(p.get("nombre_completo", "")) or "Político desconocido"
+        others.append(_rel_item(s, c, f"{who} · {p['partido']}" if p.get("partido") else who))
+        if len(others) >= 4:
             break
+    return {"photo": photo_for(claim.get("politician") or {}), "pol_slug": pk, "pol_total": len(mine),
+            "same_session_pol": same_pol, "other_sessions_pol": other_pol, "same_session_others": others}
 
-    pol_items = []
-    for sib_slug, sib in by_pol.get(pol_id, []):
-        if sib_slug in seen or sib.get("id") == cid:
-            continue
-        d = _format_session_date_es(((sib.get("session") or {}).get("fecha") or "")[:10])
-        pol_items.append({
-            "url":  f"{BASE_URL}/claim/{sib_slug}.html",
-            "text": _related_text(sib),
-            "meta": d,
-        })
-        seen.add(sib_slug)
-        if len(pol_items) >= RELATED_PER_BLOCK:
-            break
 
-    return session_items, pol_items
+def make_photo_resolver(salaries):
+    """politician dict → '/assets/photos/…' or ''.
+
+    1. the salary row (deputies and Government: same rule as profile pages);
+    2. a file whose name tokens are exactly the person's name tokens
+       (TV-debate guests: delgado-orgaz-emilio_frente-amplio.jpg).
+    """
+    by_id = {pid: row for pid, row in salaries.items()}
+    by_name = {row.get("nombre_completo"): row for row in salaries.values() if row.get("nombre_completo")}
+    photos_dir = Path(__file__).parent / "assets" / "photos"
+    by_tokens = {}
+    for f in sorted(photos_dir.glob("*")):
+        stem = f.stem.split("_")[0].removeprefix("gobierno-")
+        by_tokens.setdefault(frozenset(stem.split("-")), f.name)
+    cache = {}
+
+    def photo_for(pol):
+        key = (pol.get("id"), pol.get("nombre_completo"))
+        if key in cache:
+            return cache[key]
+        src = ""
+        row = by_id.get(pol.get("id")) or by_name.get(pol.get("nombre_completo"))
+        if row:
+            src = _salary_photo_src(row)
+        if not src and pol.get("nombre_completo"):
+            toks = frozenset(_slugify_photo(pol["nombre_completo"]).split("-"))
+            if toks in by_tokens:
+                src = f"/assets/photos/{urllib.parse.quote(by_tokens[toks])}"
+        cache[key] = src
+        return src
+    return photo_for
 
 
 # ── Supabase fetch ────────────────────────────────────────────────────────────
@@ -993,7 +625,7 @@ CLAIM_FIELDS = (
 )
 POLITICIAN_FIELDS = "id, nombre_completo, partido, grupo_parlamentario"
 SESSION_FIELDS = "id, fecha, organo, legislatura, tipo, numero"
-VERIFICATION_FIELDS = "claim_id, resultado, confidence_score, omisiones, errores, fuentes"
+VERIFICATION_FIELDS = "claim_id, resultado, confidence_score, afirmacion_correcta, omisiones, errores, fuentes"
 
 SALARY_TABLE = "politician_salary"
 
@@ -1014,7 +646,8 @@ def fetch_all_claims_sqlite():
                p.id AS pol_id,
                p.nombre_completo AS pol_nombre, p.partido AS pol_partido,
                p.grupo_parlamentario AS pol_grupo,
-               v.resultado, v.confidence_score, v.omisiones, v.errores, v.fuentes,
+               v.resultado, v.confidence_score, v.afirmacion_correcta,
+               v.omisiones, v.errores, v.fuentes,
                s.fecha AS session_fecha, s.organo AS session_organo,
                s.legislatura AS session_legislatura, s.tipo AS session_tipo,
                s.numero AS session_numero
@@ -1037,6 +670,7 @@ def fetch_all_claims_sqlite():
         if r["resultado"]:
             ver = [{"resultado": r["resultado"],
                     "confidence_score": r["confidence_score"],
+                    "afirmacion_correcta": r["afirmacion_correcta"],
                     "omisiones": r["omisiones"],
                     "errores": r["errores"],
                     "fuentes": r["fuentes"]}]
@@ -1133,7 +767,8 @@ def fetch_all_claims(supabase):
     verifications = {}
     for v in _paginate_verifications(supabase):
         verifications.setdefault(v["claim_id"], []).append({
-            k: v.get(k) for k in ("resultado", "confidence_score", "omisiones", "errores", "fuentes")
+            k: v.get(k) for k in ("resultado", "confidence_score", "afirmacion_correcta",
+                                  "omisiones", "errores", "fuentes")
         })
 
     raw_claims = _paginate_table(supabase, "claim", CLAIM_FIELDS, "afirmaciones", page_size=500)
@@ -2100,6 +1735,7 @@ def main():
         except Exception:
             pass
     by_session, by_pol = build_related_indexes(claims_with_slugs)
+    photo_for = make_photo_resolver(salaries)
 
     generated, errors = {}, []
 
@@ -2107,13 +1743,10 @@ def main():
     for slug, claim in claims_with_slugs:
         try:
             session_date = session_dates.get(claim.get("session_id"), "")
-            rel_session, rel_pol = build_related_blocks(claim, slug, by_session, by_pol)
+            ctx = build_claim_ctx(claim, slug, by_session, by_pol, photo_for)
             OUT_DIR.mkdir(exist_ok=True)
             (OUT_DIR / f"{slug}.html").write_text(
-                render_page(claim, slug, session_date,
-                            related_session=rel_session, related_pol=rel_pol),
-                encoding="utf-8",
-            )
+                render_page(claim, slug, session_date, ctx), encoding="utf-8")
             generated[slug] = session_date or TODAY
         except Exception as exc:
             errors.append((claim.get("id"), str(exc)))
