@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!--#redirects--><script>(function(){var q=new URLSearchParams(location.search),t=(q.get('tab')||'').toLowerCase(),p=q.get('politician'),c=(q.get('claim')||'').trim().toLowerCase(),s=q.get('q'),h=location.hash,go=function(u){location.replace(u)},e=encodeURIComponent;if(c){var d=document.documentElement;d.style.visibility='hidden';var stay=function(){q.delete('claim');d.style.visibility='';history.replaceState(null,'',location.pathname+(q.toString()?'?'+q:'')+h)};fetch('/assets/claim-ids/'+e(c.slice(0,2))+'.json').then(function(r){return r.ok?r.json():{}}).then(function(m){m[c]?go('/claim/'+m[c]+'.html'+h):stay()}).catch(stay);return}if(p)return go('/politician/'+e(p)+'.html');if(/^(parlamentari[oe]s|busqueda|representantes)$/.test(t))return go('/representantes.html'+(s?'?q='+e(s):''));if(/^(estadisticas|statistics)$/.test(t))return go('/estadisticas.html');if(s)return go('/representantes.html?q='+e(s));})();</script><!--/redirects-->
   <title>Facthem — salarios y verificaciones de políticos del Congreso</title>
   <meta name="description" content="Consulta afirmaciones verificadas y salarios públicos de políticos del Congreso: sueldo mensual, salario anual, complementos e indemnizaciones de diputados y representantes." />
 

@@ -52,6 +52,7 @@ OUT_DIR       = Path(__file__).parent / "claim"
 POL_OUT_DIR   = Path(__file__).parent / "politician"
 PEOPLE_JSON   = Path(__file__).parent / "assets" / "people.json"
 DIRECTORY_PATH = Path(__file__).parent / "representantes.html"
+CLAIM_IDS_DIR = Path(__file__).parent / "assets" / "claim-ids"
 SITEMAP_PATH  = Path(__file__).parent / "sitemap.xml"
 SALARY_DATA_PATH = Path(__file__).parent / "assets" / "salary-data.js"
 TODAY         = date.today().isoformat()
@@ -504,6 +505,23 @@ def _pol_key(claim):
     if not pol.get("nombre_completo"):
         return None
     return slugify_politician(pol["nombre_completo"], pol.get("partido", ""))
+
+
+def write_claim_id_shards(claims_with_slugs):
+    """assets/claim-ids/<xx>.json: {claim id: slug}, sharded by the id's first two
+    characters. Old /?claim=<id> links resolve through one ~3 KB file."""
+    shards = {}
+    for slug, claim in claims_with_slugs:
+        cid = str(claim.get("id") or "").lower()
+        if len(cid) >= 2:
+            shards.setdefault(cid[:2], {})[cid] = slug
+    CLAIM_IDS_DIR.mkdir(parents=True, exist_ok=True)
+    for f in CLAIM_IDS_DIR.glob("*.json"):
+        f.unlink()
+    for key, m in shards.items():
+        (CLAIM_IDS_DIR / f"{key}.json").write_text(
+            json.dumps(m, ensure_ascii=False, separators=(",", ":"), sort_keys=True), encoding="utf-8")
+    print(f"  assets/claim-ids/ — {sum(len(m) for m in shards.values())} ids en {len(shards)} ficheros")
 
 
 def build_related_indexes(claims_with_slugs):
@@ -1648,6 +1666,7 @@ def main():
         except Exception:
             pass
     by_session, by_pol = build_related_indexes(claims_with_slugs)
+    write_claim_id_shards(claims_with_slugs)
     photo_for = make_photo_resolver(salaries)
 
     generated, errors = {}, []

@@ -299,6 +299,32 @@ def page(*, body, active="", body_class="", scripts=("js/ui.js",), **head_kw):
             f'<body{cls}>{GTM_BODY}{topbar(active)}\n{body}\n{footer()}{js}</body>\n</html>\n')
 
 
+# ── Old single-page-app URLs → the pages that replaced them ──────────────────
+# Runs first thing in index.html's <head> (marker <!--#redirects-->), before
+# anything paints. location.replace keeps the old URL out of history, and
+# search engines follow it like a redirect.
+#   /?claim=<id>                     → /claim/<slug>.html  (via assets/claim-ids/<xx>.json)
+#   /?politician=<slug> (any tab)    → /politician/<slug>.html
+#   /?tab=parlamentarios|busqueda|representantes|parlamentaries → /representantes.html
+#   /?tab=estadisticas|statistics    → /estadisticas.html
+#   /?q=<text>                       → /representantes.html?q=<text>
+#   /?tab=sesiones|sessions, /?session=… stay on the home page.
+REDIRECT_JS = (
+    "(function(){var q=new URLSearchParams(location.search),t=(q.get('tab')||'').toLowerCase(),"
+    "p=q.get('politician'),c=(q.get('claim')||'').trim().toLowerCase(),s=q.get('q'),h=location.hash,"
+    "go=function(u){location.replace(u)},e=encodeURIComponent;"
+    "if(c){var d=document.documentElement;d.style.visibility='hidden';"
+    "var stay=function(){q.delete('claim');d.style.visibility='';"
+    "history.replaceState(null,'',location.pathname+(q.toString()?'?'+q:'')+h)};"
+    "fetch('/assets/claim-ids/'+e(c.slice(0,2))+'.json').then(function(r){return r.ok?r.json():{}})"
+    ".then(function(m){m[c]?go('/claim/'+m[c]+'.html'+h):stay()}).catch(stay);return}"
+    "if(p)return go('/politician/'+e(p)+'.html');"
+    "if(/^(parlamentari[oe]s|busqueda|representantes)$/.test(t))return go('/representantes.html'+(s?'?q='+e(s):''));"
+    "if(/^(estadisticas|statistics)$/.test(t))return go('/estadisticas.html');"
+    "if(s)return go('/representantes.html?q='+e(s));"
+    "})();")
+
+
 # ── Hand-written pages: refresh chrome + asset hashes in place ───────────────
 # Markers in the HTML:  <!--#topbar active="sesiones"--> … <!--/topbar-->
 #                       <!--#footer--> … <!--/footer-->
@@ -308,6 +334,7 @@ STATIC_PAGES = ["index.html", "metodologia.html", "acerca.html", "aviso.html", "
 
 _TOP = re.compile(r'<!--#topbar(?: active="([a-z]*)")?-->.*?<!--/topbar-->', re.S)
 _FOOT = re.compile(r'<!--#footer-->.*?<!--/footer-->', re.S)
+_REDIR = re.compile(r'<!--#redirects-->.*?<!--/redirects-->', re.S)
 _ASSET = re.compile(r'((?:href|src)=")(/(?:css|js|assets)/[^"?#]+)\?v=[^"]*(")')
 
 
@@ -317,6 +344,7 @@ def refresh_static(text):
         return f'<!--#topbar active="{act}"-->{topbar(act)}<!--/topbar-->'
     text = _TOP.sub(top, text)
     text = _FOOT.sub(lambda m: f"<!--#footer-->{footer()}<!--/footer-->", text)
+    text = _REDIR.sub(lambda m: f"<!--#redirects--><script>{REDIRECT_JS}</script><!--/redirects-->", text)
     return _ASSET.sub(lambda m: f"{m.group(1)}{asset(m.group(2))}{m.group(3)}", text)
 
 
