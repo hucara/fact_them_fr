@@ -249,11 +249,12 @@ def footer():
         '</div></div></footer>')
 
 
-FONTS = ('<link rel="preconnect" href="https://fonts.googleapis.com" />'
-         '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />'
-         '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" />')
+# Self-hosted Inter (css/site.css @font-face). Preload the latin subset only:
+# it covers Spanish; latin-ext loads on demand for rarer names.
+FONTS = '<link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />'
 
-GTM_HEAD = ("<script>addEventListener('load',function(){(function(w,d,s,l,i){w[l]=w[l]||[];"
+# Only on the real site: local previews must not send page views to Analytics.
+GTM_HEAD = ("<script>if(location.hostname==='facthem.es')addEventListener('load',function(){(function(w,d,s,l,i){w[l]=w[l]||[];"
             "w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],"
             "j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;"
             f"f.parentNode.insertBefore(j,f);}})(window,document,'script','dataLayer','{GTM_ID}');}});</script>")
