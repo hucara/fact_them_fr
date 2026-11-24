@@ -54,6 +54,7 @@ PEOPLE_JSON   = Path(__file__).parent / "assets" / "people.json"
 DIRECTORY_PATH = Path(__file__).parent / "representantes.html"
 CLAIM_IDS_DIR = Path(__file__).parent / "assets" / "claim-ids"
 SESSIONS_DIR  = Path(__file__).parent / "assets" / "sessions"
+SESION_DIR    = Path(__file__).parent / "sesion"
 INDEX_PATH    = Path(__file__).parent / "index.html"
 INDEX_TEMPLATE = Path(__file__).parent / "templates" / "index.html"
 SITEMAP_PATH  = Path(__file__).parent / "sitemap.xml"
@@ -333,7 +334,8 @@ def session_label(sess, short=False):
 
 
 def session_url(session_id):
-    return f"/?session={urllib.parse.quote(str(session_id))}" if session_id else "/"
+    """The sitting's static page (/sesion/<id>.html); the home page still reads ?session=."""
+    return f"/sesion/{_safe_id(session_id)}.html" if session_id else "/"
 
 
 def _more_list(items):
@@ -864,7 +866,7 @@ def _loc(url):
                .replace(">", "&gt;"))
 
 
-def update_sitemap(slug_dates, politician_dates):
+def update_sitemap(slug_dates, politician_dates, session_dates=None):
     parts = [
         '<?xml version="1.0" encoding="UTF-8"?>\n',
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n',
@@ -873,6 +875,12 @@ def update_sitemap(slug_dates, politician_dates):
         parts.append(
             f"  <url>\n    <loc>{_loc(loc)}</loc>\n    <lastmod>{_iso(lastmod)}</lastmod>\n"
             f"    <changefreq>{changefreq}</changefreq>\n    <priority>{priority}</priority>\n  </url>\n"
+        )
+    for sid, lastmod in sorted((session_dates or {}).items(), key=lambda kv: kv[1], reverse=True):
+        url = BASE_URL + session_url(sid)
+        parts.append(
+            f"  <url>\n    <loc>{_loc(url)}</loc>\n    <lastmod>{_iso(lastmod)}</lastmod>\n"
+            f"    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>\n"
         )
     for slug, lastmod in sorted(politician_dates.items()):
         url = f"{BASE_URL}/politician/{slug}.html"
@@ -1740,7 +1748,7 @@ def render_rail(index, current):
         kind = "Debate" if deb else "Pleno · Congreso"
         org = s["organo"] if deb else "Sesión plenaria"
         lis.append(
-            f'<li><a href="/?session={esc(s["id"])}" data-s="{esc(s["id"])}"{cur}>'
+            f'<li><a href="{esc(session_url(s["id"]))}" data-s="{esc(s["id"])}"{cur}>'
             f'<span class="r-type{" deb" if deb else ""}">{kind}</span>'
             f'<span class="r-date"><span class="r-day">{day}</span><span class="r-mon">{mon}</span></span>'
             f'<span class="r-org">{esc(org)}</span>{site_chrome.stack(cnt, "mini-stack")}'
@@ -1754,7 +1762,7 @@ def session_eyebrow(s):
 
 
 def session_actions(s):
-    url = f"{BASE_URL}/?session={s['id']}"
+    url = BASE_URL + session_url(s["id"])
     pdf = (f'<a class="btn btn-ghost btn-sm" href="{esc(s["pdf"])}" target="_blank" rel="noopener">'
            f'Diario de sesiones ↗</a>') if s.get("pdf") else ""
     return pdf + site_chrome.share(url, f"{s['title']}: {s['n']} afirmaciones verificadas en Facthem",
@@ -1803,6 +1811,50 @@ def render_session_block(s, recs):
 </div>
 <div class="grid" id="grid">{cards}</div>
 </section>"""
+
+
+def generate_session_pages(index, recs_by):
+    """/sesion/<id>.html for every sitting: the session block of the home page
+    as its own crawlable page (filters via js/home.js). Returns {id: fecha}."""
+    SESION_DIR.mkdir(exist_ok=True)
+    for f in SESION_DIR.glob("*.html"):
+        f.unlink()
+    data = json.dumps(index, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+    dates = {}
+    for i, s in enumerate(index):
+        recs = recs_by[s["id"]]
+        url = BASE_URL + session_url(s["id"])
+        cnt = {}
+        for r in recs:
+            cnt[r["v"]] = cnt.get(r["v"], 0) + 1
+        bits = [f"{n} {site_chrome.VK[k][2].lower()}" for k, *_ in site_chrome.VERDICTS for n in [cnt.get(k, 0)] if n]
+        where = "del Pleno del Congreso" if s["tipo"] == "PL" else f"del {s['organo']}"
+        when = _format_session_date_es(s["fecha"]).lstrip("0")
+        title = (f"Pleno del Congreso del {when}: {s['n']} afirmaciones verificadas | Facthem" if s["tipo"] == "PL"
+                 else f"{s['organo']} ({when}): {s['n']} afirmaciones verificadas | Facthem")
+        desc = f"Verificación de las {s['n']} afirmaciones {where} del {when}: {', '.join(bits)}. Cada una con sus fuentes."
+        newer, older = (index[i - 1] if i > 0 else None), (index[i + 1] if i + 1 < len(index) else None)
+        nav = '<nav class="s-nav" aria-label="Otras sesiones">' + (
+            f'<a class="btn btn-ghost btn-sm" href="{esc(session_url(older["id"]))}" rel="prev">← {esc(older["title"])}</a>' if older else "<span></span>") + (
+            f'<a class="btn btn-ghost btn-sm" href="{esc(session_url(newer["id"]))}" rel="next">{esc(newer["title"])} →</a>' if newer else "<span></span>") + "</nav>"
+        body = (f'<main id="main"><nav class="crumbs" aria-label="Ruta"><a href="/">Sesiones</a><span>/</span>'
+                f'<span>{esc(s["title"])}</span></nav>{render_session_block(s, recs)}{nav}</main>'
+                f'<script type="application/json" id="sessions-index">{data}</script>')
+        ld = [{"@context": "https://schema.org", "@type": "CollectionPage", "url": url, "name": title, "description": desc,
+               "datePublished": s["fecha"], "inLanguage": "es",
+               "isPartOf": {"@type": "WebSite", "name": "Facthem", "url": BASE_URL},
+               "mainEntity": {"@type": "ItemList", "numberOfItems": len(recs), "itemListElement": [
+                   {"@type": "ListItem", "position": j + 1, "url": f"{BASE_URL}/claim/{r['u']}.html",
+                    "name": _truncate_words(r["t"], 110)} for j, r in enumerate(recs)]}},
+              {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+                  {"@type": "ListItem", "position": 1, "name": "Sesiones", "item": f"{BASE_URL}/"},
+                  {"@type": "ListItem", "position": 2, "name": s["title"]}]}]
+        (SESION_DIR / f"{_safe_id(s['id'])}.html").write_text(site_chrome.page(
+            body=body, active="sesiones", body_class="sesion-page", scripts=("js/ui.js", "js/home.js"),
+            title=title, description=desc, canonical=url, jsonld=ld), encoding="utf-8")
+        dates[s["id"]] = s["fecha"]
+    print(f"  sesion/ — {len(dates)} páginas de sesión")
+    return dates
 
 
 def render_home(index, recs_by, n_people):
@@ -1896,12 +1948,13 @@ def main():
     POL_OUT_DIR.mkdir(exist_ok=True)
     politician_dates = generate_politician_pages(claims_with_slugs, salaries, photo_for)
 
-    print("Actualizando sitemap…")
-    update_sitemap(generated, politician_dates)
-
     print("Generando portada y datos de sesiones…")
     index, recs_by = write_session_data(claims_with_slugs, photo_for)
     render_home(index, recs_by, n_people=len(politician_dates))
+    session_dates = generate_session_pages(index, recs_by)
+
+    print("Actualizando sitemap…")
+    update_sitemap(generated, politician_dates, session_dates)
 
     print("Generando página de archivo…")
     generate_archive(claims_with_slugs)

@@ -1235,3 +1235,9 @@ ul.dir { list-style: none; margin: 0; padding: 0; }
 .mini-stack > span { height: 100%; background: var(--c); }
 .mini-stack > span.hatch { background: repeating-linear-gradient(-45deg, var(--c) 0 3px, color-mix(in oklab, var(--c) 60%, var(--bg)) 3px 5px); }
 #grid[aria-busy="true"] { opacity: .5; transition: opacity .2s; }
+
+/* ── Sitting page (/sesion/<id>.html) ───────────────────────────────── */
+.sesion-page .session { margin-top: 12px; }
+.s-nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line); }
+.s-nav a { max-width: 48%; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 639px) { .s-nav { flex-direction: column; } .s-nav a { max-width: 100%; } }

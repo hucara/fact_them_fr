@@ -19,6 +19,9 @@
   const load = id => (cache[id] ??= fetch(`/assets/sessions/${fileId(id)}.json`).then(r => (r.ok ? r.json() : [])).catch(() => []));
   const state = { ids: [], recs: [], v: new Set(), tema: '', party: '', q: '' };
   const prerendered = $('#session').dataset.ids.split(',');
+  // On /sesion/<id>.html the page IS one sitting: no rail, no calendar, no switching.
+  const SITTING_PAGE = document.body.classList.contains('sesion-page');
+  const sittingUrl = id => `${FT.BASE_URL}/sesion/${fileId(id)}.html`;
   const HOME_TITLE = document.title;
 
   // ── Hero counters ────────────────────────────────────────────────────────
@@ -35,7 +38,7 @@
   });
 
   // ── Rail ─────────────────────────────────────────────────────────────────
-  const rail = $('#rail');
+  const rail = $('#rail') || document.createElement('ol');
   document.querySelectorAll('[data-rail]').forEach(b => b.addEventListener('click', () =>
     rail.scrollBy({ left: +b.dataset.rail * Math.max(300, rail.clientWidth * 0.8), behavior: reduce ? 'auto' : 'smooth' })));
   rail.addEventListener('click', e => {
@@ -48,7 +51,7 @@
   });
 
   // ── Calendar ─────────────────────────────────────────────────────────────
-  const calBtn = $('#cal-btn'), cal = $('#cal');
+  const calBtn = $('#cal-btn') || document.createElement('button'), cal = $('#cal') || document.createElement('div');
   let calMonth = new Date(index[0].fecha + 'T12:00:00');
   function drawCal() {
     const y = calMonth.getFullYear(), m = calMonth.getMonth();
@@ -154,7 +157,7 @@
     const s = ss[0], n = ss.reduce((a, x) => a + x.n, 0);
     $('#s-eyebrow').textContent = s.tipo === 'PL' ? `Congreso de los Diputados${s.leg ? ` · ${s.leg} Legislatura` : ''}` : 'Debate electoral';
     $('#session-title').textContent = ss.length > 1 ? `${s.title} · ${ss.length} sesiones` : s.title;
-    const url = `${FT.BASE_URL}/?session=${ss.map(x => x.id).join(',')}`;
+    const url = ss.length === 1 ? sittingUrl(s.id) : `${FT.BASE_URL}/?session=${ss.map(x => x.id).join(',')}`;
     $('#s-actions').innerHTML = ss.filter(x => x.pdf).map(x => `<a class="btn btn-ghost btn-sm" href="${esc(x.pdf)}" target="_blank" rel="noopener">Diario de sesiones${ss.length > 1 ? ` ${esc(x.id.split('-').pop())}` : ''} ↗</a>`).join('')
       + shareMenu(url, `${s.title}: ${n} afirmaciones verificadas en Facthem`, '<span>Compartir</span>');
     document.title = ss.length === 1 && s.id === index[0].id ? HOME_TITLE : `${s.title} — ${n} afirmaciones verificadas | Facthem`;
@@ -175,8 +178,9 @@
     if (scroll) { const top = $('#session').getBoundingClientRect().top; if (top < 60 || top > innerHeight * 0.6) $('#session').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }); }
     rail.querySelector('a[aria-current]')?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
   }
-  addEventListener('popstate', () => select(idsFromUrl(), { scroll: true }));
+  if (!SITTING_PAGE) addEventListener('popstate', () => select(idsFromUrl(), { scroll: true }));
   const idsFromUrl = () => {
+    if (SITTING_PAGE) return prerendered;
     const raw = new URLSearchParams(location.search).get('session');
     const ids = (raw || '').split(',').map(s => s.trim()).filter(id => byId[id]);
     return ids.length ? ids : [index[0].id];
