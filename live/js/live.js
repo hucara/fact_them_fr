@@ -612,7 +612,6 @@ function replayRebuild(t) {
   $('weak-drawer').hidden = true;
   $('weak-count').textContent = '0';
   clearNewAbove();
-  $('claim-count').textContent = '0';
   $('feed-empty').hidden = false;
   clock = t;
   for (const ev of replayEvents) {
@@ -1218,8 +1217,6 @@ function addClaim(ev) {
   const el = makeCard(ev.payload, 'pending');
   claims.set(claim_id, { el, claim, startedAt: Date.now(), t: ev.t ?? ev.payload.t_end ?? null });
   markPending(claim_id);
-  $('claim-count').textContent = claims.size;
-  bumpEl($('claim-count'));
 
   // A verdict that arrived before the card was revealed (the viewer delay
   // covers the whole verification) is not landed now: the viewer would never
@@ -1399,7 +1396,7 @@ function renderCost(cost) {
 /* One stacked bar, not five. At the counts a live debate produces (a dozen or
    two), five separate tracks are mostly empty rails; a single bar shows the
    mix at a glance and reads as a summary of the feed it sits above. */
-/* The feed's header: the count, one stacked bar whose segments resize as
+/* The feed's header: one stacked bar whose segments resize as
    verdicts land, and its legend. Bar and legend are also the filter: a click
    shows only that verdict (several can be on); pending cards always show.
    Built once, then updated in place. */
@@ -1407,9 +1404,7 @@ const feedFilter = new Set();
 function renderBreakdown() {
   const box = $('live-dist');
   if (!box.firstElementChild) {
-    box.innerHTML = `<div class="dist-head"><span><b class="num" id="claim-count">0</b> afirmaciones</span>`
-      + '<button type="button" class="dist-clear" id="dist-clear" hidden>Quitar filtro</button></div>'
-      + `<div class="stack stack-live" role="group" aria-label="Filtrar por veredicto">${VERDICTS.map(([k, , long, , c]) =>
+    box.innerHTML = `<div class="stack stack-live" role="group" aria-label="Filtrar por veredicto">${VERDICTS.map(([k, , long, , c]) =>
         `<button type="button" class="${k === 'SUBESTIMADO' ? 'hatch' : ''}" data-k="${k}" style="--c:${c};flex:0" title="${esc(long)}" aria-label="${esc(long)}" aria-pressed="false"></button>`).join('')}</div>`
       + '<ul class="legend" id="live-legend"></ul>';
   }
@@ -1425,7 +1420,6 @@ function renderBreakdown() {
     ? VERDICTS.filter(([k]) => verdictCounts[k] || feedFilter.has(k)).map(([k, label, , , c]) =>
       `<li><button type="button" data-k="${k}" style="--c:${c}" aria-pressed="${feedFilter.has(k)}"><span class="dot"></span>${esc(label)} <span class="num">${verdictCounts[k] || 0}</span></button></li>`).join('')
     : '<li class="legend-wait">Esperando la primera verificación</li>';
-  $('dist-clear').hidden = !feedFilter.size;
 }
 function applyFeedFilter() {
   for (const el of document.querySelectorAll('#feed > .f-item, #weak-list > .f-item')) {
@@ -1433,12 +1427,9 @@ function applyFeedFilter() {
   }
 }
 $('live-dist').addEventListener('click', (e) => {
-  if (e.target.closest('#dist-clear')) { feedFilter.clear(); }
-  else {
-    const b = e.target.closest('[data-k]'); if (!b) return;
-    const k = b.dataset.k;
-    if (feedFilter.has(k)) feedFilter.delete(k); else feedFilter.add(k);
-  }
+  const b = e.target.closest('[data-k]'); if (!b) return;   // a second click on a verdict turns it off
+  const k = b.dataset.k;
+  if (feedFilter.has(k)) feedFilter.delete(k); else feedFilter.add(k);
   renderBreakdown();
   applyFeedFilter();
 });

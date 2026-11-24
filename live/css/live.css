@@ -157,11 +157,7 @@ body.admin .brand-tag { display: inline; margin-left: -20px; }
 .past h2 { margin: 0 0 16px; font-size: 13px; font-weight: 600; color: var(--muted); }
 /* The feed's header: count, the verdict bar and its legend — both also the
    filter (renderBreakdown / applyFeedFilter in live.js). Stays in view. */
-.live-dist { position: sticky; top: 60px; z-index: 6; padding: 4px 0 14px; background: var(--bg); border-bottom: 1px solid var(--line); }
-.dist-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; font-size: 15px; font-weight: 600; }
-.dist-head .num { font-weight: 700; }
-.dist-clear { border: 0; padding: 0; background: none; font-size: 13px; font-weight: 500; color: var(--text-2); cursor: pointer; }
-.dist-clear:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+.live-dist { position: sticky; top: 60px; z-index: 6; padding: 14px 0; background: var(--bg); border-bottom: 1px solid var(--line); }
 .stack-live { height: 10px; border-radius: 5px; }
 .stack-live > button { all: unset; height: 100%; background: var(--c); cursor: pointer; transition: flex .8s var(--ease-out), opacity .2s, filter .2s; }
 .stack-live > button.hatch { background: repeating-linear-gradient(-45deg, var(--c) 0 4px, color-mix(in oklab, var(--c) 60%, var(--bg)) 4px 7px); }
@@ -228,7 +224,7 @@ body.admin .brand-tag { display: inline; margin-left: -20px; }
 .weak .weak-list { padding-top: 12px; }
 .weak .f-item { opacity: .75; }
 
-.feed-new { position: sticky; top: 172px; z-index: 7; display: block; margin: 8px auto; padding: 6px 14px; border-radius: 99px; border: 0; background: var(--text); color: var(--accent-ink); font-size: 13px; font-weight: 600; cursor: pointer; }
+.feed-new { position: sticky; top: 150px; z-index: 7; display: block; margin: 8px auto; padding: 6px 14px; border-radius: 99px; border: 0; background: var(--text); color: var(--accent-ink); font-size: 13px; font-weight: 600; cursor: pointer; }
 .past { margin-top: 64px; padding-top: 32px; border-top: 1px solid var(--line); }
 .past-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .past-card { display: grid; gap: 8px; padding: 18px; border-radius: var(--r); border: 1px solid var(--line); background: var(--bg-2); text-decoration: none; color: inherit; font-size: 13px; transition: background .15s, border-color .15s; }
@@ -431,7 +427,6 @@ button.btn.admin.on { background: rgba(217, 112, 138, .12); }
   .player { border-radius: 0; border-left: 0; border-right: 0; }
   body:not(.admin) .now, body:not(.admin) .caption { display: none; }
   .live-dist { top: 0; margin: 0 -16px; padding: 10px 16px 10px; }
-  .dist-head { display: none; }
   .live-dist .legend { margin-top: 6px; gap: 2px 2px; font-size: 11px; }
   .live-dist .legend button { padding: 2px 6px; }
   body:not(.admin) .live-feed { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 16px 24px; position: relative; }
