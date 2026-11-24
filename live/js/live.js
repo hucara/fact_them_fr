@@ -318,7 +318,7 @@ function showIdle() {
   document.title = 'Facthem directo';
   $('onair').hidden = true;
   document.body.classList.add('idle');
-  for (const sel of ['.live-stage', '#live-dist', '#debug-current']) {
+  for (const sel of ['.live-stage', '#live-dist', '#weak-drawer', '#debug-current']) {
     const el = document.querySelector(sel);
     if (el) el.hidden = true;
   }
@@ -606,6 +606,9 @@ function replayRebuild(t) {
   captionParts = [];
   $('caption').textContent = '';
   $('feed').querySelectorAll(':scope > .f-item').forEach((el) => el.remove());
+  $('weak-list').replaceChildren();
+  $('weak-drawer').hidden = true;
+  $('weak-count').textContent = '0';
   clearNewAbove();
   $('feed-empty').hidden = false;
   clock = t;
@@ -1246,7 +1249,8 @@ function tickPending() {
 }
 
 const BAD = new Set(['FALSO', 'SOBREESTIMADO', 'SUBESTIMADO']);
-const FILL_DELAY_MS = 650;   // the actions row fills after the stamp
+const FILL_DELAY_MS = 650;
+const WEAK_HOLD_MS = 2200;   // an unverifiable verdict is shown this long before it leaves for the drawer
 
 function applyVerdict(ev) {
   const { claim_id, verdict, cache_hit, latency_seconds } = ev.payload;
@@ -1266,16 +1270,10 @@ function applyVerdict(ev) {
   bump('verdicts');
 
   // NO_VERIFICABLE says nothing about the world, only that the verifier found
-  // no data: it is not shown on the live page. The card that was waiting for
-  // it leaves (fades, then its space closes) and nothing is counted.
+  // no data. The claim was still made, so it is kept — in the drawer under the
+  // feed — but the verdict bar and its legend do not count it.
   const { el } = entry;
   const vk = verdictKey(verdict.resultado);
-  if (vk === 'NO_VERIFICABLE') {
-    entry.dropped = true;
-    const drop = () => { el.remove(); if (!$('feed').querySelector(':scope > .f-item')) $('feed-empty').hidden = false; };
-    if (!motion()) drop(); else leave(el).then(drop);
-    return;
-  }
   const color = VKEY[vk][4];
   el.dataset.state = 'done';
   el.dataset.v = vk;
@@ -1285,6 +1283,24 @@ function applyVerdict(ev) {
   if (pendingTag) pendingTag.outerHTML = `<span class="vtag stamped" style="--c:${color}">${vtagInner(vk)}</span>`;
   const animate = motion();
   if (animate) el.classList.add('reveal');
+  if (vk === 'NO_VERIFICABLE') {
+    // Nothing to unfold or share: drop the reserved (shimmering) actions row,
+    // or the card would look as if it were still verifying.
+    el.querySelector('.f-actions')?.remove();
+    // Verdict shown, a hold, then it leaves for the drawer, which lights up.
+    const park = () => {
+      el.remove(); el.classList.remove('reveal');
+      el.getAnimations().forEach((a) => a.cancel()); el.style.overflow = '';
+      insertByTime($('weak-list'), el);
+      const d = $('weak-drawer'); d.hidden = false;
+      $('weak-count').textContent = $('weak-list').children.length;
+      bumpEl($('weak-count'));
+      pulseClass(d, 'received', 2000);
+    };
+    if (!animate) park();
+    else setTimeout(async () => { await leave(el); park(); }, WEAK_HOLD_MS);
+    return;
+  }
   countVerdict(vk);
   if (feedFilter.size) el.classList.toggle('filtered', !feedFilter.has(vk));
 
@@ -1324,6 +1340,14 @@ function applyVerdict(ev) {
   };
   if (!animate) fill(); else setTimeout(fill, FILL_DELAY_MS);
 }
+
+/* Opening the drawer scrolls the feed so its cards are in view. */
+$('weak-drawer').addEventListener('toggle', (e) => {
+  const d = e.currentTarget; if (!d.open) return;
+  // Land just under the sticky verdict bar, not beneath it.
+  d.style.scrollMarginTop = `${$('live-dist').offsetHeight + 8}px`;
+  d.scrollIntoView({ block: 'start', behavior: reducedMotion ? 'auto' : 'smooth' });
+});
 
 /* Unfold / fold the full verification with a height tween. */
 document.addEventListener('click', (e) => {
@@ -1399,6 +1423,7 @@ function renderBreakdown() {
   box.querySelectorAll('.stack-live [data-k]').forEach((el) => {
     const k = el.dataset.k;
     el.style.flex = String(verdictCounts[k] || 0);
+    el.hidden = !verdictCounts[k];   // an empty segment would still take its gaps
     el.title = `${VKEY[k][2]}: ${verdictCounts[k] || 0}`;
     el.setAttribute('aria-pressed', String(feedFilter.has(k)));
   });
@@ -1409,7 +1434,7 @@ function renderBreakdown() {
     : '<li class="legend-wait">Esperando la primera verificación</li>';
 }
 function applyFeedFilter() {
-  for (const el of document.querySelectorAll('#feed > .f-item')) {
+  for (const el of document.querySelectorAll('#feed > .f-item, #weak-list > .f-item')) {
     el.classList.toggle('filtered', feedFilter.size > 0 && el.dataset.state === 'done' && !feedFilter.has(el.dataset.v));
   }
 }

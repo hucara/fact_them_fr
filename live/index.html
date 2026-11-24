@@ -25,7 +25,7 @@
   <!-- Inter is self-hosted by facthem.es (/assets/fonts); elsewhere (the runner's
        own page) the system font stands in. -->
   <link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="css/live.css?v=135248a9db" />
+  <link rel="stylesheet" href="css/live.css?v=2503791009" />
 </head>
 <body class="live-body">
   <!-- Structure, class names and motion follow fact_them_fr/mockup/live.html. -->
@@ -80,6 +80,12 @@
         <div class="feed" id="feed">
           <p class="feed-empty" id="feed-empty">Escuchando el debate. Las afirmaciones aparecen en cuanto se pronuncian.</p>
         </div>
+        <!-- Claims the verifier could neither check nor rule out: kept, because they
+             were still said, but folded away under the resolved ones (not in the bar). -->
+        <details class="weak" id="weak-drawer" hidden>
+          <summary><span>Sin datos suficientes para verificar</span> <span class="num" id="weak-count">0</span><span class="weak-chev" aria-hidden="true"></span></summary>
+          <div class="feed weak-list" id="weak-list"></div>
+        </details>
       </section>
     </div>
 
@@ -99,6 +105,6 @@
        Set to the R2 custom domain (e.g. https://live-data.facthem.es/) when the
        page is hosted elsewhere. `?data=` on the URL overrides it. -->
   <script>window.LIVE_DATA_BASE = window.LIVE_DATA_BASE || 'https://pub-4b0592b162234f079cbe05777d9aa1f2.r2.dev/';</script>
-  <script src="js/live.js?v=6b49de9eb8"></script>
+  <script src="js/live.js?v=e74d51a188"></script>
 </body>
 </html>

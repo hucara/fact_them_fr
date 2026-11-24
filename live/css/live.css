@@ -145,10 +145,10 @@ body.admin .brand-tag { display: inline; margin-left: -20px; }
 .eq i:nth-child(2) { animation-delay: -.3s; } .eq i:nth-child(3) { animation-delay: -.6s; } .eq i:nth-child(4) { animation-delay: -.15s; }
 @keyframes eq { 0%, 100% { height: 4px; } 50% { height: 16px; } }
 .caption {
-  /* Fixed slot: always four lines tall, newest text anchored at the bottom,
+  /* Fixed slot: always five lines tall, newest text anchored at the bottom,
      older text fades out at the top. Nothing below it ever moves. */
   margin: 0; font-size: 15px; color: var(--text-2); line-height: 1.5;
-  height: calc(1.5em * 4); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end;
+  height: calc(1.5em * 5); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end;
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 1.2em); mask-image: linear-gradient(to bottom, transparent 0, #000 1.2em);
 }
 .caption b, .caption .cap-txt { display: block; }
@@ -221,6 +221,17 @@ body.admin .brand-tag { display: inline; margin-left: -20px; }
 .spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(217, 112, 138, .25); border-top-color: var(--accent); animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* the drawer: unverifiable claims, folded under the feed */
+.weak { margin-top: 16px; border: 1px solid var(--line); border-radius: var(--r); font-size: 13px; color: var(--text-2); transition: border-color .3s; scroll-margin-top: 8px; }
+.weak summary { list-style: none; cursor: pointer; display: flex; gap: 8px; align-items: center; padding: 12px 14px; border-radius: var(--r); }
+.weak summary::-webkit-details-marker { display: none; }
+.weak summary:hover { color: var(--text); background: var(--bg-2); }
+.weak summary .num { color: var(--muted); }
+.weak-chev { margin-left: auto; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg) translate(-2px, -2px); transition: transform .25s var(--ease-out); }
+.weak[open] .weak-chev { transform: rotate(-135deg) translate(-2px, -2px); }
+.weak .weak-list { padding: 0 12px 12px; }
+.weak .f-item { opacity: .85; }
+.weak .f-item .f-actions { display: none; }
 .feed-new { position: sticky; top: 150px; z-index: 7; display: block; margin: 8px auto; padding: 6px 14px; border-radius: 99px; border: 0; background: var(--text); color: var(--accent-ink); font-size: 13px; font-weight: 600; cursor: pointer; }
 .past { margin-top: 64px; padding-top: 32px; border-top: 1px solid var(--line); }
 .past-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
@@ -260,6 +271,8 @@ body.admin .brand-tag { display: inline; margin-left: -20px; }
   @keyframes bump { 40% { transform: scale(1.3); } }
   .feed-new.pop { animation: pop .2s cubic-bezier(.2,.9,.3,1.2); transform-origin: top center; }
   .stack-live span { transition: flex .8s var(--ease-out); }
+  .weak.received { animation: drawer-received 2s ease-out; }
+  @keyframes drawer-received { 0% { border-color: rgba(217,112,138,.7); box-shadow: 0 4px 24px rgba(217,112,138,.15); } 100% { border-color: var(--line); box-shadow: none; } }
 }
 
 /* Verdict stamp: lifted above the page, lands with a short press, a faint
@@ -392,7 +405,7 @@ button.btn.admin.on { background: rgba(217, 112, 138, .12); }
 
 /* ── Desktop and tablet: the live / diferido page is one screen, no page
    scroll. Header, video, speaker and transcript fit the window height; the
-   video is as wide as that height allows (16:9 above ≈ 21rem of header,
+   video is as wide as that height allows (16:9 above ≈ 22.5rem of header,
    speaker and transcript); the claims column scrolls inside, the verdict
    bar fixed at its top. The picker grid and the operator page scroll as usual. */
 @media (min-width: 861px) {
@@ -401,7 +414,7 @@ button.btn.admin.on { background: rgba(217, 112, 138, .12); }
   body:not(.admin):not(.replay-picker) .live { flex: 1; min-height: 0; width: 100%; max-width: 1680px; display: flex; flex-direction: column; padding-top: 8px; padding-bottom: 16px; }
   body:not(.admin):not(.replay-picker) .live-head { flex: none; padding: 6px 0 16px; }
   body:not(.admin):not(.replay-picker) .live-cols { flex: 1; min-height: 0; align-items: stretch;
-    grid-template-columns: minmax(0, min(62%, calc((100vh - 21rem) * 16 / 9))) minmax(300px, 1fr); gap: 28px; }
+    grid-template-columns: minmax(0, min(62%, calc((100vh - 22.5rem) * 16 / 9))) minmax(300px, 1fr); gap: 28px; }
   body:not(.admin):not(.replay-picker) .live-stage { position: static; align-content: start; min-height: 0; }
   body:not(.admin):not(.replay-picker) .live-feed { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 6px;
     scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
@@ -410,7 +423,7 @@ button.btn.admin.on { background: rgba(217, 112, 138, .12); }
   body:not(.admin):not(.replay-picker) .replay-banner { flex: none; margin-bottom: 14px; }
 }
 @media (min-width: 861px) and (max-width: 1023px) {
-  body:not(.admin):not(.replay-picker) .live-cols { grid-template-columns: minmax(0, min(56%, calc((100vh - 21rem) * 16 / 9))) minmax(280px, 1fr); gap: 20px; }
+  body:not(.admin):not(.replay-picker) .live-cols { grid-template-columns: minmax(0, min(56%, calc((100vh - 22.5rem) * 16 / 9))) minmax(280px, 1fr); gap: 20px; }
 }
 /* the operator page keeps the stacked layout on narrow screens */
 @media (max-width: 1023px) {
@@ -450,6 +463,7 @@ button.btn.admin.on { background: rgba(217, 112, 138, .12); }
   .live-dist .legend button { padding: 2px 6px; }
   body:not(.admin) .live-feed { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 16px 24px; position: relative; }
   .feed-new { top: 76px; }
+  .weak { margin: 16px 0 0; }
   body:not(.admin) .past { display: none; }
   body.replay-picker .live { position: static; display: block; padding: 16px; }
   body.replay-picker.live-body { overflow: auto; }
