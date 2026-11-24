@@ -25,24 +25,30 @@
   <!-- Inter is self-hosted by facthem.es (/assets/fonts); elsewhere (the runner's
        own page) the system font stands in. -->
   <link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="css/live.css?v=f13a7360a6" />
+  <link rel="stylesheet" href="css/live.css?v=1fc855e3e6" />
 </head>
 <body>
 
-  <!-- One header on every screen: the site's wordmark, whether we are on air,
-       the session, the way back to the site, and sharing the session. -->
+  <!-- Header. Desktop: the site bar, then the session (status, title, clock,
+       share). Phones: one row — wordmark, status, title, share. Same elements,
+       rearranged by CSS grid (see "Header" in live.css). -->
   <header class="site-header live-top" id="topbar">
     <a class="brand wordmark" href="https://facthem.es/" aria-label="Facthem, inicio">Facthem</a>
     <span class="brand-tag">directo</span>
-    <span class="onair" id="onair" hidden>en directo</span>
-    <h1 class="session-title" id="session-title">cargando…</h1>
     <nav class="live-nav" aria-label="Facthem">
       <a href="https://facthem.es/">Sesiones</a>
       <a href="https://facthem.es/representantes.html">Representantes</a>
       <a href="https://facthem.es/estadisticas.html">Estadísticas</a>
       <a href="https://facthem.es/metodologia.html">Metodología</a>
     </nav>
-    <div class="live-share" id="live-share"></div>
+    <div class="live-head">
+      <div class="live-id">
+        <h1 class="session-title" id="session-title">cargando…</h1>
+        <span class="onair" id="onair" hidden>En directo</span>
+      </div>
+      <div class="clocks">emisión <strong id="clock-emision">00:00</strong> <span id="clock-lag">en directo</span></div>
+      <div class="live-share" id="live-share"></div>
+    </div>
   </header>
 
   <!-- Diferido: nothing on air, the last debate replays below (see bootReplay in live.js). -->
@@ -52,39 +58,52 @@
   <main class="layout">
     <div class="col">
 
-      <section class="panel">
+      <section class="panel stage">
         <div class="player-wrap">
           <video id="player" controls playsinline preload="auto" muted hidden></video>
           <div id="yt-player" hidden></div>
           <button id="play-overlay" hidden>▶ Empezar emisión</button>
         </div>
 
+        <!-- Who has the floor. The rail of participants and how the speaker was
+             identified are for the operator page only. -->
         <div class="now">
           <img class="now-avatar" id="now-avatar" alt="" />
-          <div>
-            <div class="now-name" id="now-name">—</div>
-            <div class="now-how" id="now-how">esperando atribución de orador</div>
+          <div class="now-who">
+            <span class="now-label">Hablando</span>
+            <span class="now-name" id="now-name">—</span>
+            <span class="now-how" id="now-how">esperando atribución de orador</span>
           </div>
-          <div class="clocks">
-            emisión <strong id="clock-emision">00:00</strong><br />
-            <span id="clock-lag">en directo</span>
-          </div>
+          <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
         </div>
-
         <div class="rail" id="rail"></div>
-        <div class="caption" id="caption"></div>
+
+        <!-- What is being said: a fixed four-line slot, newest at the bottom. -->
+        <div class="caption" id="caption" aria-live="off"></div>
+
+        <div class="live-dist">
+          <h2 class="dist-title">Hasta ahora</h2>
+          <div class="summary-bar" id="summary-bar" hidden></div>
+        </div>
 
       </section>
 
 
     </div>
 
-    <section class="panel feed-panel">
-      <h2 class="panel-title">
-        Afirmaciones verificadas
-        <span class="count num" id="claim-count">0</span>
-      </h2>
-      <div class="summary-bar" id="summary-bar" hidden></div>
+    <section class="feed-panel">
+      <div class="feed-head">
+        <h2 class="panel-title">
+          Afirmaciones verificadas
+          <span class="count num" id="claim-count">0</span>
+        </h2>
+        <label class="feed-filter"><span class="sr">Mostrar</span>
+          <select id="feed-filter">
+            <option value="">Todas</option>
+            <option value="bad">Solo falsas o exageradas</option>
+          </select>
+        </label>
+      </div>
       <div class="feed" id="feed">
         <button class="feed-new" id="feed-new" hidden>↑ <b>1</b> <span class="n">nueva afirmación</span></button>
         <p class="feed-empty" id="feed-empty">
@@ -92,8 +111,7 @@
         </p>
       </div>
 
-
-      <!-- Desktop: claims the verifier could neither check nor rule out are kept,
+      <!-- Claims the verifier could neither check nor rule out are kept,
            because they were still said, but folded away under the resolved ones. -->
       <details class="weak-drawer" id="weak-drawer" hidden>
         <summary>
@@ -114,6 +132,6 @@
        Set to the R2 custom domain (e.g. https://live-data.facthem.es/) when the
        page is hosted elsewhere. `?data=` on the URL overrides it. -->
   <script>window.LIVE_DATA_BASE = window.LIVE_DATA_BASE || 'https://pub-4b0592b162234f079cbe05777d9aa1f2.r2.dev/';</script>
-  <script src="js/live.js?v=060da15d85"></script>
+  <script src="js/live.js?v=9c2c18c107"></script>
 </body>
 </html>

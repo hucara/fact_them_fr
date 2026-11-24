@@ -326,7 +326,7 @@ function showIdle() {
   document.title = 'Facthem directo';
   $('onair').hidden = true;
   document.querySelector('.layout')?.classList.add('idle');
-  for (const sel of ['.layout > .col', '.feed-panel > .panel-title', '#summary-bar', '#weak-drawer', '#debug-current']) {
+  for (const sel of ['.layout > .col', '.feed-panel .feed-head', '#summary-bar', '#weak-drawer', '#debug-current']) {
     const el = document.querySelector(sel);
     if (el) el.hidden = true;
   }
@@ -449,7 +449,7 @@ async function bootReplay() {
   };
   applySession();
   document.body.classList.add('replay');
-  $('session-title').textContent = `Diferido · ${session.title}`;
+  $('session-title').textContent = session.title;   // the status above it says "Diferido"
   document.title = `${session.title} (diferido) · Facthem`;
   showDiferidoBadge();
   $('feed-empty').textContent = 'Las afirmaciones aparecerán a medida que se pronuncien en el vídeo.';
@@ -469,7 +469,7 @@ let replayHasGrid = false;   // the replay was picked from the grid: offer the w
 
 function showDiferidoBadge() {
   const badge = $('onair');
-  badge.textContent = 'diferido';
+  badge.textContent = 'Diferido';
   badge.classList.add('diferido');
   badge.hidden = false;
 }
@@ -510,6 +510,7 @@ function showReplayGrid(list) {
     '<p class="rb-links">Para el próximo directo, ' + IDLE_FOLLOW + ' <span class="rb-donate">' + IDLE_DONATE + '</span></p>' +
     '<p class="rb-live" id="rb-live" hidden></p>';
   ban.hidden = false;
+  closableBanner(ban);
 
   const cards = list.map((s, i) => {
     const counts = Object.fromEntries(VERDICT_KEYS.map(([k]) => [k, 0]));
@@ -556,6 +557,22 @@ function showReplayBanner(ptr, data) {
     '<p class="rb-links">Para el próximo directo, ' + IDLE_FOLLOW + ' <span class="rb-donate">' + IDLE_DONATE + '</span></p>' +
     '<p class="rb-live" id="rb-live" hidden></p>';
   el.hidden = false;
+  closableBanner(el);
+}
+
+/* The "¡Llegas tarde!" banner can be dismissed; it stays closed for the rest
+   of the visit (sessionStorage), reloads included. */
+const BANNER_KEY = 'facthem-live-banner-closed';
+function closableBanner(el) {
+  let closed = false;
+  try { closed = sessionStorage.getItem(BANNER_KEY) === '1'; } catch { /* ignore */ }
+  if (closed) { el.hidden = true; return; }
+  if (el.querySelector('.rb-close')) return;
+  el.insertAdjacentHTML('afterbegin', '<button type="button" class="rb-close" aria-label="Cerrar aviso">×</button>');
+  el.querySelector('.rb-close').addEventListener('click', () => {
+    el.hidden = true;
+    try { sessionStorage.setItem(BANNER_KEY, '1'); } catch { /* ignore */ }
+  });
 }
 
 async function checkLiveFromReplay() {
@@ -1044,6 +1061,7 @@ function showSpeaker(sp) {
       $('now-how').textContent = '';
       $('now-avatar').src = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
       $('now-avatar').classList.remove('live');
+      document.querySelector('.now')?.classList.remove('speaking');
       document.querySelectorAll('.person').forEach((el) => el.classList.remove('active'));
     }
     return;
@@ -1057,6 +1075,7 @@ function showSpeaker(sp) {
     pulseClass(document.querySelector('.now'), 'swap', 700);
   }
   noteSpeakerInRail(sp);
+  document.querySelector('.now')?.classList.add('speaking');
   $('now-name').innerHTML = `${esc(sp.name ? shortName(sp) : 'Orador no identificado')} ${partyChip(partyFor(sp))}`;
   $('now-name').title = sp.name || '';
   $('now-name').classList.toggle('unknown', !sp.name);
@@ -1222,6 +1241,12 @@ $('feed-new').addEventListener('click', () => {
   };
   requestAnimationFrame(step);
 });
+/* "Solo falsas o exageradas": hides the landed cards whose verdict is not
+   Falso / Sobreestimado / Subestimado (CSS on .feed.only-bad). */
+$('feed-filter').addEventListener('change', (e) => {
+  $('feed').classList.toggle('only-bad', e.target.value === 'bad');
+});
+
 $('feed').addEventListener('scroll', () => {
   if ($('feed').scrollTop < 30 && newAbove) { newAbove = 0; $('feed-new').hidden = true; }
 }, { passive: true });
@@ -2148,7 +2173,7 @@ function renderSwitch(active) {
   cap.classList.toggle('was-paused', paused);
   const pill = $('onair');
   pill.classList.toggle('paused', paused);
-  pill.textContent = paused ? 'en pausa' : 'en directo';
+  pill.textContent = paused ? 'En pausa' : 'En directo';
   const btn = $('btn-switch');
   btn.textContent = active === false ? '▶ Activar verificación' : '⏸ Pausar verificación';
   btn.classList.toggle('on', active !== false);
