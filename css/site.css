@@ -1289,3 +1289,7 @@ a.archive-letter:hover { border-color: var(--line-2); color: var(--text); }
 .nf .muted { max-width: 56ch; font-size: 16px; }
 .nf-hint a { color: var(--text); }
 .nf-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 28px; }
+
+/* ── Claim page: citation line ───────────────────────────────────────── */
+.c-cite p { font-size: 14px; line-height: 1.6; color: var(--text-2); padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r); background: var(--bg-2); }
+.c-cite a { color: var(--text-2); word-break: break-all; }

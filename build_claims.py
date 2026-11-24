@@ -56,6 +56,8 @@ CLAIM_IDS_DIR = Path(__file__).parent / "assets" / "claim-ids"
 SESSIONS_DIR  = Path(__file__).parent / "assets" / "sessions"
 SESION_DIR    = Path(__file__).parent / "sesion"
 STATS_PATH    = Path(__file__).parent / "estadisticas.html"
+LLMS_PATH     = Path(__file__).parent / "llms.txt"
+LLMS_FULL_PATH = Path(__file__).parent / "llms-full.txt"
 INDEX_PATH    = Path(__file__).parent / "index.html"
 INDEX_TEMPLATE = Path(__file__).parent / "templates" / "index.html"
 SITEMAP_PATH  = Path(__file__).parent / "sitemap.xml"
@@ -242,6 +244,10 @@ def build_claim_review_schema(claim, slug, pol_name, session_date):
             "alternateName": rating_name,
         },
     }
+
+    verified = str(v.get("created_at") or "")[:10]
+    if verified and verified >= str(schema["datePublished"])[:10]:
+        schema["dateModified"] = verified
 
     omis = _omisiones_items(v.get("omisiones"))
     if omis:
@@ -452,6 +458,21 @@ def render_page(claim, slug, session_date, ctx=None):
             lis.append(f"<li>{link}{meta_html}{dato_html}</li>")
         secs.append(f'<section class="c-sec"><h2>Fuentes <span class="n">· {len(src)}</span></h2>'
                     f'<ol class="c-sources">{"".join(lis)}</ol></section>')
+    # One plain sentence that answers "who said what, where, and what did Facthem
+    # find": the line answer engines quote, with the canonical link.
+    verified = str(v.get("created_at") or "")[:10]
+    where = (f"el Pleno del Congreso del {_format_session_date_es(sess.get('fecha')).lstrip('0')}"
+             if (sess.get("tipo") or "PL") == "PL" and sess.get("fecha") else
+             f"el {sess.get('organo')} del {_format_session_date_es(sess.get('fecha')).lstrip('0')}"
+             if sess.get("fecha") else "")
+    who_cite = f"{pol_nombre} ({pol_partido})" if pol_nombre and pol_partido else (pol_nombre or "Un político")
+    cite = (f"{esc(who_cite)} afirmó{' en ' + esc(where) if where else ''}: «{esc(desc_text.rstrip('.'))}». "
+            f"Facthem lo verificó"
+            + (f' el <time datetime="{verified}">{esc(_format_session_date_es(verified).lstrip("0"))}</time>' if verified else "")
+            + f" como «{esc(site_chrome.VK[vkey][2])}»"
+            + (f", con un {score} % de confianza" if score is not None else "") + ". "
+            + f'<a href="{esc(canon_url)}">{esc(canon_url)}</a>')
+    cite_html = f'<section class="c-sec c-cite"><h2>Cómo citar esta verificación</h2><p>{cite}</p></section>'
     if not secs:
         secs.append(f'<section class="c-sec c-lead"><h2>Lo que dicen los datos</h2>'
                     f'<p>{esc(site_chrome.VERDICT_WHAT[vkey])}</p></section>')
@@ -482,7 +503,7 @@ def render_page(claim, slug, session_date, ctx=None):
 </header>
 {conf_html}
 <div class="c-cols">
-<div class="c-main">{''.join(secs)}</div>
+<div class="c-main">{''.join(secs)}{cite_html}</div>
 <aside class="c-side">{''.join(side)}</aside>
 </div>
 </article>
@@ -617,7 +638,7 @@ CLAIM_FIELDS = (
 )
 POLITICIAN_FIELDS = "id, nombre_completo, partido, grupo_parlamentario"
 SESSION_FIELDS = "id, fecha, organo, legislatura, tipo, numero"
-VERIFICATION_FIELDS = "claim_id, resultado, confidence_score, afirmacion_correcta, omisiones, errores, fuentes"
+VERIFICATION_FIELDS = "claim_id, resultado, confidence_score, afirmacion_correcta, omisiones, errores, fuentes, created_at"
 
 SALARY_TABLE = "politician_salary"
 
@@ -639,7 +660,7 @@ def fetch_all_claims_sqlite():
                p.nombre_completo AS pol_nombre, p.partido AS pol_partido,
                p.grupo_parlamentario AS pol_grupo,
                v.resultado, v.confidence_score, v.afirmacion_correcta,
-               v.omisiones, v.errores, v.fuentes,
+               v.omisiones, v.errores, v.fuentes, v.created_at AS verified_at,
                s.fecha AS session_fecha, s.organo AS session_organo,
                s.legislatura AS session_legislatura, s.tipo AS session_tipo,
                s.numero AS session_numero
@@ -664,6 +685,7 @@ def fetch_all_claims_sqlite():
             ver = [{"resultado": r["resultado"],
                     "confidence_score": r["confidence_score"],
                     "afirmacion_correcta": r["afirmacion_correcta"],
+                    "created_at": r["verified_at"],
                     "omisiones": r["omisiones"],
                     "errores": r["errores"],
                     "fuentes": r["fuentes"]}]
@@ -762,7 +784,7 @@ def fetch_all_claims(supabase):
     for v in _paginate_verifications(supabase):
         verifications.setdefault(v["claim_id"], []).append({
             k: v.get(k) for k in ("resultado", "confidence_score", "afirmacion_correcta",
-                                  "omisiones", "errores", "fuentes")
+                                  "omisiones", "errores", "fuentes", "created_at")
         })
 
     raw_claims = _paginate_table(supabase, "claim", CLAIM_FIELDS, "afirmaciones", page_size=500)
@@ -1804,6 +1826,83 @@ def generate_stats_page(stats):
     print(f"  estadisticas.html — {'prerenderizada' if inner else 'sin prerenderizar'}")
 
 
+def _html_to_text(fragment):
+    """Readable Markdown-ish text from one of our own pages' HTML."""
+    t = re.sub(r"<(script|style|aside|nav)[^>]*>.*?</\1>", "", fragment, flags=re.S)
+    # the contact address is assembled by JS (kept from scrapers): point to the page instead
+    t = re.sub(r'<a[^>]*class="footer-email"[^>]*>.*?</a>', "la dirección de contacto que aparece en https://facthem.es/aviso.html",
+               t, flags=re.S)
+    t = re.sub(r"<h1[^>]*>(.*?)</h1>", lambda m: f"\n# {m.group(1)}\n", t, flags=re.S)
+    t = re.sub(r"<h2[^>]*>(.*?)</h2>", lambda m: f"\n## {m.group(1)}\n", t, flags=re.S)
+    t = re.sub(r"<h3[^>]*>(.*?)</h3>", lambda m: f"\n### {m.group(1)}\n", t, flags=re.S)
+    t = re.sub(r"<li[^>]*>", "\n- ", t)
+    t = re.sub(r"<(tr)[^>]*>", "\n", t)
+    t = re.sub(r"</t[dh]>", " | ", t)
+    t = re.sub(r"</?(p|div|ul|ol|table|tbody|thead|section|article|figure|br)[^>]*>", "\n", t)
+    t = html.unescape(re.sub(r"<[^>]+>", "", t))
+    t = re.sub(r"[ \t]+", " ", t)
+    t = re.sub(r"\n\s*\n\s*\n+", "\n\n", t)
+    return "\n".join(l.strip() for l in t.splitlines()).strip()
+
+
+def generate_llms_txt(index, n_people, stats):
+    """llms.txt (a map of the site for language models, llmstxt.org) and
+    llms-full.txt (the same plus the full methodology as text)."""
+    total = sum(s["n"] for s in index)
+    n = lambda x: f"{x:,}".replace(",", ".")
+    verdicts = "\n".join(f"- **{lg}**: {site_chrome.VERDICT_WHAT[k]}" for k, _s, lg, *_ in site_chrome.VERDICTS)
+    recent = []
+    for s in index[:15]:
+        bits = ", ".join(f"{c} {site_chrome.VK[k][2].lower()}" for k, *_ in site_chrome.VERDICTS for c in [s["d"].get(k, 0)] if c)
+        recent.append(f"- [{s['title']}]({BASE_URL}{session_url(s['id'])}): {s['n']} afirmaciones ({bits})")
+    head = f"""# Facthem
+
+> Facthem verifica las afirmaciones factuales que hacen los diputados y los miembros del Gobierno en el Congreso de los Diputados de España, y publica la retribución pública de cada uno. {n(total)} afirmaciones verificadas en {len(index)} sesiones; {n(n_people)} perfiles de representantes. Cada verificación enlaza a sus fuentes.
+
+Facthem es un proyecto independiente. Las verificaciones se generan con un proceso automatizado con IA (extracción de afirmaciones de la transcripción oficial, búsqueda de fuentes y veredicto) y pueden contener errores; cada ficha muestra sus fuentes y la confianza de la verificación. Neutralidad: todos los grupos se verifican con el mismo criterio.
+
+Veredictos:
+{verdicts}
+
+## Páginas principales
+
+- [Sesiones]({BASE_URL}/): la última sesión verificada y el acceso a todas las anteriores.
+- [Representantes]({BASE_URL}/representantes.html): los diputados y miembros del Gobierno, con sus afirmaciones verificadas y su sueldo.
+- [Estadísticas]({BASE_URL}/estadisticas.html): qué partidos y diputados acumulan más afirmaciones falsas, exageradas o con matices.
+- [Metodología]({BASE_URL}/metodologia.html): cómo se extraen y verifican las afirmaciones y qué significa cada veredicto.
+- [Todas las afirmaciones]({BASE_URL}/archive.html): índice A–Z de todas las fichas.
+- [Sitemap]({BASE_URL}/sitemap.xml)
+
+## Sesiones recientes
+
+{chr(10).join(recent)}
+
+## Estructura
+
+- Cada afirmación verificada tiene una ficha estable en `{BASE_URL}/claim/<slug>.html` con la cita, el veredicto, lo que dicen los datos, los errores, el contexto que falta y las fuentes, y datos estructurados schema.org `ClaimReview`. Cada ficha incluye una frase para citarla.
+- Cada representante tiene un perfil en `{BASE_URL}/politician/<slug>.html` con su sueldo mensual y anual desglosado (fuentes oficiales del Congreso y del Gobierno) y todas sus afirmaciones.
+- Cada sesión tiene una página en `{BASE_URL}/sesion/<id>.html` con todas sus afirmaciones en el orden en que se dijeron.
+
+## Optional
+
+- [Metodología completa en texto]({BASE_URL}/llms-full.txt)
+- [Blog]({BASE_URL}/blog.html): correcciones y novedades.
+- [Acerca de]({BASE_URL}/acerca.html)
+- [Aviso legal]({BASE_URL}/aviso.html)
+"""
+    LLMS_PATH.write_text(head, encoding="utf-8")
+    full = head
+    for page in ("metodologia.html", "acerca.html", "aviso.html"):
+        p = Path(__file__).parent / page
+        if p.exists():
+            src = p.read_text(encoding="utf-8")
+            m = re.search(r'<article class="doc-body">(.*?)</article>', src, re.S)
+            if m:
+                full += f"\n\n---\n\nFuente: {BASE_URL}/{page}\n\n" + _html_to_text(m.group(1)) + "\n"
+    LLMS_FULL_PATH.write_text(full, encoding="utf-8")
+    print(f"  llms.txt + llms-full.txt ({len(full) // 1024} KB)")
+
+
 def render_home(index, recs_by, n_people):
     """Fill index.html's markers: hero counters, rail, latest sitting, sitting index JSON."""
     if not index or not INDEX_TEMPLATE.exists():
@@ -1902,6 +2001,7 @@ def main():
     render_home(index, recs_by, n_people=len(politician_dates))
     session_dates = generate_session_pages(index, recs_by)
     generate_stats_page(stats)
+    generate_llms_txt(index, len(politician_dates), stats)
 
     print("Actualizando sitemap…")
     update_sitemap(generated, politician_dates, session_dates)
