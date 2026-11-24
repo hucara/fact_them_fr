@@ -155,6 +155,7 @@ const player = $('player');
    Detected at boot: sessions/current.json wins if it exists. */
 let mode = 'ws';
 let bucketCfg = null;      // sessions/current.json
+let pointerKey = 'current'; // the pointer this page follows: current, or current-<channel>
 let nextBucket = 0;        // next bucket to fetch
 let bucketMisses = 0;
 let bucketBase = '';
@@ -217,22 +218,56 @@ async function fetchJSON(url, opts = {}) {
   return r.json();
 }
 
+/* A pointer is on air when it is not ended, is listed (not a rehearsal) and
+   the runner published in the last 15 minutes (a dead runner never says
+   "ended"). Same rule as the site's "Directos" pulse (fact_them_fr/js/ui.js). */
+const LIVE_STALE_S = 15 * 60;
+const isRunning = (c) => !!c && !!c.status && c.status !== 'ended' && c.listed !== false
+  && (!c.updated || Date.now() / 1000 - c.updated < LIVE_STALE_S);
+const fetchPointer = async (key) => {
+  try { return await fetchJSON(`${bucketBase}sessions/${key}.json`, { cache: 'no-store' }); } catch { return null; }
+};
+/* The verification on air, Congress stream first, then a TV debate: {cfg, channel} or null. */
+async function runningPointer() {
+  for (const [key, channel] of [['current', ''], ['current-tv', 'tv']]) {
+    const cfg = await fetchPointer(key);
+    if (isRunning(cfg)) return { cfg, channel };
+  }
+  return null;
+}
+
 async function boot() {
   bucketBase = dataBase();
-  const sid = new URLSearchParams(location.search).get('s');
+  const q = new URLSearchParams(location.search);
+  const sid = q.get('s');
   // A second runner (a TV debate beside the Congress stream) publishes its own
   // pointer: ?c=tv → sessions/current-tv.json. The runner's own page sets it.
-  const channel = (new URLSearchParams(location.search).get('c') || window.LIVE_CHANNEL || '')
+  let channel = (q.get('c') || window.LIVE_CHANNEL || '')
     .toLowerCase().replace(/[^a-z0-9-]/g, '');
   // 1. Published buckets (static hosting / aton). The manifest is the only
   //    mutable object, so it is fetched with the cache bypassed.
-  try {
-    const key = sid ? `sessions/${encodeURIComponent(sid)}.json`
-      : channel ? `sessions/current-${channel}.json` : 'sessions/current.json';
-    bucketCfg = await fetchJSON(bucketBase + key, { cache: 'no-store' });
+  if (!window.LIVE_ADMIN && !sid && !channel && !q.has('diferido') && !q.has('replay')) {
+    // Plain /live/ ("Directos"): whatever is on air, on either pointer; with
+    // nothing on air, the diferidos grid (bootBuckets → bootReplay).
+    const on = await runningPointer();
+    if (on) {
+      bucketCfg = on.cfg; channel = on.channel;
+      if (channel) { const u = new URL(location.href); u.searchParams.set('c', channel); history.replaceState(null, '', u); }
+      pointerKey = channel ? `current-${channel}` : 'current';
+    } else {
+      bucketCfg = (await fetchPointer('current')) || { status: 'ended' };
+    }
     mode = 'buckets';
-  } catch {
-    bucketCfg = null;
+  } else {
+    try {
+      const key = sid ? `sessions/${encodeURIComponent(sid)}.json`
+        : channel ? `sessions/current-${channel}.json` : 'sessions/current.json';
+      bucketCfg = await fetchJSON(bucketBase + key, { cache: 'no-store' });
+      if (!sid && channel) pointerKey = `current-${channel}`;
+      mode = 'buckets';
+    } catch {
+      bucketCfg = null;
+    }
   }
   try {
     VOCAB = await fetchJSON(mode === 'buckets' ? bucketBase + 'vocabularies.json' : '/vocabularies');
@@ -334,7 +369,9 @@ function showIdle() {
 async function bootBuckets() {
   const replay = new URLSearchParams(location.search).has('replay') || new URLSearchParams(location.search).has('s');
   const forceDiferido = new URLSearchParams(location.search).has('diferido');
-  if ((bucketCfg.status === 'ended' && !replay) || forceDiferido) {
+  // The public page never shows a stale or rehearsal pointer as live.
+  const over = window.LIVE_ADMIN ? bucketCfg.status === 'ended' : !isRunning(bucketCfg);
+  if ((over && !replay) || forceDiferido) {
     if (await bootReplay()) return;
     showIdle();
     return;
@@ -558,12 +595,12 @@ function closableBanner(el) {
 }
 
 async function checkLiveFromReplay() {
-  let cfg = null;
-  try { cfg = await fetchJSON(`${bucketBase}sessions/current.json`, { cache: 'no-store' }); } catch { return; }
-  if (!cfg || cfg.status === 'ended' || cfg.listed === false) return;
+  const on = await runningPointer(); if (!on) return;
+  const { cfg, channel } = on;
   const el = $('rb-live');
   if (!el.hidden) return;
-  el.innerHTML = `● Ahora estamos en directo: <a href="${esc(location.pathname)}">${esc(cfg.title || 'ver el directo')}</a>`;
+  const href = location.pathname + (channel ? `?c=${encodeURIComponent(channel)}` : '');
+  el.innerHTML = `● Ahora estamos en directo: <a href="${esc(href)}">${esc(cfg.title || 'ver el directo')}</a>`;
   el.hidden = false;
   if (replayMode) $('replay-banner').hidden = false;
 }
@@ -2068,7 +2105,7 @@ function onRunnerSeek(cfg) {
 async function pollManifest() {
   if (mode !== 'buckets' || !bucketCfg?.vod || sessionEnded) return;
   try {
-    const cfg = await fetchJSON(`${bucketBase}sessions/current.json`, { cache: 'no-store' });
+    const cfg = await fetchJSON(`${bucketBase}sessions/${pointerKey}.json`, { cache: 'no-store' });
     if (cfg.session_id !== bucketCfg.session_id) return;
     if ((cfg.seek_seq || 0) !== lastSeekSeq) onRunnerSeek(cfg);
   } catch { /* transient */ }
