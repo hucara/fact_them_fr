@@ -252,9 +252,12 @@ window.FT = (() => {
     document.addEventListener('click', e => { if (!root.contains(e.target)) close(); });
   }
 
+  // Contact address assembled at runtime (kept out of the HTML for scrapers).
   function initFooter() {
-    const el = document.querySelector('.footer-email'); if (!el) return;
-    const a = `${el.dataset.u}@${el.dataset.d}`; el.href = `mailto:${a}`; el.textContent = a;
+    document.querySelectorAll('a.footer-email').forEach(el => {
+      const a = `${el.dataset.u || 'contacto'}@${el.dataset.d || 'facthem.es'}`;
+      el.href = `mailto:${a}`; el.textContent = a;
+    });
   }
 
   function init() {

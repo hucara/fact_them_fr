@@ -949,90 +949,6 @@ def _archive_nav(file_for, current):
     )
 
 
-ARCHIVE_STYLE_ES = """
-    .archive-page {
-      flex: 1;
-      max-width: 900px;
-      margin: 0 auto;
-      width: 100%;
-      padding: 3rem 1.75rem 5rem;
-    }
-    .archive-page h1 {
-      font-size: 1.4rem;
-      font-weight: 900;
-      letter-spacing: -.03em;
-      background: linear-gradient(135deg, #f0b8c4 0%, #c8607a 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: .5rem;
-    }
-    .archive-caption {
-      font-size: .82rem;
-      color: var(--c-text-muted);
-      margin: 0 0 1.5rem;
-    }
-    .archive-page h2 {
-      font-size: .78rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .12em;
-      color: var(--c-text-muted);
-      margin: 2rem 0 .5rem;
-    }
-    .archive-page ul {
-      margin: 0 0 .5rem;
-      padding-left: 1.2rem;
-    }
-    .archive-page li {
-      margin: .3rem 0;
-      font-size: .88rem;
-      line-height: 1.5;
-    }
-    .archive-page a {
-      color: var(--c-accent);
-      text-decoration: none;
-      border-bottom: 1px solid rgba(160,120,0,.3);
-    }
-    .archive-page a:hover { border-color: var(--c-accent); }
-    .archive-nav {
-      display: flex;
-      flex-wrap: wrap;
-      gap: .3rem;
-      margin: 0 0 2rem;
-    }
-    .archive-nav + h2 { margin-top: 0; }
-    .archive-page .archive-letter {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 2rem;
-      height: 2rem;
-      padding: 0 .35rem;
-      border: 1px solid var(--c-border);
-      border-radius: var(--radius-xs);
-      font-size: .82rem;
-      font-weight: 700;
-      color: var(--c-accent);
-      text-decoration: none;
-    }
-    .archive-page .archive-letter:hover {
-      border-color: var(--c-accent);
-      background: rgba(255,255,255,.05);
-    }
-    .archive-page .archive-letter--current {
-      background: rgba(255,255,255,.12);
-      border-color: var(--c-accent);
-      color: var(--c-text);
-    }
-    .archive-page .archive-letter--empty {
-      color: var(--c-text-muted);
-      opacity: .3;
-      border-color: transparent;
-    }
-"""
-
-
 def generate_archive(claims_data):
     """
     Plain-HTML archive paginated A–Z by politician initial.
@@ -1065,7 +981,7 @@ def generate_archive(claims_data):
             sample_pol = by_pol[name][0][1].get("politician") or {}
             pol_slug = slugify_politician(sample_pol.get("nombre_completo", name), sample_pol.get("partido", ""))
             pol_url  = f"{BASE_URL}/politician/{pol_slug}.html"
-            rows.append(f'  <h2><a href="{pol_url}" style="color:inherit;text-decoration:none">{esc(name)}</a></h2>\n  <ul>')
+            rows.append(f'  <h2><a href="{pol_url}">{esc(name)}</a></h2>\n  <ul>')
             for slug, claim in by_pol[name]:
                 text = esc(str(claim.get("texto_normalizado") or slug).strip()[:120])
                 url  = f"{BASE_URL}/claim/{slug}.html"
@@ -1074,38 +990,16 @@ def generate_archive(claims_data):
         return "\n".join(rows)
 
     def _page(letter):
-        nav   = _archive_nav(file_for, letter)
-        body  = _letter_body(letter)
+        nav = _archive_nav(file_for, letter)
         canon = f"{BASE_URL}/{file_for[letter]}"
         n_pol = len(buckets[letter])
-        pol_word = "representante" if n_pol == 1 else "representantes"
-        return f"""<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Todas las afirmaciones — {esc(letter)} | Facthem</title>
-  <meta name="robots" content="noindex, follow" />
-  <link rel="canonical" href="{esc(canon)}" />
-  <link rel="stylesheet" href="css/style.css" />
-  <style>{ARCHIVE_STYLE_ES}  </style>
-</head>
-<body>
-  <header class="site-header">
-    <nav class="tabs">
-      <a href="{BASE_URL}/" class="tab-button" style="text-decoration:none">← Volver</a>
-    </nav>
-  </header>
-  <div class="archive-page">
-    <h1>Todas las afirmaciones</h1>
-    <p class="archive-caption">Representantes cuya inicial es «{esc(letter)}» · {n_pol} {pol_word}</p>
-    {nav}
-{body}
-    {nav}
-  </div>
-</body>
-</html>
-"""
+        caption = f"Representantes cuya inicial es «{letter}» · {n_pol} {'representante' if n_pol == 1 else 'representantes'}"
+        body = (f'<main class="page archive-page" id="main"><header class="page-head"><h1>Todas las afirmaciones</h1>'
+                f'<p class="muted">{esc(caption)}</p></header>{nav}\n{_letter_body(letter)}\n{nav}</main>')
+        # noindex, follow: a plain link graph for crawlers (unchanged).
+        return site_chrome.page(body=body, title=f"Todas las afirmaciones — {letter} | Facthem",
+                                description=f"Archivo de afirmaciones verificadas por Facthem. {caption}.",
+                                canonical=canon, robots="noindex, follow")
 
     if not active_ordered:
         ARCHIVE_PATH.write_text(

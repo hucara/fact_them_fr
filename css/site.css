@@ -1241,3 +1241,51 @@ ul.dir { list-style: none; margin: 0; padding: 0; }
 .s-nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line); }
 .s-nav a { max-width: 48%; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 639px) { .s-nav { flex-direction: column; } .s-nav a { max-width: 100%; } }
+
+/* ── Text pages: content kept from the old site ─────────────────────── */
+.doc-single { grid-template-columns: minmax(0, 720px); }
+.doc-body h1 { margin: 0; }
+.doc-body h3 { margin: 28px 0 8px; font-size: 17px; color: var(--text); }
+.doc-body a { color: var(--text); text-decoration-color: var(--line-2); text-underline-offset: 3px; }
+.doc-body a:hover { text-decoration-color: var(--accent); }
+.doc-body a.btn { text-decoration: none; }
+.doc-body table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+.doc-body th, .doc-body td { text-align: left; vertical-align: top; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line); color: var(--text-2); }
+.doc-body th { color: var(--muted); font-weight: 600; font-size: 13px; }
+.doc-body td:first-child { color: var(--text); font-weight: 600; white-space: nowrap; }
+.doc-body figure { margin: 24px 0; }
+.doc-body figure img { max-width: 100%; height: auto; border-radius: var(--r); border: 1px solid var(--line); }
+.doc-body figcaption { margin-top: 8px; font-size: 13px; color: var(--muted); }
+.doc-body .donate-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
+.doc-hr { border: 0; border-top: 1px solid var(--line); margin: 48px 0; }
+.blog-post time { display: block; margin-top: 8px; font-size: 13px; color: var(--muted); }
+.blog-post h2 { margin-top: 6px; }
+@media (max-width: 860px) {
+  .doc { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .doc-toc { display: none; }
+  .doc-body { font-size: 16px; }
+  .doc-body td:first-child { white-space: normal; }
+}
+
+/* ── Archive (noindex link graph, A–Z by representative) ─────────────── */
+.archive-page { max-width: 960px; }
+.archive-nav { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 28px; }
+.archive-letter { display: inline-grid; place-items: center; min-width: 32px; height: 32px; padding: 0 6px; border: 1px solid var(--line); border-radius: var(--r-sm); font-size: 13px; font-weight: 700; color: var(--text-2); text-decoration: none; }
+a.archive-letter:hover { border-color: var(--line-2); color: var(--text); }
+.archive-letter--current { background: var(--surface-2); border-color: var(--accent); color: var(--text); }
+.archive-letter--empty { opacity: .3; border-color: transparent; }
+.archive-page h2 { margin: 28px 0 8px; font-size: 15px; font-weight: 700; }
+.archive-page h2 a { color: var(--text); text-decoration: none; }
+.archive-page h2 a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.archive-page ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.archive-page li { font-size: 14px; line-height: 1.5; color: var(--muted); }
+.archive-page li a { color: var(--text-2); text-decoration: none; }
+.archive-page li a:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+.archive-page .archive-nav:last-child { margin: 40px 0 0; }
+
+/* ── 404 ──────────────────────────────────────────────────────────────── */
+.nf { padding-top: 12vh; padding-bottom: 16vh; }
+.nf h1 { margin: 0 0 12px; font-size: clamp(32px, 4vw, 48px); font-weight: 800; letter-spacing: -.035em; }
+.nf .muted { max-width: 56ch; font-size: 16px; }
+.nf-hint a { color: var(--text); }
+.nf-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 28px; }

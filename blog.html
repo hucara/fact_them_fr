@@ -1,194 +1,30 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Blog — Facthem</title>
-  <meta name="description"
-    content="Actualizaciones y mejoras de Facthem, el verificador de afirmaciones parlamentarias." />
-  <link rel="canonical" href="https://facthem.es/blog.html" />
+  <meta name="description" content="Actualizaciones y mejoras de Facthem, el verificador de afirmaciones parlamentarias." />
   <meta property="og:image" content="https://facthem.es/assets/portada_opt.png" />
   <meta name="twitter:image" content="https://facthem.es/assets/portada_opt.png" />
-  <link rel="icon" type="image/png" href="/assets/favicon.png" />
-  <meta name="theme-color" content="#0f0f0f" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" />
-  <link rel="stylesheet" href="css/style.css" />
-  <!-- Google Tag Manager -->
-  <script>(function (w, d, s, l, i) { w[l] = w[l] || []; w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' }); var f = d.getElementsByTagName(s)[0], j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : ''; j.async = true; j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f); })(window, document, 'script', 'dataLayer', 'GTM-M6ZJVS39');</script>
-  <style>
-    .blog-page {
-      flex: 1;
-      max-width: 760px;
-      margin: 0 auto;
-      width: 100%;
-      padding: 4rem 1.75rem 5rem;
-    }
-
-    .blog-page h1 {
-      font-size: 1.6rem;
-      font-weight: 900;
-      letter-spacing: -.03em;
-      background: linear-gradient(135deg, #f0b8c4 0%, #c8607a 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: .25rem;
-    }
-
-    .blog-page .blog-subtitle {
-      font-size: .85rem;
-      color: var(--c-text-muted);
-      margin-bottom: 3rem;
-    }
-
-    .blog-post {
-      margin-bottom: 3rem;
-    }
-
-    .blog-post time {
-      display: block;
-      font-size: .72rem;
-      color: var(--c-text-muted);
-      text-transform: uppercase;
-      letter-spacing: .1em;
-      margin-bottom: .5rem;
-    }
-
-    .blog-post h2 {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--c-text);
-      margin-bottom: .6rem;
-    }
-
-    .blog-post p {
-      font-size: .95rem;
-      line-height: 1.8;
-      color: var(--c-text);
-      margin-bottom: .75rem;
-    }
-
-    .blog-post ul {
-      list-style: none;
-      padding: 0;
-      margin: 0 0 .75rem;
-    }
-
-    .blog-post ul li {
-      font-size: .95rem;
-      line-height: 1.8;
-      color: var(--c-text);
-      padding-left: 1.25rem;
-      position: relative;
-    }
-
-    .blog-post ul li::before {
-      content: '·';
-      position: absolute;
-      left: 0;
-      color: var(--c-accent);
-      font-weight: 700;
-    }
-
-    .blog-post a {
-      color: var(--c-accent);
-      text-decoration: none;
-      border-bottom: 1px solid rgba(200, 96, 122, .35);
-    }
-
-    .blog-post a:hover {
-      border-color: var(--c-accent);
-    }
-
-    .blog-post figure {
-      margin: 1.5rem 0;
-    }
-
-    .blog-post figure img {
-      display: block;
-      width: 100%;
-      max-width: 560px;
-      height: auto;
-      border-radius: 12px;
-      border: 1px solid var(--c-border);
-    }
-
-    .blog-post figcaption {
-      margin-top: .5rem;
-      font-size: .85rem;
-      color: var(--c-text-muted);
-    }
-
-    .blog-divider {
-      height: 1px;
-      background: var(--c-border);
-      margin: 2.5rem 0;
-    }
-
-    .blog-donate-row {
-      display: flex;
-      gap: .75rem;
-      margin: 1rem 0 .75rem;
-      flex-wrap: wrap;
-    }
-
-    .blog-donate-row .donate-btn {
-      display: inline-flex;
-      align-items: center;
-      min-height: 1.9rem;
-      line-height: 1.2;
-      border-bottom: none !important;
-    }
-
-    .yt-shorts-grid {
-      display: flex;
-      gap: 1rem;
-      margin: 1.25rem 0;
-      flex-wrap: wrap;
-    }
-
-    .yt-short {
-      flex: 1 1 180px;
-      max-width: 280px;
-      aspect-ratio: 9 / 16;
-      border-radius: 8px;
-      overflow: hidden;
-      background: #000;
-    }
-
-    .yt-short iframe {
-      width: 100%;
-      height: 100%;
-      border: 0;
-      display: block;
-    }
-  </style>
+  <link rel="canonical" href="https://facthem.es/blog.html" />
+  <!--#head-common--><link rel="icon" href="/assets/favicon.ico" sizes="any" /><link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png" /><link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" /><link rel="manifest" href="/assets/site.webmanifest" /><meta name="theme-color" content="#120c0f" /><link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin /><link rel="stylesheet" href="/css/site.css?v=cdb8df196b" /><script>if(location.hostname==='facthem.es')addEventListener('load',function(){(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-M6ZJVS39');});</script><!--/head-common-->
 </head>
+<body class="doc-page">
+  <!--#gtm-body--><noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-M6ZJVS39" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript><!--/gtm-body-->
+  <!--#topbar active=""--><a class="skip" href="#main">Saltar al contenido</a><header class="topbar" id="topbar"><a class="wordmark" href="/" aria-label="Facthem, inicio">Facthem</a><nav class="nav" aria-label="Principal"><a href="/">Sesiones</a><a href="/representantes.html">Representantes</a><a href="/estadisticas.html">Estadísticas</a><a href="/metodologia.html">Metodología</a><span class="nav-ink" aria-hidden="true"></span></nav><div class="topbar-right"><div class="psearch psearch-top" role="search"><label class="psearch-box"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="sr">Buscar representante</span><input type="search" class="psearch-input" placeholder="Buscar diputado o ministro" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-autocomplete="list" /><kbd aria-hidden="true">/</kbd></label><ul class="psearch-list" role="listbox" hidden></ul></div><a class="live-chip" href="/live/" data-live hidden><span class="pulse" aria-hidden="true"></span>En directo</a><button type="button" class="menu-btn" aria-expanded="false" aria-controls="mnav" aria-label="Menú"><span></span><span></span><span></span></button></div></header><nav class="mnav" id="mnav" aria-label="Menú" hidden><div class="psearch psearch-menu" role="search"><label class="psearch-box"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="sr">Buscar representante</span><input type="search" class="psearch-input" placeholder="Buscar diputado o ministro" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-autocomplete="list" /><kbd aria-hidden="true">/</kbd></label><ul class="psearch-list" role="listbox" hidden></ul></div><a href="/">Sesiones</a><a href="/representantes.html">Representantes</a><a href="/estadisticas.html">Estadísticas</a><a href="/metodologia.html">Metodología</a><a href="/live/" class="mnav-live" data-live hidden><span class="pulse" aria-hidden="true"></span>En directo</a></nav><!--/topbar-->
+  <main class="page doc" id="main">
+    <aside class="doc-toc" aria-label="En esta página"><p class="toc-label">En esta página</p><ol><li><a href="#fe-de-errores-la-cuota-ferroviaria-de-mercancias-era-del-pai">Fe de errores: la cuota ferroviaria de mercancías era del País Vasco, no de España</a></li><li><a href="#nueva-metodologia-de-verificacion-por-niveles-de-fuente">Nueva metodología de verificación por niveles de fuente</a></li><li><a href="#calculadora-de-salarios-y-llega-facthem-eu">Calculadora de salarios y llega Facthem EU</a></li><li><a href="#mas-paginas-indexables-mas-transparencia-y-una-nueva-seccion">Más páginas indexables, más transparencia y una nueva sección Acerca de</a></li><li><a href="#superamos-los-3-100-claims-verificados-y-estrenamos-canal-de">Superamos los 3.100 claims verificados — y estrenamos canal de YouTube</a></li><li><a href="#35-sesiones-casi-3-000-afirmaciones-y-nuevas-mejoras">35 sesiones, casi 3.000 afirmaciones y nuevas mejoras</a></li><li><a href="#mas-sesiones-y-mejores-estadisticas">Más sesiones y mejores estadísticas</a></li><li><a href="#nuevo-buscador-de-representantes">Nuevo buscador de representantes</a></li><li><a href="#panel-de-estadisticas-rankings-comparativos">Panel de estadísticas: rankings comparativos</a></li><li><a href="#ahora-puedes-apoyar-el-proyecto">Ahora puedes apoyar el proyecto</a></li></ol></aside>
+    <article class="doc-body">
 
-<body>
-  <!-- Google Tag Manager (noscript) -->
-  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-M6ZJVS39" height="0" width="0"
-      style="display:none;visibility:hidden"></iframe></noscript>
-
-  <header class="site-header">
-    <nav class="tabs">
-      <a href="index.html" class="tab-button" style="text-decoration:none">&larr; Volver</a>
-    </nav>
-  </header>
-
-  <div class="blog-page">
     <h1>Blog</h1>
-    <p class="blog-subtitle">Actualizaciones y mejoras de Facthem</p>
+    <p class="doc-meta">Actualizaciones y mejoras de Facthem</p>
 
     <!-- ── Posts (más reciente primero) ──────────────────────────────────── -->
 
     <article class="blog-post">
       <time datetime="2026-10-05">5 octubre 2026</time>
-      <h2>Fe de errores: la cuota ferroviaria de mercancías era del País Vasco, no de España</h2>
+      <h2 id="fe-de-errores-la-cuota-ferroviaria-de-mercancias-era-del-pai">Fe de errores: la cuota ferroviaria de mercancías era del País Vasco, no de España</h2>
       <p>
         El 22 de septiembre, en el pleno del Congreso, el diputado de EH Bildu Mikel Otero afirmó que «la cuota
         de mercancías en tren» era «menor del 2 %». Publicamos esa afirmación como <strong>Subestimado</strong>.
@@ -230,17 +66,17 @@
         Mantener Facthem implica costes reales de infraestructura y modelos de IA. Si el proyecto te resulta
         útil, cualquier contribución ayuda a que sigamos adelante. 🥸
       </p>
-      <div class="blog-donate-row">
-        <a href="https://ko-fi.com/hugocasero" class="donate-btn" target="_blank" rel="noopener">Ko-fi</a>
-        <a href="https://paypal.me/hcasero" class="donate-btn" target="_blank" rel="noopener">PayPal</a>
+      <div class="donate-row">
+        <a href="https://ko-fi.com/hugocasero" class="btn btn-ghost btn-sm" target="_blank" rel="noopener">Ko-fi</a>
+        <a href="https://paypal.me/hcasero" class="btn btn-ghost btn-sm" target="_blank" rel="noopener">PayPal</a>
       </div>
     </article>
 
-    <div class="blog-divider"></div>
+    <hr class="doc-hr" />
 
     <article class="blog-post">
       <time datetime="2026-07-20">20 julio 2026</time>
-      <h2>Nueva metodología de verificación por niveles de fuente</h2>
+      <h2 id="nueva-metodologia-de-verificacion-por-niveles-de-fuente">Nueva metodología de verificación por niveles de fuente</h2>
       <p>
         A partir de la primera sesión posterior al pleno del 18 de junio de 2026, Facthem estrena una forma
         más matizada de asignar veredictos. En lugar de un único umbral, el sistema clasifica cada afirmación
@@ -278,17 +114,17 @@
         Mantener Facthem implica costes reales de infraestructura y modelos de IA. Si el proyecto te resulta
         útil, cualquier contribución ayuda a que sigamos adelante. 🥸
       </p>
-      <div class="blog-donate-row">
-        <a href="https://ko-fi.com/hugocasero" class="donate-btn" target="_blank" rel="noopener">Ko-fi</a>
-        <a href="https://paypal.me/hcasero" class="donate-btn" target="_blank" rel="noopener">PayPal</a>
+      <div class="donate-row">
+        <a href="https://ko-fi.com/hugocasero" class="btn btn-ghost btn-sm" target="_blank" rel="noopener">Ko-fi</a>
+        <a href="https://paypal.me/hcasero" class="btn btn-ghost btn-sm" target="_blank" rel="noopener">PayPal</a>
       </div>
     </article>
 
-    <div class="blog-divider"></div>
+    <hr class="doc-hr" />
 
     <article class="blog-post">
       <time datetime="2026-05-09">9 mayo 2026</time>
-      <h2>Calculadora de salarios y llega Facthem EU</h2>
+      <h2 id="calculadora-de-salarios-y-llega-facthem-eu">Calculadora de salarios y llega Facthem EU</h2>
       <p>
         Esta semana traemos dos novedades importantes. La primera, una herramienta nueva dentro del buscador de
         representantes para entender mejor cuánto cobra cada diputado o diputada del Congreso.
@@ -313,17 +149,17 @@
         Mantener Facthem y ahora también Facthem EU implica costes reales de infraestructura y modelos de IA. Si el
         proyecto te resulta útil, cualquier contribución ayuda a que sigamos adelante. 🥸
       </p>
-      <div class="blog-donate-row">
-        <a href="https://ko-fi.com/hugocasero" class="donate-btn" target="_blank" rel="noopener">Ko-fi</a>
-        <a href="https://paypal.me/hcasero" class="donate-btn" target="_blank" rel="noopener">PayPal</a>
+      <div class="donate-row">
+        <a href="https://ko-fi.com/hugocasero" class="btn btn-ghost btn-sm" target="_blank" rel="noopener">Ko-fi</a>
+        <a href="https://paypal.me/hcasero" class="btn btn-ghost btn-sm" target="_blank" rel="noopener">PayPal</a>
       </div>
     </article>
 
-    <div class="blog-divider"></div>
+    <hr class="doc-hr" />
 
     <article class="blog-post">
       <time datetime="2026-05-05">5 mayo 2026</time>
-      <h2>Más páginas indexables, más transparencia y una nueva sección Acerca de</h2>
+      <h2 id="mas-paginas-indexables-mas-transparencia-y-una-nueva-seccion">Más páginas indexables, más transparencia y una nueva sección Acerca de</h2>
       <p>
         Esta actualización se centra en hacer Facthem más fácil de encontrar, entender y compartir.
         Hemos mejorado la estructura pública del sitio para que cada afirmación tenga una página más
@@ -344,17 +180,17 @@
         costes de cómputo, infraestructura y uso de modelos de IA. Si el proyecto te resulta útil y quieres
         ayudar a mantenerlo en marcha, cualquier contribución ayuda. 🥸
       </p>
-      <div class="blog-donate-row">
-        <a href="https://ko-fi.com/hugocasero" class="donate-btn" target="_blank" rel="noopener">Ko-fi</a>
-        <a href="https://paypal.me/hcasero" class="donate-btn" target="_blank" rel="noopener">PayPal</a>
+      <div class="donate-row">
+        <a href="https://ko-fi.com/hugocasero" class="btn btn-ghost btn-sm" target="_blank" rel="noopener">Ko-fi</a>
+        <a href="https://paypal.me/hcasero" class="btn btn-ghost btn-sm" target="_blank" rel="noopener">PayPal</a>
       </div>
     </article>
 
-    <div class="blog-divider"></div>
+    <hr class="doc-hr" />
 
     <article class="blog-post">
       <time datetime="2026-04-21">21 abril 2026</time>
-      <h2>Superamos los 3.100 claims verificados — y estrenamos canal de YouTube</h2>
+      <h2 id="superamos-los-3-100-claims-verificados-y-estrenamos-canal-de">Superamos los 3.100 claims verificados — y estrenamos canal de YouTube</h2>
       <p>
         Dos noticias esta semana. La primera: Facthem ha superado las <strong>3.100 afirmaciones verificadas</strong>
         en la base de datos, un hito que celebramos con nuevas sesiones parlamentarias en camino.
@@ -383,11 +219,11 @@
       </p>
     </article>
 
-    <div class="blog-divider"></div>
+    <hr class="doc-hr" />
 
     <article class="blog-post">
       <time datetime="2026-04-04">4 abril 2026</time>
-      <h2>35 sesiones, casi 3.000 afirmaciones y nuevas mejoras</h2>
+      <h2 id="35-sesiones-casi-3-000-afirmaciones-y-nuevas-mejoras">35 sesiones, casi 3.000 afirmaciones y nuevas mejoras</h2>
       <p>
         Facthem sigue creciendo. Hemos incorporado nuevas sesiones de marzo y varias sesiones antiguas de 2025,
         alcanzando ya <strong>35 sesiones parlamentarias</strong> analizadas y cerca de <strong>3.000
@@ -411,11 +247,11 @@
       </p>
     </article>
 
-    <div class="blog-divider"></div>
+    <hr class="doc-hr" />
 
     <article class="blog-post">
       <time datetime="2026-03-13">13 marzo 2026</time>
-      <h2>Más sesiones y mejores estadísticas</h2>
+      <h2 id="mas-sesiones-y-mejores-estadisticas">Más sesiones y mejores estadísticas</h2>
       <p>
         Esta actualización trae dos mejoras principales: ampliación del corpus de sesiones verificadas y corrección del
         panel de estadísticas.
@@ -452,11 +288,11 @@
       </p>
     </article>
 
-    <div class="blog-divider"></div>
+    <hr class="doc-hr" />
 
     <article class="blog-post">
       <time datetime="2026-03-12">12 marzo 2026</time>
-      <h2>Nuevo buscador de representantes</h2>
+      <h2 id="nuevo-buscador-de-representantes">Nuevo buscador de representantes</h2>
       <p>
         La pestaña <strong>Representantes</strong> incorpora ahora un buscador por nombre que ofrece una visión completa
         de la actividad verificada de cada diputado o diputada. Sus capacidades son:
@@ -468,11 +304,11 @@
       </ul>
     </article>
 
-    <div class="blog-divider"></div>
+    <hr class="doc-hr" />
 
     <article class="blog-post">
       <time datetime="2026-03-11">11 marzo 2026</time>
-      <h2>Panel de estadísticas: rankings comparativos</h2>
+      <h2 id="panel-de-estadisticas-rankings-comparativos">Panel de estadísticas: rankings comparativos</h2>
       <p>
         El panel de <strong>Estadísticas</strong> se ha ampliado con una serie de rankings comparativos que permiten
         analizar el comportamiento parlamentario desde distintos ángulos:
@@ -484,11 +320,11 @@
       </ul>
     </article>
 
-    <div class="blog-divider"></div>
+    <hr class="doc-hr" />
 
     <article class="blog-post">
       <time datetime="2026-03-11">11 marzo 2026</time>
-      <h2>Ahora puedes apoyar el proyecto</h2>
+      <h2 id="ahora-puedes-apoyar-el-proyecto">Ahora puedes apoyar el proyecto</h2>
       <p>
         Facthem es un proyecto independiente. Cada sesión parlamentaria que verificamos tiene un coste real en
         infraestructura y modelos de inteligencia artificial. Para quienes quieran contribuir a su continuidad, hemos
@@ -502,41 +338,10 @@
     </article>
 
     <!-- Para añadir un nuevo post, copia la estructura de arriba antes de este comentario -->
-
-  </div>
-
-  <footer class="site-footer">
-    <p class="footer-links">
-      <a href="aviso.html" class="footer-link">Aviso legal</a>
-      &nbsp;·&nbsp;
-      <a href="metodologia.html" class="footer-link">Metodología</a>
-      &nbsp;·&nbsp;
-      <a href="acerca.html" class="footer-link">Acerca de</a>
-      &nbsp;·&nbsp;
-      <a href="blog.html" class="footer-link">Blog</a>
-      &nbsp;·&nbsp;
-      <a href="archive.html" class="footer-link">Archivo</a>
-    </p>
-    <p class="footer-links footer-links--secondary">
-      Contacto: <a class="footer-email" href="#" aria-label="Dirección de contacto"></a>
-      &nbsp;·&nbsp;
-      <a href="https://www.youtube.com/@facthem_es" class="footer-link" target="_blank" rel="noopener">YouTube</a>
-      &nbsp;·&nbsp;
-      ♥ Apóyanos:
-      <a href="https://paypal.me/hcasero" class="donate-btn" target="_blank" rel="noopener">PayPal</a>
-      <a href="https://ko-fi.com/hugocasero" class="donate-btn" target="_blank" rel="noopener">Ko-fi</a>
-    </p>
-  </footer>
-
-  <script>
-    (function () {
-      var u = 'contacto', d = 'facthem' + '.' + 'es';
-      document.querySelectorAll('.footer-email[aria-label]').forEach(function (el) {
-        el.href = 'mailto:' + u + '@' + d;
-        el.textContent = u + '\u0040' + d;
-      });
-    })();
-  </script>
+    </article>
+  </main>
+  <!--#footer--><footer class="footer"><div class="footer-inner"><div><span class="wordmark">Facthem</span><p class="muted">Las verificaciones se generan mediante un proceso automatizado con IA y pueden contener inexactitudes. Cada una enlaza a sus fuentes.</p></div><nav aria-label="Pie"><a href="/metodologia.html">Metodología</a><a href="/archive.html">Archivo</a><a href="/blog.html">Blog</a><a href="/acerca.html">Acerca de</a><a href="/aviso.html">Aviso legal</a></nav><div class="footer-social"><a href="https://x.com/facthem_es" target="_blank" rel="noopener">X</a><a href="https://www.youtube.com/@facthem_es" target="_blank" rel="noopener">YouTube</a><a class="footer-email" href="#" data-u="contacto" data-d="facthem.es">Contacto</a><span class="footer-support">♥ Apóyanos: <a href="https://paypal.me/hcasero" target="_blank" rel="noopener">PayPal</a> · <a href="https://ko-fi.com/hugocasero" target="_blank" rel="noopener">Ko-fi</a></span></div></div></footer><!--/footer-->
+  <script src="/js/ui.js?v=c8f5cbdb6b" defer></script>
+  <script src="/js/doc.js?v=0a6636d1b8" defer></script>
 </body>
-
 </html>
