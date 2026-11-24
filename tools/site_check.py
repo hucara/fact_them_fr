@@ -226,11 +226,17 @@ def compare(snap_path, site, sample=None):
     seen_allowed = set()
     new_urls = dict(pages(site))
     fails, warns = [], []
+    # Claims whose verdict was retired: the page is now a noindex redirect to the profile.
+    redirected = set((exp.get("redirected") or {}).get("urls") or [])
+    for u in sorted(redirected):
+        f = new_urls.get(u)
+        if not f or 'http-equiv="refresh"' not in f.read_text(encoding="utf-8"):
+            fails.append(f"{u}: listed as redirected but is not a redirect page")
     missing = sorted(set(old) - set(new_urls))
     for u in missing:
         fails.append(f"URL removed: {u}")
     added = sorted(set(new_urls) - set(old))
-    urls = sorted(set(old) & set(new_urls))
+    urls = sorted((set(old) & set(new_urls)) - redirected)
     if sample:
         random.seed(0)
         urls = random.sample(urls, min(sample, len(urls)))
@@ -257,7 +263,7 @@ def compare(snap_path, site, sample=None):
         raw = p.links | set(re.findall(r'href="([^"]+)"', new_urls[u].read_text(encoding="utf-8")))
         hrefs = {urljoin(u, html.unescape(h)) for h in raw}
         for h in o["links"]:
-            if urljoin(u, h) not in hrefs:
+            if urljoin(u, h) not in hrefs and urljoin(u, h) not in redirected:
                 fails.append(f"{u}: link missing: {h}")
         if norm(p.title) != o["title"]:
             warns.append(f"{u}: title changed")

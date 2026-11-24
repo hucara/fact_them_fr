@@ -143,8 +143,9 @@
     stack.querySelectorAll('[data-v]').forEach(btn => {
       const k = btn.dataset.v; btn.title = `${VK[k].long}: ${counts[k]}`;
       btn.classList.toggle('on', state.v.has(k)); btn.style.setProperty('--w', counts[k]);
+      btn.hidden = !counts[k];   // an empty segment would still leave its 2px gap
     });
-    stack.setAttribute('aria-label', V.map(v => `${v.long}: ${counts[v.k]}`).join(', '));
+    stack.setAttribute('aria-label', V.filter(v => counts[v.k]).map(v => `${v.long}: ${counts[v.k]}`).join(', '));
     $('#x-legend').innerHTML = V.filter(v => counts[v.k]).map(v => `<li style="--c:${v.c}"><span class="dot"></span>${esc(v.l)} <span class="num">${counts[v.k]}</span></li>`).join('');
     const total = state.recs.length;
     const line = visible.length === total ? `<strong>${fmt(total)}</strong> afirmaciones` : `<strong>${fmt(visible.length)}</strong> de ${fmt(total)}`;

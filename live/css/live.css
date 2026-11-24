@@ -59,6 +59,7 @@ body.admin .brand-tag { display: inline; margin-left: -20px; }
 .nav { display: flex; gap: 4px; }
 .nav a { padding: 8px 12px; font-size: 14px; color: var(--text-2); text-decoration: none; border-radius: var(--r-sm); transition: color .15s; }
 .nav a:hover { color: var(--text); }
+.nav a[aria-current] { color: var(--text); }
 .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 .tb-live, .tb-share { display: none; }
 

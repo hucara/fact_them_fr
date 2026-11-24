@@ -1731,8 +1731,8 @@ def render_session_block(s, recs):
     total = len(recs) or 1
     stack = "".join(
         f'<button type="button" class="{"hatch" if k in site_chrome.HATCH else ""}" style="--c:{c};--w:{cnt[k]}" '
-        f'data-v="{k}" aria-label="{esc(lg)}" title="{esc(lg)}: {cnt[k]}"></button>'
-        for k, _s, lg, _i, c in site_chrome.VERDICTS)
+        f'data-v="{k}" aria-label="{esc(lg)}" title="{esc(lg)}: {cnt[k]}"{"" if cnt[k] else " hidden"}></button>'
+        for k, _s, lg, _i, c in site_chrome.VERDICTS if k not in RETIRED_VERDICTS)
     cards = "".join(record_card(r, i) for i, r in enumerate(recs))
     return f"""<section class="session" id="session" aria-labelledby="session-title" data-ids="{esc(s['id'])}">
 <header class="session-head"><div><p class="eyebrow" id="s-eyebrow">{esc(session_eyebrow(s))}</p>
@@ -1874,7 +1874,8 @@ def generate_llms_txt(index, n_people, stats):
     llms-full.txt (the same plus the full methodology as text)."""
     total = sum(s["n"] for s in index)
     n = lambda x: f"{x:,}".replace(",", ".")
-    verdicts = "\n".join(f"- **{lg}**: {site_chrome.VERDICT_WHAT[k]}" for k, _s, lg, *_ in site_chrome.VERDICTS)
+    verdicts = "\n".join(f"- **{lg}**: {site_chrome.VERDICT_WHAT[k]}" for k, _s, lg, *_ in site_chrome.VERDICTS
+                          if k not in RETIRED_VERDICTS)
     recent = []
     for s in index[:15]:
         bits = ", ".join(f"{c} {site_chrome.VK[k][2].lower()}" for k, *_ in site_chrome.VERDICTS for c in [s["d"].get(k, 0)] if c)
@@ -1953,6 +1954,25 @@ def render_home(index, recs_by, n_people):
     print(f"  index.html — última sesión {latest['id']} ({latest['n']} afirmaciones) prerenderizada")
 
 
+RETIRED_VERDICTS = {"IMPRECISO", "DESCONTEXTUALIZADO"}
+
+
+def write_retired_redirects(retired):
+    for slug, claim in retired:
+        pol = claim.get("politician") or {}
+        target = (f"/politician/{slugify_politician(format_nombre(pol['nombre_completo']), pol.get('partido') or '')}.html"
+                  if pol.get("nombre_completo") else "/")
+        OUT_DIR.mkdir(exist_ok=True)
+        (OUT_DIR / f"{slug}.html").write_text(
+            '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8" /><title>Facthem</title>'
+            f'<meta name="robots" content="noindex" /><link rel="canonical" href="{BASE_URL}{target}" />'
+            f'<meta http-equiv="refresh" content="0; url={target}" /></head>'
+            f'<body><script>location.replace({json.dumps(target)})</script><a href="{target}">Facthem</a></body></html>',
+            encoding="utf-8")
+    if retired:
+        print(f"  {len(retired)} afirmaciones con veredicto retirado → redirección al perfil")
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
@@ -1992,8 +2012,15 @@ def main():
             claims_with_slugs.append((slug, claim))
         except Exception:
             pass
+    # Retired verdicts (old taxonomy: Inexacto, Descontextualizado) are never shown:
+    # no card, no count, no sitemap entry. Their pages were public, so the URL stays
+    # alive as a noindex redirect to the speaker's profile (or the home page).
+    retired = [(sl, c) for sl, c in claims_with_slugs
+               if site_chrome.verdict_key(((c.get("verification") or [{}])[0] or {}).get("resultado")) in RETIRED_VERDICTS]
+    claims_with_slugs = [x for x in claims_with_slugs if x not in retired]
+    write_claim_id_shards(claims_with_slugs + retired)
+    write_retired_redirects(retired)
     by_session, by_pol = build_related_indexes(claims_with_slugs)
-    write_claim_id_shards(claims_with_slugs)
     photo_for = make_photo_resolver(salaries)
 
     generated, errors = {}, []

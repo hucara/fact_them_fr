@@ -163,7 +163,7 @@ def share(url, text, label=""):
 
 def stack(counts, cls="stack"):
     total = sum(counts.get(v[0], 0) for v in VERDICTS) or 1
-    label = ", ".join(f"{v[2]}: {counts.get(v[0], 0)}" for v in VERDICTS)
+    label = ", ".join(f"{v[2]}: {counts[v[0]]}" for v in VERDICTS if counts.get(v[0]))
     parts = "".join(
         f'<span class="{"hatch" if v[0] in HATCH else ""}" style="--c:{v[4]};flex:{counts[v[0]] / total:.4f}" '
         f'title="{esc(v[2])}: {counts[v[0]]}"></span>'
@@ -207,6 +207,7 @@ def card(c, *, with_who=True, index=0):
 # ── Chrome ────────────────────────────────────────────────────────────────────
 NAV = [
     ("/",                    "Sesiones",       "sesiones"),
+    ("/live/",               "Directos",       "live"),
     ("/representantes.html", "Representantes", "representantes"),
     ("/estadisticas.html",   "Estadísticas",   "estadisticas"),
     ("/metodologia.html",    "Metodología",    "metodologia"),
@@ -246,8 +247,7 @@ def topbar(active=""):
 def footer():
     return (
         '<footer class="footer"><div class="footer-inner">'
-        '<div><span class="wordmark">Facthem</span><p class="muted">Las verificaciones se generan mediante un '
-        'proceso automatizado con IA y pueden contener inexactitudes. Cada una enlaza a sus fuentes.</p></div>'
+        '<span class="wordmark">Facthem</span>'
         '<nav aria-label="Pie">'
         '<a href="/metodologia.html">Metodología</a><a href="/archive.html">Archivo</a><a href="/blog.html">Blog</a>'
         '<a href="/acerca.html">Acerca de</a><a href="/aviso.html">Aviso legal</a></nav>'
@@ -257,8 +257,10 @@ def footer():
         '<a class="footer-email" href="#" data-u="contacto" data-d="facthem.es">Contacto</a>'
         '<span class="footer-support">♥ Apóyanos: '
         '<a href="https://paypal.me/hcasero" target="_blank" rel="noopener">PayPal</a> · '
-        '<a href="https://ko-fi.com/hugocasero" target="_blank" rel="noopener">Ko-fi</a></span>'
-        '</div></div></footer>')
+        '<a href="https://ko-fi.com/hugocasero" target="_blank" rel="noopener">Ko-fi</a></span></div>'
+        '<p class="footer-note">Las verificaciones se generan mediante un proceso automatizado con IA y pueden '
+        'contener inexactitudes. Cada una enlaza a sus fuentes.</p>'
+        '</div></footer>')
 
 
 # Self-hosted Inter (css/site.css @font-face). Preload the latin subset only:

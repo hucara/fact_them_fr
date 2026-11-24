@@ -110,7 +110,7 @@ window.FT = (() => {
   };
   const stackHTML = (cnt, cls = 'stack') => {
     const total = V.reduce((a, v) => a + (cnt[v.k] || 0), 0) || 1;
-    const label = V.map(v => `${v.long}: ${cnt[v.k] || 0}`).join(', ');
+    const label = V.filter(v => cnt[v.k]).map(v => `${v.long}: ${cnt[v.k]}`).join(', ');
     return `<div class="${cls}" role="img" aria-label="${esc(label)}">${V.filter(v => cnt[v.k]).map(v =>
       `<span class="${v.hatch ? 'hatch' : ''}" style="--c:${v.c};flex:${(cnt[v.k] / total).toFixed(4)}" title="${esc(v.long)}: ${cnt[v.k]}"></span>`).join('')}</div>`;
   };

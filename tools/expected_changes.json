@@ -85,5 +85,24 @@
     "https://facthem.es/claim/vox-voto-en-contra-de-las-subidas-del-m2d97711ac6423efd21bf7e2dccd22a3.html"
    ]
   }
+ },
+ "redirected": {
+  "why": "Retired verdicts (Inexacto / Descontextualizado, old taxonomy) are never shown; the 14 claim pages redirect to the speaker's profile (noindex).",
+  "urls": [
+   "https://facthem.es/claim/durante-las-recientes-emergencias-por-inundaciones-los-trayectos-926ebba8.html",
+   "https://facthem.es/claim/el-1-de-los-grandes-millonarios-son-ayudados-28f9024a.html",
+   "https://facthem.es/claim/el-coste-de-la-vida-en-cataluna-es-400502bc.html",
+   "https://facthem.es/claim/el-gobierno-socialista-abandono-la-reforma-del-seguro-88d381a9.html",
+   "https://facthem.es/claim/el-partido-popular-lleva-dieciocho-dias-manteniendo-posiciones-4fb14d79.html",
+   "https://facthem.es/claim/el-plan-para-el-campo-de-gibraltar-dotado-a48b5190.html",
+   "https://facthem.es/claim/el-porcentaje-de-confianza-en-el-tren-ha-e2d50a71.html",
+   "https://facthem.es/claim/el-precio-de-la-electricidad-en-espana-es-7d835174.html",
+   "https://facthem.es/claim/en-espana-se-cierran-tres-centrales-nucleares-por-ba79ff2f.html",
+   "https://facthem.es/claim/la-inversion-extranjera-directa-en-espana-cayo-en-d8609fd5.html",
+   "https://facthem.es/claim/la-presidenta-ayuso-ha-incurrido-en-multirreincidencia-beneficiando-94e77e0e.html",
+   "https://facthem.es/claim/las-reservas-hidricas-han-estado-bajo-minimos-durante-b586dff3.html",
+   "https://facthem.es/claim/los-estudiantes-de-comunidades-autonomas-con-lenguas-cooficiales-6113724a.html",
+   "https://facthem.es/claim/los-trabajadores-tienen-que-pagar-un-40-mas-7be459ba.html"
+  ]
  }
 }
