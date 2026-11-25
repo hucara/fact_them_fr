@@ -61,7 +61,14 @@ body.admin .brand-tag { display: inline; margin-left: -20px; }
 .nav a:hover { color: var(--text); }
 .nav a[aria-current] { color: var(--text); }
 .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
-.tb-live, .tb-share { display: none; }
+.tb-live, .tb-share, .tb-back { display: none; }
+.menu-btn, .mnav { display: none; }
+/* picker cards: who took part, and the legend under the bar */
+.past-people { display: flex; align-items: center; gap: 8px; color: var(--text-2); }
+.past-faces { display: flex; }
+.past-faces img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; object-position: 50% 20%; border: 2px solid var(--bg-2); margin-left: -6px; background: var(--surface-2); }
+.past-faces img:first-child { margin-left: 0; }
+.past-legend { margin: 0; gap: 4px 12px; font-size: 12px; }
 
 /* ── Shared components the live page uses (mock.css) ────────────────────── */
 .vtag { display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 10px 0 4px; flex: none; border-radius: 6px; font-size: 13px; font-weight: 700; white-space: nowrap; }
@@ -152,7 +159,7 @@ body.admin .brand-tag { display: inline; margin-left: -20px; }
   height: calc(1.5em * 5); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end;
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 1.2em); mask-image: linear-gradient(to bottom, transparent 0, #000 1.2em);
 }
-.caption b, .caption .cap-txt { display: block; }
+.caption .cap-run { margin: 0; }   /* one speaker's chunks flow as running text */
 .caption .cap-txt { color: var(--muted); }
 /* speaker change: a thin rule with the new speaker's name */
 .caption .cap-sep { display: flex; align-items: center; gap: 10px; margin: 6px 0 4px; flex: none;
@@ -449,7 +456,22 @@ button.btn.admin.on { background: rgba(217, 112, 138, .12); }
   .tb-live { display: flex; align-items: center; gap: 7px; min-width: 0; margin-right: auto; font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tb-live::before { content: ''; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--v-falso); animation: ping-dot 1.8s ease-out infinite; }
   .tb-live.off::before { background: var(--muted); animation: none; }
+  .tb-live.dif::before { display: none; }   /* the "Diferido" tag says it; room for the title */
+  body:not(.admin) .topbar .wordmark { font-size: 19px; }
+  body:not(.admin) .topbar { gap: 10px; padding: 0 12px; }
   .tb-share { display: block; }
+  .tb-back:not([hidden]) { display: grid; place-items: center; flex: none; width: 30px; height: 30px; margin-right: -6px; border-radius: var(--r-sm); color: var(--text-2); text-decoration: none; font-size: 17px; }
+  .tb-tag { flex: none; padding: 2px 7px; border-radius: 99px; border: 1px solid var(--line); font-size: 11px; font-weight: 600; color: var(--text-2); }
+  .menu-btn { display: inline-grid; place-content: center; gap: 4px; width: 38px; height: 34px; border-radius: var(--r-sm); border: 1px solid var(--line); background: transparent; cursor: pointer; }
+  .menu-btn span { display: block; width: 16px; height: 2px; border-radius: 1px; background: var(--text-2); transition: transform .25s var(--ease-out), opacity .2s; }
+  .menu-btn[aria-expanded="true"] span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+  .menu-btn[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+  .menu-btn[aria-expanded="true"] span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+  .mnav:not([hidden]) { display: grid; position: fixed; z-index: 40; top: 60px; left: 0; right: 0; padding: 8px 16px 16px; background: color-mix(in oklab, var(--bg) 96%, transparent); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); box-shadow: 0 20px 40px -20px rgba(0,0,0,.8); animation: mnav-in .28s var(--ease-out) both; }
+  @keyframes mnav-in { from { opacity: 0; transform: translateY(-8px); } }
+  .mnav a { display: flex; align-items: center; gap: 10px; padding: 14px 4px; border-bottom: 1px solid var(--line); font-size: 17px; font-weight: 600; color: var(--text); text-decoration: none; }
+  .mnav a[aria-current="page"] { color: var(--accent); }
+  .topbar-right { gap: 8px; }
   .tb-share .share-btn { width: 34px; height: 34px; border: 1px solid var(--line); }
   .topbar-right { margin-left: 0; }
   body:not(.admin) .replay-banner { display: none; }

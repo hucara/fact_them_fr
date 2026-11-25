@@ -1034,12 +1034,12 @@ a.archive-letter:hover { border-color: var(--line-2); color: var(--text); }
 
 /* Slot-machine salary digits (js/profile.js): a reel of 30 digits per place,
    spun down to its digit with a small overshoot, staggered left to right. */
-.roll .rd { display: inline-block; position: relative; height: 1.15em; line-height: 1.15em; overflow: hidden; vertical-align: bottom; }
-.roll .rd-sz { visibility: hidden; }
-.roll .rd-reel { position: absolute; left: 0; right: 0; top: 0; display: flex; flex-direction: column; text-align: center;
+.roll .rd { display: inline-block; position: relative; height: 1.15em; line-height: 1.15em; overflow: hidden; vertical-align: bottom; color: transparent; }
+.roll .rs { display: inline-block; height: 1.15em; line-height: 1.15em; vertical-align: bottom; white-space: pre; }
+.roll .rd::before { content: "0\A 1\A 2\A 3\A 4\A 5\A 6\A 7\A 8\A 9\A 0\A 1\A 2\A 3\A 4\A 5\A 6\A 7\A 8\A 9\A 0\A 1\A 2\A 3\A 4\A 5\A 6\A 7\A 8\A 9";
+  position: absolute; left: 0; right: 0; top: 0; text-align: center; white-space: pre; color: var(--text); pointer-events: none;
   transform: translateY(calc(var(--n) * -1.15em));
   animation: reel var(--d) linear var(--w) both; }
-.roll .rd-reel > span { height: 1.15em; }
 /* steady spin that slows down, runs a quarter digit past, and clicks back */
 @keyframes reel {
   0%   { transform: translateY(0); filter: blur(1.5px); animation-timing-function: cubic-bezier(.35, .15, .45, 1); }

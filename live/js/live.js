@@ -525,7 +525,7 @@ function showDiferidoBadge() {
 /* The page's own URL with ?diferido=<session> (or without it, for the grid). */
 function diferidoHref(sid) {
   const u = new URL(location.href);
-  for (const k of ['diferido', 'yt', 'offset', 'start']) u.searchParams.delete(k);
+  for (const k of ['diferido', 'yt', 'offset', 'start', 't', 's']) u.searchParams.delete(k);
   if (sid) u.searchParams.set('diferido', sid);
   return u.pathname + u.search;
 }
@@ -543,13 +543,26 @@ function pastCards(list) {
     const cnt = {};
     for (const [res, n] of Object.entries(s.verdicts || {})) { const k = verdictKey(res); cnt[k] = (cnt[k] || 0) + n; }
     const total = Object.values(cnt).reduce((a, b) => a + b, 0) || s.claims || 0;
-    const bar = VERDICTS.filter(([k]) => cnt[k]).map(([k, , long, , c]) =>
+    // Bar and legend: the resolved verdicts, as in the replay's own bar (no "No verificable").
+    const shown = VERDICTS.filter(([k]) => cnt[k] && k !== 'NO_VERIFICABLE');
+    const bar = shown.map(([k, , long, , c]) =>
       `<span class="${k === 'SUBESTIMADO' ? 'hatch' : ''}" style="--c:${c};flex:${cnt[k]}" title="${esc(long)}: ${cnt[k]}"></span>`).join('');
+    const legend = shown.map(([k, short, , , c]) =>
+      `<li style="--c:${c}"><span class="dot"></span>${esc(short)} <span class="num">${cnt[k]}</span></li>`).join('');
+    const people = (s.roster || []).filter((r) => !r.presiding);
+    const faces = people.filter((r) => r.photo_url).slice(0, 8).map((r) =>
+      `<img src="${esc(r.photo_url)}" alt="" title="${esc(r.name || '')}" width="22" height="22" loading="lazy" />`).join('');
+    const who = people.length && people.length <= 3 ? people.map((r) => esc(r.short_name || r.name)).join(' · ')
+      : people.length ? `${people.length} participantes` : '';
     const when = [fmtDateEs(s.session_date), s.label].filter(Boolean).join(' · ');
     return `<a class="past-card" href="${esc(diferidoHref(s.session_id))}">`
       + (s.youtube_id ? `<span class="past-thumb" style="background-image:url(https://i.ytimg.com/vi/${encodeURIComponent(s.youtube_id)}/hqdefault.jpg)"><span class="past-play" aria-hidden="true">▶</span>${s.duration ? `<span class="past-dur">${fmtDuration(s.duration)}</span>` : ''}</span>` : '')
       + `<span class="muted">${esc(when)}</span><strong>${esc(s.title || s.session_id)}</strong>`
-      + `<span class="mini-stack">${bar}</span><span class="muted">${total} afirmaciones · ver en diferido</span></a>`;
+      + (who ? `<span class="past-people"><span class="past-faces">${faces}</span>${who}</span>` : '')
+      + `<span class="mini-stack">${bar}</span>${legend ? `<ul class="legend past-legend">${legend}</ul>` : ''}`
+      // The live count: the published archive of the same debate is reverified
+      // and can hold fewer claims, so say which one this is.
+      + `<span class="muted" title="Verificadas durante la emisión. El archivo definitivo se reverifica después y puede tener alguna menos.">${total} afirmaciones verificadas en directo · ver en diferido</span></a>`;
   }).join('');
 }
 function showPast(list) {
@@ -1059,13 +1072,19 @@ function renderCaption() {
   captionParts.forEach((p, i) => { if (typeof p === 'string') last = i; });
   let prev = -1;
   for (let i = last - 1; i >= 0; i--) if (typeof captionParts[i] === 'string') { prev = i; break; }
-  $('caption').innerHTML = captionParts.map((p, i) => {
-    if (typeof p !== 'string') return `<span class="cap-sep">${p.sep ? `<span>${esc(p.sep)}</span>` : ''}</span>`;
+  // Chunks of one speaker run together as one paragraph (they are pieces of
+  // the same speech); a speaker change starts a new one under its rule.
+  let html = '', run = '';
+  const flush = () => { if (run) { html += `<p class="cap-run">${run}</p>`; run = ''; } };
+  captionParts.forEach((p, i) => {
+    if (typeof p !== 'string') { flush(); html += `<span class="cap-sep">${p.sep ? `<span>${esc(p.sep)}</span>` : ''}</span>`; return; }
     // The newest chunk arrives word by word; the one before it settles.
-    if (i === last) return `<b class="fresh">${captionWords(p)}</b>`;
-    if (i === prev) return `<span class="cap-txt settling">${esc(p)}</span>`;
-    return `<span class="cap-txt">${esc(p)}</span>`;
-  }).join('');
+    const piece = i === last ? `<b class="fresh">${captionWords(p)}</b>`
+      : i === prev ? `<span class="cap-txt settling">${esc(p)}</span>` : `<span class="cap-txt">${esc(p)}</span>`;
+    run += (run ? ' ' : '') + piece;
+  });
+  flush();
+  $('caption').innerHTML = html;
 }
 function showCaption(text) {
   if (switchActive === false) return;
@@ -2379,11 +2398,30 @@ player.addEventListener('seeked', () => {
    replay) is mirrored into the site's top bar; the live header row is hidden. */
 function syncTopbar() {
   const onair = $('onair');
-  $('tb-live').textContent = $('session-title').textContent;
+  const dif = !onair.hidden && onair.classList.contains('diferido');
+  // Phones have no page header: the bar says it is a replay and leads back to the grid.
+  $('tb-live').innerHTML = (dif ? '<span class="tb-tag">Diferido</span>' : '') + esc($('session-title').textContent);
+  $('tb-live').classList.toggle('dif', dif);
+  $('tb-back').hidden = !document.body.classList.contains('replay');
+  $('tb-back').href = diferidoHref(null);
   $('tb-live').classList.toggle('off', onair.hidden || onair.classList.contains('diferido') || onair.classList.contains('paused'));
 }
 new MutationObserver(syncTopbar).observe($('session-title'), { childList: true, characterData: true, subtree: true });
 new MutationObserver(syncTopbar).observe($('onair'), { attributes: true, childList: true });
+
+/* Phones: the ☰ menu (as on the rest of the site, js/ui.js). */
+(() => {
+  const btn = document.querySelector('.menu-btn'), nav = $('mnav');
+  if (!btn || !nav) return;
+  const set = (open) => { nav.hidden = !open; btn.setAttribute('aria-expanded', String(open)); };
+  btn.addEventListener('click', (e) => { e.stopPropagation(); set(nav.hidden); });
+  document.addEventListener('click', (e) => { if (!nav.hidden && !nav.contains(e.target)) set(false); });
+  addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || nav.hidden) return;
+    const inside = nav.contains(document.activeElement) || document.activeElement === btn;
+    set(false); if (inside) btn.focus();
+  });
+})();
 
 setInterval(tickClock, 250);
 renderStats();
