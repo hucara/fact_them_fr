@@ -409,6 +409,10 @@ def render_page(claim, slug, session_date, ctx=None):
     # ── Header: photo + share, who, claim, verdict ──
     # as on the old claim pages ("afirmó"; cards say "ha afirmado")
     share_text = site_chrome.share_text(pol_nombre, pol_partido, desc_text, v.get("resultado"), verb="afirmó")
+    tweet = site_chrome.tweet_text(pol_nombre, pol_partido, str(pol.get("twitter") or "").strip().lstrip("@"), desc_text,
+                                   v.get("resultado"), claim.get("ambito_tematico"),
+                                   snake_to_label(claim.get("ambito_geografico")) if claim.get("ambito_geografico") else "",
+                                   canon_url)
     photo = ctx.get("photo")
     initials = "".join(p[0] for p in pol_nombre.split()[:2]).upper() if pol_nombre else "?"
     photo_html = (f'<img class="c-photo" src="{esc(photo)}" alt="{esc(pol_nombre)}" width="120" height="148" />'
@@ -478,7 +482,7 @@ def render_page(claim, slug, session_date, ctx=None):
 {crumb_html}
 <article>
 <header class="c-head" style="--vc:{vcolor}">
-<div class="p-pic">{photo_html}{site_chrome.share(canon_url, share_text, '<span>Compartir</span>')}</div>
+<div class="p-pic">{photo_html}{site_chrome.share(canon_url, share_text, '<span>Compartir</span>', tweet=tweet)}</div>
 <div>
 <div class="c-who">{name_html}{party_html}{date_html}</div>
 <h1 class="c-claim" title="{esc(texto_orig)}">{esc(texto_norm)}</h1>
@@ -620,7 +624,7 @@ CLAIM_FIELDS = (
     "id, session_id, politician_id, intervention_id, texto_normalizado, texto_original, "
     "ambito_geografico, ambito_tematico"
 )
-POLITICIAN_FIELDS = "id, nombre_completo, partido, grupo_parlamentario, genero, cargo_gobierno_detalle"
+POLITICIAN_FIELDS = "id, nombre_completo, partido, grupo_parlamentario, genero, cargo_gobierno_detalle, twitter"
 SESSION_FIELDS = "id, fecha, organo, legislatura, tipo, numero"
 VERIFICATION_FIELDS = "claim_id, resultado, confidence_score, afirmacion_correcta, omisiones, errores, fuentes, created_at"
 
@@ -1401,7 +1405,8 @@ def _write_politician_page(pol_slug, info, photo_for):
             "verdict": ((c.get("verification") or [{}])[0] or {}).get("resultado"), "name": nombre, "party": partido,
             "tema": c.get("ambito_tematico"),
             "geo": snake_to_label(c.get("ambito_geografico")) if c.get("ambito_geografico") else "",
-            "id": c.get("id")}, with_who=False) for cs, c in groups[sid])
+            "id": c.get("id"), "handle": str((c.get("politician") or {}).get("twitter") or "").strip().lstrip("@")},
+            with_who=False) for cs, c in groups[sid])
         when = _format_session_date_es(sess.get("fecha"))
         sec.append(f'<section class="r-group" data-session="{esc(sid)}"><h3><a href="{esc(session_url(sid))}">{esc(when)}</a>'
                    f'<span>{esc(session_label(sess, short=True))} · <span class="r-n">{len(groups[sid])}</span></span></h3>'
@@ -1612,12 +1617,14 @@ def claim_record(slug, claim, photo_for):
         "f": photo_for(pol) if pol else "",
         "tm": claim.get("ambito_tematico") or "",
         "g": snake_to_label(claim.get("ambito_geografico")) if claim.get("ambito_geografico") else "",
+        "x": str(pol.get("twitter") or "").strip().lstrip("@"),   # X handle, for the X share text
     }
 
 
 def record_card(r, index=0):
     return site_chrome.card({"url": f"/claim/{r['u']}.html", "text": r["t"], "verdict": r["v"], "name": r["n"],
-                             "party": r["p"], "photo": r["f"], "tema": r["tm"], "geo": r["g"], "id": r["i"]},
+                             "party": r["p"], "photo": r["f"], "tema": r["tm"], "geo": r["g"], "id": r["i"],
+                             "handle": r.get("x")},
                             index=index)
 
 

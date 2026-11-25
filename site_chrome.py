@@ -106,6 +106,72 @@ def share_text(name, party, text, verdict, verb="ha afirmado"):
     return f'🔍 {who} {verb}: "{t}"\n{VERDICT_EMOJI.get(k, "🔍")} {VK[k][2]}'
 
 
+# ── X (Twitter) share: the same rules as the session thread the backend posts
+# (fact_them_be/scripts/archive/generate_twitter_thread.py): name, @handle, party
+# as a hashtag, the claim in quotes, verdict line, topic/region hashtags, link.
+# When it doesn't fit 280, drop "ha afirmado", then the party, then the handle,
+# then the hashtags; cut the claim only as a last resort (keeping the @handle).
+# = tweetTextOf in js/ui.js.
+TWEET_VERDICT = {"CONFIRMADO": ("✅", "Confirmado"), "CONFIRMADO_CON_MATIZ": ("✅", "Confirmado con matiz"),
+                 "SOBREESTIMADO": ("🟠", "Sobreestimado"), "SUBESTIMADO": ("🟠", "Subestimado"),
+                 "FALSO": ("❌", "Falso"), "NO_VERIFICABLE": ("🔵", "No verificable")}
+TOPIC_HASHTAGS = {   # the thread's table, plus the site's newer topic keys
+    "economía": ["#Economía", "#Datos"], "sanidad": ["#Sanidad", "#Salud"], "educación": ["#Educación"],
+    "vivienda": ["#Vivienda"], "inmigración": ["#Inmigración"], "medio_ambiente": ["#MedioAmbiente", "#Clima"],
+    "política_social": ["#PolíticaSocial"], "justicia_y_corrupción": ["#Justicia"], "seguridad": ["#Seguridad"],
+    "defensa": ["#Defensa"], "trabajo": ["#Empleo", "#Trabajo"], "pensiones": ["#Pensiones"],
+    "infraestructuras": ["#Infraestructuras"], "hacienda": ["#Hacienda", "#Impuestos"],
+    "industria_y_trabajo": ["#Empleo"], "igualdad": ["#Igualdad"], "interior": ["#Seguridad"],
+    "relaciones_internacionales": ["#PolíticaExterior"], "transporte": ["#Transporte"], "agricultura": ["#Agricultura"],
+}
+_HASHTAG_DROP = re.compile(r"[^0-9A-Za-zÁÉÍÓÚÜÑáéíóúüñ_]")
+_REGION_SKIP = {"", "no especificado", "no especificada", "sin especificar", "ue", "unión europea", "union europea"}
+_REGION_STOP = {"de", "del", "la", "las", "los", "y", "el"}
+TWEET_BUDGET = 280 - 6 - len(" via @facthem_ES")   # X adds " via @facthem_ES"; 6 of headroom, as the thread
+
+
+def _hashtag(s):
+    t = _HASHTAG_DROP.sub("", s or "")
+    return f"#{t}" if t else ""
+
+
+def region_hashtag(geo):
+    raw = re.sub(r"\(.*?\)", "", geo or "").strip()
+    if raw.lower() in _REGION_SKIP:
+        return ""
+    words = [w for w in raw.split() if w.lower() not in _REGION_STOP]
+    return _hashtag("".join(w[:1].upper() + w[1:] for w in words))
+
+
+def x_len(s):
+    """Length as X counts it: a link is 23, a character outside the BMP (emoji) 2
+    (= JS string length, so Python and JS cut at the same place)."""
+    s = re.sub(r"https?://\S+", "u" * 23, s)
+    return sum(2 if ord(ch) > 0xFFFF else 1 for ch in s)
+
+
+def tweet_text(name, party, handle, text, verdict, tema, geo, url):
+    k = verdict_key(verdict)
+    emoji, label = TWEET_VERDICT.get(k, ("🔍", VK[k][2]))
+    tags = " ".join(t for t in [*TOPIC_HASHTAGS.get(str(tema or "").lower(), []), region_hashtag(geo)] if t)
+    footers = [f'"\n{emoji} {label}\n' + (f"{tags}\n" if tags else "") + url]
+    if tags:   # a long claim keeps its words before its hashtags
+        footers.append(f'"\n{emoji} {label}\n' + url)
+    who = name or "Un político"
+    pt = f" ({_hashtag(party) or party})" if party else ""
+    h = f" (@{handle})" if handle else ""
+    text = str(text or "").strip()
+    heads = ([f'🔍 {who}{h}{pt} ha afirmado: "', f'🔍 {who}{h}{pt}: "', f'🔍 {who}{h}: "'] if handle else []) \
+        + [f'🔍 {who}{pt} ha afirmado: "', f'🔍 {who}{pt}: "']
+    for footer in footers:
+        for head in heads:
+            if x_len(head + text + footer) <= TWEET_BUDGET:
+                return head + text + footer
+    head, footer = heads[1 if handle else -1], footers[-1]   # cut: keep the @handle, drop the verb
+    room = TWEET_BUDGET - x_len(head) - x_len(footer) - 1
+    return head + text[:max(0, room)].rstrip() + "…" + footer
+
+
 def tema_label(t):
     if not t:
         return ""
@@ -145,17 +211,21 @@ def vtag(key, cls=""):
             f'{esc(long_)}</span>')
 
 
-def share(url, text, label=""):
-    """Share button + desktop menu. On touch screens ui.js opens the system sheet instead."""
+def share(url, text, label="", tweet=None):
+    """Share button + menu. `tweet` (already holding the link) is the X text;
+    WhatsApp and Telegram get `text` and the link."""
     # same set encodeURIComponent leaves alone, so JS builds identical markup
     u, t = quote(url, safe="!'()*"), quote(text, safe="!'()*")
+    qt = quote(tweet, safe="!'()*") if tweet else ""
+    x_href = (f"https://twitter.com/intent/tweet?text={qt}&amp;via=facthem_ES" if tweet
+              else f"https://twitter.com/intent/tweet?text={t}&amp;url={u}&amp;via=facthem_ES")
     has = " has-label" if label else ""
     return (f'<div class="share"><button type="button" class="share-btn{has}" aria-haspopup="true" '
             f'aria-expanded="false" aria-label="Compartir" data-url="{esc(url)}" data-text="{esc(text)}">'
             f'{ICON_SHARE}{label}</button>'
             f'<div class="share-pop" role="menu" hidden>'
             f'<button type="button" role="menuitem" data-copy="{esc(url)}">Copiar enlace</button>'
-            f'<a role="menuitem" href="https://twitter.com/intent/tweet?text={t}&amp;url={u}&amp;via=facthem_ES" target="_blank" rel="noopener">X</a>'
+            f'<a role="menuitem" href="{x_href}" target="_blank" rel="noopener">X</a>'
             f'<a role="menuitem" href="https://wa.me/?text={t}%0A{u}" target="_blank" rel="noopener">WhatsApp</a>'
             f'<a role="menuitem" href="https://t.me/share/url?url={u}&amp;text={t}" target="_blank" rel="noopener">Telegram</a>'
             f'</div></div>')
@@ -191,6 +261,7 @@ def card(c, *, with_who=True, index=0):
     meta = esc(tema_label(c.get("tema"))) + (f" · {esc(c['geo'])}" if c.get("geo") else "")
     url = c["url"]
     abs_url = url if url.startswith("http") else BASE_URL + url
+    tweet = tweet_text(name, party, c.get("handle"), c.get("text"), c.get("verdict"), c.get("tema"), c.get("geo"), abs_url)
     head = (f'<article class="card in" style="--c:{color};--i:{min(index, 18)}" data-id="{esc(c.get("id", ""))}" '
             f'data-v="{k}" data-t="{esc(c.get("tema") or "")}">{vtag(k)}'
             f'<p class="claim-q"><a class="card-link" href="{esc(url)}">{esc(c.get("text", ""))}</a></p>')
@@ -198,10 +269,10 @@ def card(c, *, with_who=True, index=0):
         photo = (f'<img class="avatar" src="{esc(c["photo"])}" alt="" loading="lazy" width="28" height="28" />'
                  if c.get("photo") else '<span class="avatar" aria-hidden="true"></span>')
         return (f'{head}<div class="who">{photo}<span class="who-name">{esc(name)}</span>'
-                f'<span class="who-party">{esc(party)}</span>{share(abs_url, share_text)}</div>'
+                f'<span class="who-party">{esc(party)}</span>{share(abs_url, share_text, tweet=tweet)}</div>'
                 f'<div class="card-meta">{meta}</div></article>')
     return (f'{head}<div class="who"><span class="card-meta-inline">{meta}</span>'
-            f'{share(abs_url, share_text)}</div></article>')
+            f'{share(abs_url, share_text, tweet=tweet)}</div></article>')
 
 
 # ── Chrome ────────────────────────────────────────────────────────────────────

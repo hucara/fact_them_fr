@@ -97,13 +97,51 @@ window.FT = (() => {
     const t = x.slice(0, 200) + (x.length > 200 ? '…' : '');
     return `🔍 ${name || 'Un político'}${party ? ` (${party})` : ''} ${verb}: "${t}"\n${EMOJI[k] || '🔍'} ${VK[k].long}`;
   };
-  const shareMenu = (url, text, label = '') => {
+  // X share = site_chrome.tweet_text (the session thread's rules).
+  const TWEET_VERDICT = { CONFIRMADO: ['✅', 'Confirmado'], CONFIRMADO_CON_MATIZ: ['✅', 'Confirmado con matiz'],
+    SOBREESTIMADO: ['🟠', 'Sobreestimado'], SUBESTIMADO: ['🟠', 'Subestimado'], FALSO: ['❌', 'Falso'], NO_VERIFICABLE: ['🔵', 'No verificable'] };
+  const TOPIC_HASHTAGS = {
+    'economía': ['#Economía', '#Datos'], 'sanidad': ['#Sanidad', '#Salud'], 'educación': ['#Educación'],
+    'vivienda': ['#Vivienda'], 'inmigración': ['#Inmigración'], 'medio_ambiente': ['#MedioAmbiente', '#Clima'],
+    'política_social': ['#PolíticaSocial'], 'justicia_y_corrupción': ['#Justicia'], 'seguridad': ['#Seguridad'],
+    'defensa': ['#Defensa'], 'trabajo': ['#Empleo', '#Trabajo'], 'pensiones': ['#Pensiones'],
+    'infraestructuras': ['#Infraestructuras'], 'hacienda': ['#Hacienda', '#Impuestos'],
+    'industria_y_trabajo': ['#Empleo'], 'igualdad': ['#Igualdad'], 'interior': ['#Seguridad'],
+    'relaciones_internacionales': ['#PolíticaExterior'], 'transporte': ['#Transporte'], 'agricultura': ['#Agricultura'],
+  };
+  const HASHTAG_DROP = /[^0-9A-Za-zÁÉÍÓÚÜÑáéíóúüñ_]/g;
+  const REGION_SKIP = new Set(['', 'no especificado', 'no especificada', 'sin especificar', 'ue', 'unión europea', 'union europea']);
+  const REGION_STOP = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'el']);
+  const TWEET_BUDGET = 280 - 6 - ' via @facthem_ES'.length;
+  const hashtag = s => { const t = String(s || '').replace(HASHTAG_DROP, ''); return t ? `#${t}` : ''; };
+  const regionHashtag = geo => {
+    const raw = String(geo || '').replace(/\(.*?\)/g, '').trim();
+    if (REGION_SKIP.has(raw.toLowerCase())) return '';
+    return hashtag(raw.split(/\s+/).filter(w => w && !REGION_STOP.has(w.toLowerCase())).map(w => w.slice(0, 1).toUpperCase() + w.slice(1)).join(''));
+  };
+  const xLen = s => s.replace(/https?:\/\/\S+/g, 'u'.repeat(23)).length;   // UTF-16 length: emoji count 2, as on X
+  const tweetTextOf = (name, party, handle, text, verdict, tema, geo, url) => {
+    const k = verdictKey(verdict), [emoji, label] = TWEET_VERDICT[k] || ['🔍', VK[k].long];
+    const tags = [...(TOPIC_HASHTAGS[String(tema || '').toLowerCase()] || []), regionHashtag(geo)].filter(Boolean).join(' ');
+    const footers = [`"\n${emoji} ${label}\n` + (tags ? `${tags}\n` : '') + url, ...(tags ? [`"\n${emoji} ${label}\n` + url] : [])];
+    const who = name || 'Un político', pt = party ? ` (${hashtag(party) || party})` : '', h = handle ? ` (@${handle})` : '';
+    const t = String(text || '').trim();
+    const heads = [...(handle ? [`🔍 ${who}${h}${pt} ha afirmado: "`, `🔍 ${who}${h}${pt}: "`, `🔍 ${who}${h}: "`] : []),
+      `🔍 ${who}${pt} ha afirmado: "`, `🔍 ${who}${pt}: "`];
+    for (const footer of footers) for (const head of heads) if (xLen(head + t + footer) <= TWEET_BUDGET) return head + t + footer;
+    const head = heads[handle ? 1 : heads.length - 1], footer = footers[footers.length - 1];   // cut: keep the @handle, drop the verb
+    const room = TWEET_BUDGET - xLen(head) - xLen(footer) - 1;
+    return head + t.slice(0, Math.max(0, room)).trimEnd() + '…' + footer;
+  };
+  const shareMenu = (url, text, label = '', tweet = null) => {
     const u = encodeURIComponent(url), t = encodeURIComponent(text);
+    const xHref = tweet ? `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweet)}&amp;via=facthem_ES`
+      : `https://twitter.com/intent/tweet?text=${t}&amp;url=${u}&amp;via=facthem_ES`;
     return `<div class="share"><button type="button" class="share-btn${label ? ' has-label' : ''}" aria-haspopup="true" `
       + `aria-expanded="false" aria-label="Compartir" data-url="${esc(url)}" data-text="${esc(text)}">${ICON_SHARE}${label}</button>`
       + `<div class="share-pop" role="menu" hidden>`
       + `<button type="button" role="menuitem" data-copy="${esc(url)}">Copiar enlace</button>`
-      + `<a role="menuitem" href="https://twitter.com/intent/tweet?text=${t}&amp;url=${u}&amp;via=facthem_ES" target="_blank" rel="noopener">X</a>`
+      + `<a role="menuitem" href="${xHref}" target="_blank" rel="noopener">X</a>`
       + `<a role="menuitem" href="https://wa.me/?text=${t}%0A${u}" target="_blank" rel="noopener">WhatsApp</a>`
       + `<a role="menuitem" href="https://t.me/share/url?url=${u}&amp;text=${t}" target="_blank" rel="noopener">Telegram</a>`
       + `</div></div>`;
@@ -129,6 +167,7 @@ window.FT = (() => {
     const shareText = shareTextOf(name, party, c.text, c.verdict);
     const meta = esc(temaLabel(c.tema)) + (c.geo ? ` · ${esc(c.geo)}` : '');
     const absUrl = c.url.startsWith('http') ? c.url : BASE_URL + c.url;
+    const tweet = tweetTextOf(name, party, c.handle, c.text, c.verdict, c.tema, c.geo, absUrl);
     const head = `<article class="card in" style="--c:${color};--i:${Math.min(index, 18)}" data-id="${esc(c.id ?? '')}" `
       + `data-v="${k}" data-t="${esc(c.tema || '')}">${tag(k)}`
       + `<p class="claim-q"><a class="card-link" href="${esc(c.url)}">${inner ?? esc(c.text || '')}</a></p>`;
@@ -136,10 +175,10 @@ window.FT = (() => {
       const photo = c.photo ? `<img class="avatar" src="${esc(c.photo)}" alt="" loading="lazy" width="28" height="28" />`
         : '<span class="avatar" aria-hidden="true"></span>';
       return `${head}<div class="who">${photo}<span class="who-name">${esc(name)}</span>`
-        + `<span class="who-party">${esc(party)}</span>${shareMenu(absUrl, shareText)}</div>`
+        + `<span class="who-party">${esc(party)}</span>${shareMenu(absUrl, shareText, '', tweet)}</div>`
         + `<div class="card-meta">${meta}</div></article>`;
     }
-    return `${head}<div class="who"><span class="card-meta-inline">${meta}</span>${shareMenu(absUrl, shareText)}</div></article>`;
+    return `${head}<div class="who"><span class="card-meta-inline">${meta}</span>${shareMenu(absUrl, shareText, '', tweet)}</div></article>`;
   }
 
   // ── Share: system sheet on touch screens, our menu elsewhere ─────────────
@@ -322,6 +361,6 @@ window.FT = (() => {
   return {
     BASE_URL, esc, norm, fmt, fdate, MES, reduce, V, VK, verdictKey, WHAT, TEMA_LABELS, temaLabel, PARTY,
     slugifyClaim, slugifyPolitician, formatNombre, claimPath, politicianPath,
-    ICON_SHARE, tag, shareMenu, stackHTML, legendHTML, counts, cardHTML, isLive,
+    ICON_SHARE, tag, shareMenu, tweetTextOf, stackHTML, legendHTML, counts, cardHTML, isLive,
   };
 })();

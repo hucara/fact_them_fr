@@ -79,6 +79,7 @@ const out = {
   cards: inp.cards.map(([c, withWho]) => FT.cardHTML(c, { withWho })),
   stack: FT.stackHTML(inp.counts), legend: FT.legendHTML(inp.counts),
   tags: inp.tags.map(t => FT.tag(t)),
+  tweets: inp.tweets.map(a => FT.tweetTextOf(...a)),
 };
 process.stdout.write(JSON.stringify(out));
 """
@@ -101,14 +102,24 @@ def main():
     for i, c in enumerate(sample):
         d = {"url": f"/claim/{bc.slugify(c['text'] or '', c['id'])}.html", "text": c["text"] or "",
              "verdict": c["verdict"], "name": bc.format_nombre(c.get("pol") or ""), "party": c.get("partido") or "",
-             "photo": "/assets/photos/x.jpg" if i % 2 else None, "tema": c["tema"], "geo": c["geo"], "id": c["id"]}
+             "photo": "/assets/photos/x.jpg" if i % 2 else None, "tema": c["tema"], "geo": c["geo"], "id": c["id"],
+             "handle": ["", "alberto_aim", "Santi_ABASCAL", "un_handle_muy_largo_x"][i % 4]}
         cards.append((d, i % 3 != 0))
     counts = {"CONFIRMADO": 31, "CONFIRMADO_CON_MATIZ": 69, "SOBREESTIMADO": 22, "SUBESTIMADO": 0,
               "IMPRECISO": 1, "DESCONTEXTUALIZADO": 0, "FALSO": 3, "NO_VERIFICABLE": 16}
     tags = [k for k, *_ in sc.VERDICTS] + [None, "confirmado con matiz", "raro"]
 
+    # X share texts: every sampled claim (long ones exercise the shortening steps
+    # and the cut), with and without a handle, party, topic and region.
+    tweets = [[bc.format_nombre(c.get("pol") or ""), c.get("partido") or "", ["", "alberto_aim", "x"][i % 3],
+               c["text"] or "", c["verdict"], c["tema"], c["geo"], f"https://facthem.es/claim/{c['id']}.html"]
+              for i, c in enumerate(sample)]
+    tweets += [[ "María José Rodríguez de Millán Parro", "JxCAT-JUNTS", "un_handle_muy_largo_x", "palabra " * 60,
+                "SOBREESTIMADO", "economía", "Comunidad de Madrid", "https://facthem.es/claim/z.html"],
+               ["", "", "", "", None, None, None, "https://facthem.es/claim/e.html"]]
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
-        json.dump({"claims": claims, "politicians": pols, "cards": cards, "counts": counts, "tags": tags}, f, ensure_ascii=False)
+        json.dump({"claims": claims, "politicians": pols, "cards": cards, "counts": counts, "tags": tags, "tweets": tweets},
+                  f, ensure_ascii=False)
         inp = f.name
     with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as f:
         f.write(NODE)
@@ -130,6 +141,12 @@ def main():
         if py != s:
             i = next((k for k in range(min(len(py), len(s))) if py[k] != s[k]), min(len(py), len(s)))
             bad.append(f"card {d['id']}: differs at {i}: py=…{py[max(0, i-40):i+60]!r} js=…{s[max(0, i-40):i+60]!r}")
+    for a, s_ in zip(tweets, js["tweets"]):
+        py = sc.tweet_text(*a)
+        if py != s_:
+            bad.append(f"tweet {a[7]}: py={py!r}\n        js={s_!r}")
+        elif sc.x_len(py) > sc.TWEET_BUDGET:
+            bad.append(f"tweet {a[7]} too long: {sc.x_len(py)} > {sc.TWEET_BUDGET}")
     if sc.stack(counts) != js["stack"]:
         bad.append(f"stack: py={sc.stack(counts)!r}\n        js={js['stack']!r}")
     if sc.legend(counts) != js["legend"]:
@@ -138,7 +155,7 @@ def main():
         if sc.vtag(t) != s:
             bad.append(f"vtag {t!r}: py={sc.vtag(t)!r} js={s!r}")
 
-    print(f"parity: {len(claims)} claim slugs, {len(pols)} politician slugs, {len(cards)} cards, "
+    print(f"parity: {len(claims)} claim slugs, {len(pols)} politician slugs, {len(cards)} cards, {len(tweets)} X texts, "
           f"{len(tags)} tags, stack + legend")
     for b in bad[:30]:
         print("  FAIL", b)

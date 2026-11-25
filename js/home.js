@@ -136,7 +136,7 @@
     const re = new RegExp(esc(state.q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
     return esc(t).replace(re, m => `<mark>${m}</mark>`);
   };
-  const toCard = (r, i) => cardHTML({ url: `/claim/${r.u}.html`, text: r.t, verdict: r.v, name: r.n, party: r.p, photo: r.f, tema: r.tm, geo: r.g, id: r.i }, { index: i, inner: hl(r.t) });
+  const toCard = (r, i) => cardHTML({ url: `/claim/${r.u}.html`, text: r.t, verdict: r.v, name: r.n, party: r.p, photo: r.f, tema: r.tm, geo: r.g, id: r.i, handle: r.x }, { index: i, inner: hl(r.t) });
 
   function update({ grid = true } = {}) {
     const b = base();
