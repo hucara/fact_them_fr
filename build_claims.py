@@ -18,7 +18,7 @@ import sqlite3
 import sys
 import unicodedata
 import urllib.parse
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import site_chrome
@@ -1809,6 +1809,61 @@ def fetch_dashboard_stats(supabase=None):
         return {}
 
 
+def stats_last_month(claims_with_slugs, today=None):
+    """'Último mes' for the cards the backend only computes over the whole term,
+    from the published claims of sittings in the last 30 days. Same definitions
+    as fact_them_be/pipeline/stats.py (top by count; rates need at least 10% of
+    the leader's claims, a topic at least 5). Keys end in '_last_month'."""
+    from collections import Counter
+    since = (today or date.today()) - timedelta(days=30)
+    rows = []
+    for _, c in claims_with_slugs:
+        fecha = str((c.get("session") or {}).get("fecha") or "")[:10]
+        if not fecha or fecha < since.isoformat():
+            continue
+        pol = c.get("politician") or {}
+        v = site_chrome.verdict_key(((c.get("verification") or [{}])[0] or {}).get("resultado"))
+        rows.append((pol, c.get("ambito_tematico") or "", v))
+    if not rows:
+        return {}
+    party, pol_n, pol_info, tema, tema_falso, pol_temas = Counter(), Counter(), {}, Counter(), Counter(), {}
+    confirmed = 0
+    for pol, t, v in rows:
+        pid = pol.get("id") or pol.get("nombre_completo")
+        if pol.get("partido"):
+            party[pol["partido"]] += 1
+        if pid:
+            pol_n[pid] += 1
+            pol_info[pid] = {"name": pol.get("nombre_completo", ""), "partido": pol.get("partido", "")}
+            if t:
+                pol_temas.setdefault(pid, set()).add(t)
+        if t:
+            tema[t] += 1
+            if v == "FALSO":
+                tema_falso[t] += 1
+        confirmed += v == "CONFIRMADO"
+    out = {}
+    if party:
+        n, c = party.most_common(1)[0]; out["top_partido_claims_last_month"] = {"name": n, "count": c}
+    if pol_n:
+        pid, c = pol_n.most_common(1)[0]; out["top_politico_claims_last_month"] = {**pol_info[pid], "count": c}
+        min_pol = int(max(pol_n.values()) * 0.10)
+        elig = {p: len(ts) for p, ts in pol_temas.items() if pol_n[p] >= min_pol}
+        if elig:
+            best = max(elig, key=lambda p: elig[p] / pol_n[p])
+            out["top_politico_cunado_last_month"] = {**pol_info[best], "count": elig[best], "total": pol_n[best],
+                                                     "rate": round(elig[best] / pol_n[best], 4)}
+    if tema:
+        n, c = tema.most_common(1)[0]; out["top_tema_last_month"] = {"name": n, "count": c}
+    if tema_falso:
+        n, c = tema_falso.most_common(1)[0]; out["top_tema_falso_last_month"] = {"name": n, "count": c}
+    rated = {t: tema_falso.get(t, 0) / n for t, n in tema.items() if n >= 5}
+    if rated and max(rated.values()) > 0:
+        best = max(rated, key=rated.get); out["top_tema_falso_rate_last_month"] = {"name": best, "rate": round(rated[best], 4)}
+    out["confirmado_last_month"] = {"count": confirmed, "total": len(rows), "rate": round(confirmed / len(rows), 4)}
+    return out
+
+
 def generate_stats_page(stats):
     """estadisticas.html: the dashboard prerendered by js/stats.js under Node
     (same function the browser uses). Without Node the page still works: the
@@ -2089,6 +2144,7 @@ def main():
     index, recs_by = write_session_data(claims_with_slugs, photo_for)
     render_home(index, recs_by, n_people=len(politician_dates))
     session_dates = generate_session_pages(index, recs_by)
+    stats = {**(stats or {}), **stats_last_month(claims_with_slugs)} if stats else stats
     generate_stats_page(stats)
     generate_llms_txt(index, len(politician_dates), stats)
 
