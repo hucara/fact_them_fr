@@ -687,7 +687,7 @@ mark { background: color-mix(in oklab, var(--accent) 30%, transparent); color: i
 .sc:not(.sc-dual):not(.sc-list) > .sc-value:first-of-type { margin-top: auto; }
 .sc { display: flex; flex-direction: column; gap: 6px; padding: 20px; border-radius: var(--r); border: 1px solid var(--line); background: var(--bg-2); transition: border-color .2s, background .2s; }
 .sc:hover { border-color: var(--line-2); background: var(--surface); }
-.sc-title { margin: 0 0 4px; font-size: 13px; font-weight: 600; color: var(--accent); letter-spacing: 0; }
+.sc-title { margin: 0 0 4px; font-size: 15px; font-weight: 650; color: var(--accent); letter-spacing: -.005em; line-height: 1.3; }
 /* One size for every figure on the page (it used to be 15/16/20/36 px) */
 .sc-value { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -.015em; line-height: 1.3; }
 .sc-big, .sc-sm { font-size: 17px; }
