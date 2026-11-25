@@ -77,7 +77,7 @@
     const topInexactoVol = pick('top_politico_inexacto_volumen', 'top_politico_impreciso_volumen');
     const topInexactoTasa = pick('top_politico_inexacto_tasa', 'top_politico_impreciso_tasa');
     const topPartidoInexacto = pick('top_partido_inexacto', 'top_partido_impreciso');
-    const partidoInexactoCard = topPartidoInexacto.name ? statCard('Partido más inexacto', topPartidoInexacto.name, `${formatNumberES(topPartidoInexacto.count || 0)} inexactitudes`, false, 'El partido que más veces acumula afirmaciones con datos o enfoques inexactos.') : '';
+    const partidoInexactoCard = topPartidoInexacto.name ? statCard('Partido que más exagera o minimiza', topPartidoInexacto.name, `${formatNumberES(topPartidoInexacto.count || 0)} cifras sobre o subestimadas`, false, 'El partido con más afirmaciones sobreestimadas o subestimadas.') : '';
     const partidoDualCard = (title, volField, volNoun, tasaField, isFalso, description) => {
       const vol = d(volField), tasa = d(tasaField), volSub = `${formatNumberES(vol.count || 0)} ${volNoun}`;
       return tasa.name ? statCardDual(title, vol.name || '-', volSub, tasa.name, tasa.count || 0, tasa.total || 0, tasa.rate || 0, isFalso, 'sus afirmaciones', description)
@@ -100,8 +100,8 @@
       <p class="muted">${formatNumberES(total)} afirmaciones verificadas en ${s.total_sessions} sesiones · XV Legislatura</p>
     </header>
     <div class="sgrid">
-      ${statCard('Partido con más claims', d('top_partido_claims').name || '-', `${formatNumberES(d('top_partido_claims').count || 0)} claims totales`, false, 'El partido que más afirmaciones ha realizado en total.')}
-      ${statCard('Político con más claims', polLabel('top_politico_claims'), `${formatNumberES(d('top_politico_claims').count || 0)} claims totales`, false, 'El diputado que más afirmaciones ha realizado en total.')}
+      ${statCard('Partido con más afirmaciones', d('top_partido_claims').name || '-', `${formatNumberES(d('top_partido_claims').count || 0)} afirmaciones en total`, false, 'El partido que más afirmaciones ha realizado en total.')}
+      ${statCard('Político con más afirmaciones', polLabel('top_politico_claims'), `${formatNumberES(d('top_politico_claims').count || 0)} afirmaciones en total`, false, 'El diputado que más afirmaciones ha realizado en total.')}
       ${statCard('Temática más frecuente', temaLabel('top_tema'), `${formatNumberES(d('top_tema').count || 0)} menciones`, false, 'El ámbito sobre el que más afirmaciones se han hecho.')}
       ${dual('Político con más falsos', 'top_politico_falso', 'falsos/engañosos', true, 'falsedad', 'El diputado con más afirmaciones verificadas como falsas o engañosas.')}
       ${partidoDualCard('Partido con más falsos', 'top_partido_falso', 'falsos/engañosos', 'top_partido_falso_tasa', true, 'El partido con más afirmaciones verificadas como falsas o engañosas.')}
@@ -125,9 +125,9 @@
       ${dual('El Minimizador', 'top_politico_subest', 'cifras subestimadas', true, 'subestimación', 'El político que más veces ha reducido cifras reales para que suenen menos graves.')}
       ${partidoInexactoCard}
       ${matracaCard}
-      ${statCardDual('El Maestro del Bla Bla', polLabelObj(topInexactoVol), `${formatNumberES(topInexactoVol.count || 0)} afirmaciones inexactas`,
-        polLabelObj(topInexactoTasa), topInexactoTasa.count || 0, topInexactoTasa.total || 0, topInexactoTasa.rate || 0, false, 'inexactitud', 'El político que más veces ha acumulado afirmaciones con datos o enfoques inexactos.')}
-      ${dual('El Sacador de Contexto', 'top_politico_descont', 'descontextualizaciones', true, 'descontextualización', 'El político que más veces ha usado datos reales arrancándolos de su contexto para cambiar su significado.')}
+      ${statCardDual('El Maestro del Bla Bla', polLabelObj(topInexactoVol), `${formatNumberES(topInexactoVol.count || 0)} cifras sobre o subestimadas`,
+        polLabelObj(topInexactoTasa), topInexactoTasa.count || 0, topInexactoTasa.total || 0, topInexactoTasa.rate || 0, false, 'sobre o subestimación', 'El político con más afirmaciones sobreestimadas o subestimadas: cifras que no son las reales.')}
+      ${dual('El Sacador de Contexto', 'top_politico_descont', 'afirmaciones muy engañosas', true, 'potencial de engaño alto', 'El político con más afirmaciones que, según la verificación, tienen un potencial de engaño alto (aunque el dato sea real).')}
       ${statCardListTemas('Partidos por temática', topTemas)}
       ${statCardList('Afirmaciones por partido', claimsPorPartido, 'Total de afirmaciones registradas por cada partido político.')}
     </div>`;
