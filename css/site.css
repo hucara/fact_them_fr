@@ -931,16 +931,17 @@ mark { background: color-mix(in oklab, var(--accent) 30%, transparent); color: i
 .psearch-box kbd { font: 500 11px var(--sans); padding: 2px 6px; border: 1px solid var(--line); border-radius: 4px; }
 .psearch-box:focus-within kbd { display: none; }
 .psearch-list {
-  position: absolute; right: 0; left: 0; top: calc(100% + 6px); z-index: 45; margin: 0; padding: 6px; list-style: none;
-  max-height: min(60vh, 420px); overflow-y: auto; min-width: 300px;
+  /* anchored to the box's right edge, never wider than the window */
+  position: absolute; right: 0; left: auto; top: calc(100% + 6px); z-index: 45; margin: 0; padding: 6px; list-style: none;
+  width: max(100%, 340px); max-width: calc(100vw - 24px); max-height: min(60vh, 420px); overflow-y: auto; overflow-x: hidden;
   border-radius: var(--r); border: 1px solid var(--line-2); background: var(--surface);
   box-shadow: 0 20px 40px -12px rgba(0,0,0,.8); animation: pop .18s var(--ease-out) both;
 }
-.psearch-list li a { display: grid; grid-template-columns: 32px 1fr; gap: 10px; align-items: center; padding: 6px 8px; border-radius: 6px; text-decoration: none; }
+.psearch-list li a { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 10px; align-items: center; padding: 6px 8px; border-radius: 6px; text-decoration: none; }
 .psearch-list li[aria-selected="true"] a, .psearch-list li a:hover { background: var(--surface-2); }
 .psearch-list img, .psearch-list .ph { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; object-position: 50% 20%; background: var(--surface-2); }
 .psearch-list .nm { display: block; font-size: 14px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.psearch-list .mt { display: block; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.psearch-list .mt { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; font-size: 12px; line-height: 1.35; color: var(--muted); }   /* long ministries wrap to a second line */
 .psearch-list .none { padding: 10px; font-size: 13px; color: var(--muted); }
 span.avatar { display: inline-block; }
 .footer-support { color: var(--muted); }
@@ -953,7 +954,7 @@ span.avatar { display: inline-block; }
   .mnav .psearch-box { min-width: 0; height: 44px; }
   .mnav .psearch-input { font-size: 16px; }   /* 16px: no iOS zoom on focus */
   .mnav .psearch-box kbd { display: none; }
-  .mnav .psearch-list { position: static; box-shadow: none; margin-top: 6px; max-height: 50vh; min-width: 0; }
+  .mnav .psearch-list { position: static; box-shadow: none; margin-top: 6px; max-height: 50vh; min-width: 0; width: auto; max-width: none; }
   .mnav .psearch-list li a { padding: 10px 4px; border-bottom: 0; font-size: 15px; }
 }
 
