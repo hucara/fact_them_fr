@@ -1084,7 +1084,11 @@ function renderCaption() {
     run += (run ? ' ' : '') + piece;
   });
   flush();
-  $('caption').innerHTML = html;
+  const cap = $('caption');
+  cap.innerHTML = html;
+  // Fade the top edge only when older text is really cut off.
+  const used = [...cap.children].reduce((h, el) => h + el.getBoundingClientRect().height, 0);
+  cap.classList.toggle('full', used > cap.clientHeight + 1);
 }
 function showCaption(text) {
   if (switchActive === false) return;

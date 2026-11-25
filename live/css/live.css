@@ -153,12 +153,13 @@ body.admin .brand-tag { display: inline; margin-left: -20px; }
 .eq i:nth-child(2) { animation-delay: -.3s; } .eq i:nth-child(3) { animation-delay: -.6s; } .eq i:nth-child(4) { animation-delay: -.15s; }
 @keyframes eq { 0%, 100% { height: 4px; } 50% { height: 16px; } }
 .caption {
-  /* Fixed slot: always five lines tall, newest text anchored at the bottom,
-     older text fades out at the top. Nothing below it ever moves. */
+  /* Grows with the text from right under "Hablando", up to five lines; past
+     that the newest stays anchored at the bottom and older text scrolls off
+     the top (fading only once something is actually cut: .full). */
   margin: 0; font-size: 15px; color: var(--text-2); line-height: 1.5;
-  height: calc(1.5em * 5); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 1.2em); mask-image: linear-gradient(to bottom, transparent 0, #000 1.2em);
+  max-height: calc(1.5em * 5); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end;
 }
+.caption.full { -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 1.2em); mask-image: linear-gradient(to bottom, transparent 0, #000 1.2em); }
 .caption .cap-run { margin: 0; }   /* one speaker's chunks flow as running text */
 .caption .cap-txt { color: var(--muted); }
 /* speaker change: a thin rule with the new speaker's name */
