@@ -1701,7 +1701,7 @@ const shareMenu = (url, text, tweet, label = '') => {
     + '<div class="share-pop" role="menu" hidden>'
     + `<button type="button" role="menuitem" data-copy="${esc(url)}">Copiar enlace</button>`
     + `<a role="menuitem" href="https://twitter.com/intent/tweet?text=${enc(tweet)}${tweet.includes(url) ? '' : `&url=${enc(url)}`}&via=${SHARE_VIA}" target="_blank" rel="noopener">X</a>`
-    + `<a role="menuitem" href="https://wa.me/?text=${enc(`${text} ${url}`)}" target="_blank" rel="noopener">WhatsApp</a>`
+    + `<a role="menuitem" href="https://api.whatsapp.com/send?text=${enc(`${text} ${url}`)}" target="_blank" rel="noopener">WhatsApp</a>`
     + `<a role="menuitem" href="https://t.me/share/url?url=${enc(url)}&text=${enc(text)}" target="_blank" rel="noopener">Telegram</a>`
     + '</div></div>';
 };

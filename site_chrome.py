@@ -226,7 +226,7 @@ def share(url, text, label="", tweet=None):
             f'<div class="share-pop" role="menu" hidden>'
             f'<button type="button" role="menuitem" data-copy="{esc(url)}">Copiar enlace</button>'
             f'<a role="menuitem" href="{x_href}" target="_blank" rel="noopener">X</a>'
-            f'<a role="menuitem" href="https://wa.me/?text={t}%0A{u}" target="_blank" rel="noopener">WhatsApp</a>'
+            f'<a role="menuitem" href="https://api.whatsapp.com/send?text={t}%0A{u}" target="_blank" rel="noopener">WhatsApp</a>'
             f'<a role="menuitem" href="https://t.me/share/url?url={u}&amp;text={t}" target="_blank" rel="noopener">Telegram</a>'
             f'</div></div>')
 

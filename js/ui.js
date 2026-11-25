@@ -142,7 +142,7 @@ window.FT = (() => {
       + `<div class="share-pop" role="menu" hidden>`
       + `<button type="button" role="menuitem" data-copy="${esc(url)}">Copiar enlace</button>`
       + `<a role="menuitem" href="${xHref}" target="_blank" rel="noopener">X</a>`
-      + `<a role="menuitem" href="https://wa.me/?text=${t}%0A${u}" target="_blank" rel="noopener">WhatsApp</a>`
+      + `<a role="menuitem" href="https://api.whatsapp.com/send?text=${t}%0A${u}" target="_blank" rel="noopener">WhatsApp</a>`
       + `<a role="menuitem" href="https://t.me/share/url?url=${u}&amp;text=${t}" target="_blank" rel="noopener">Telegram</a>`
       + `</div></div>`;
   };
