@@ -127,7 +127,7 @@
       ${matracaCard}
       ${statCardDual('El Maestro del Bla Bla', polLabelObj(topInexactoVol), `${formatNumberES(topInexactoVol.count || 0)} cifras sobre o subestimadas`,
         polLabelObj(topInexactoTasa), topInexactoTasa.count || 0, topInexactoTasa.total || 0, topInexactoTasa.rate || 0, false, 'sobre o subestimación', 'El político con más afirmaciones sobreestimadas o subestimadas: cifras que no son las reales.')}
-      ${dual('El Sacador de Contexto', 'top_politico_descont', 'afirmaciones muy engañosas', true, 'potencial de engaño alto', 'El político con más afirmaciones que, según la verificación, tienen un potencial de engaño alto (aunque el dato sea real).')}
+      ${dual('El Trilero', 'top_politico_descont', 'afirmaciones muy engañosas', true, 'potencial de engaño alto', 'El político con más afirmaciones que, según la verificación, tienen un potencial de engaño alto (aunque el dato sea real).')}
       ${statCardListTemas('Partidos por temática', topTemas)}
       ${statCardList('Afirmaciones por partido', claimsPorPartido, 'Total de afirmaciones registradas por cada partido político.')}
     </div>`;
