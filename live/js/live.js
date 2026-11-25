@@ -2413,6 +2413,11 @@ function syncTopbar() {
 new MutationObserver(syncTopbar).observe($('session-title'), { childList: true, characterData: true, subtree: true });
 new MutationObserver(syncTopbar).observe($('onair'), { attributes: true, childList: true });
 
+/* Phones scroll only the feed, so a copy of the footer closes it there. */
+{
+  const ft = document.querySelector('body > .footer'), feedCol = document.querySelector('.live-feed');
+  if (ft && feedCol) { const c = ft.cloneNode(true); c.classList.add('feed-footer'); c.removeAttribute('id'); feedCol.appendChild(c); }
+}
 /* The footer's contact address, assembled here as on the site (js/ui.js). */
 document.querySelectorAll('a.footer-email').forEach((el) => {
   const a = `${el.dataset.u || 'contacto'}@${el.dataset.d || 'facthem.es'}`;

@@ -314,6 +314,7 @@ body.admin .brand-tag { display: inline; margin-left: -20px; }
 .footer nav a:hover, .footer-social a:hover { color: var(--text); }
 .footer-social { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
 .footer-support { color: var(--muted); }
+.feed-footer { display: none; }   /* phones only (see the phone block) */
 @media (max-width: 860px) { .footer-inner { grid-template-columns: 1fr; } }
 
 /* ── Real page additions ─────────────────────────────────────────────────── */
@@ -425,9 +426,10 @@ button.btn.admin.on { background: rgba(217, 112, 138, .12); }
    speaker and transcript); the claims column scrolls inside, the verdict
    bar fixed at its top. The picker grid and the operator page scroll as usual. */
 @media (min-width: 861px) {
-  body.live-body:not(.admin):not(.replay-picker):not(.idle) { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
-  body.live-body:not(.admin):not(.replay-picker):not(.idle) .footer { display: none; }
-  body:not(.admin):not(.replay-picker) .live { flex: 1; min-height: 0; width: 100%; max-width: 1680px; display: flex; flex-direction: column; padding-top: 8px; padding-bottom: 16px; }
+  /* The view fills the screen under the 60px top bar; the footer sits below
+     it, reached by scrolling the page. */
+  body:not(.admin):not(.replay-picker):not(.idle) .live { height: calc(100vh - 60px); height: calc(100dvh - 60px); min-height: 520px; }
+  body:not(.admin):not(.replay-picker) .live { width: 100%; max-width: 1680px; display: flex; flex-direction: column; padding-top: 8px; padding-bottom: 16px; }
   body:not(.admin):not(.replay-picker) .live-head { flex: none; padding: 6px 0 16px; }
   body:not(.admin):not(.replay-picker) .live-cols { flex: 1; min-height: 0; align-items: stretch;
     grid-template-columns: minmax(0, min(62%, calc((100vh - 22.5rem) * 16 / 9))) minmax(300px, 1fr); gap: 28px; }
@@ -452,7 +454,10 @@ button.btn.admin.on { background: rgba(217, 112, 138, .12); }
    counter or filters. (mock.css) ────────────────────────────────────────── */
 @media (max-width: 860px) {
   body:not(.admin).live-body { overflow: hidden; }
-  body:not(.admin):not(.replay-picker) .footer { display: none; }
+  /* Phones: the view is pinned and only the feed scrolls, so the footer comes
+     at the end of the feed (a copy made by live.js). */
+  body:not(.admin):not(.replay-picker) > .footer { display: none; }
+  body:not(.admin):not(.replay-picker) .feed-footer { display: block; margin: 32px -16px -24px; }
   /* The whole live view is pinned under the top bar: video and bar never
      move; only the feed scrolls (also on iOS Safari). */
   body:not(.admin) .live { position: fixed; top: 60px; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; height: auto; padding: 0; max-width: none; background: var(--bg); }

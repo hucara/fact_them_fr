@@ -253,6 +253,7 @@ def footer():
         '<div class="footer-social">'
         '<a href="https://x.com/facthem_es" target="_blank" rel="noopener">X</a>'
         '<a href="https://www.youtube.com/@facthem_es" target="_blank" rel="noopener">YouTube</a>'
+        '<a href="https://www.tiktok.com/@facthem_es" target="_blank" rel="noopener">TikTok</a>'
         '<a class="footer-email" href="#" data-u="contacto" data-d="facthem.es">Contacto</a>'
         '<span class="footer-support">♥ Apóyanos: '
         '<a href="https://paypal.me/hcasero" target="_blank" rel="noopener">PayPal</a> · '

@@ -620,7 +620,7 @@ CLAIM_FIELDS = (
     "id, session_id, politician_id, intervention_id, texto_normalizado, texto_original, "
     "ambito_geografico, ambito_tematico"
 )
-POLITICIAN_FIELDS = "id, nombre_completo, partido, grupo_parlamentario, genero"
+POLITICIAN_FIELDS = "id, nombre_completo, partido, grupo_parlamentario, genero, cargo_gobierno_detalle"
 SESSION_FIELDS = "id, fecha, organo, legislatura, tipo, numero"
 VERIFICATION_FIELDS = "claim_id, resultado, confidence_score, afirmacion_correcta, omisiones, errores, fuentes, created_at"
 
@@ -761,6 +761,9 @@ def fetch_all_claims(supabase):
         for p in _paginate_table(supabase, "politician", POLITICIAN_FIELDS, "políticos", page_size=1000)
     }
     POL_GENDER.update({pid: p.get("genero") for pid, p in politicians.items() if p.get("genero")})
+    # La Moncloa's exact post ("Ministra de Defensa"); "" = not in the cabinet now
+    POL_CABINET.update({pid: p.get("cargo_gobierno_detalle") or "" for pid, p in politicians.items()
+                        if "cargo_gobierno_detalle" in p})
     sessions = {
         s["id"]: s
         for s in _paginate_table(supabase, "session", SESSION_FIELDS, "sesiones", page_size=1000)
@@ -1204,6 +1207,7 @@ def build_roster(claims_with_slugs, salaries=None):
 
 
 POL_GENDER = {}   # politician id → 'M' / 'F' (politician.genero), filled by fetch_all_claims
+POL_CABINET = {}  # politician id → current cabinet post, verbatim ('' = not in the cabinet)
 
 
 def gendered(label, genero):
@@ -1221,13 +1225,20 @@ def _person_role(info):
     sal = info.get("salary") or {}
     g = next((POL_GENDER[p] for p in info.get("pol_ids") or () if p in POL_GENDER),
              POL_GENDER.get(sal.get("politician_id")))
+    ids = [p for p in (info.get("pol_ids") or ()) if p] + ([sal["politician_id"]] if sal.get("politician_id") else [])
+    post = next((POL_CABINET[p] for p in ids if POL_CABINET.get(p)), None)
+    if post:                       # in the cabinet now: La Moncloa's wording
+        return post[0].upper() + post[1:]
+    left = any(p in POL_CABINET for p in ids)   # known, and not in the cabinet any more
     gov = _salary_value(sal, ["government_role"])
-    if gov:
+    if gov and not left:
         return gendered(GOVERNMENT_ROLE_LABELS.get(gov, snake_to_label(gov)), g)
-    if info.get("grupo") == "Cargo de Gobierno":
+    if info.get("grupo") == "Cargo de Gobierno" and not left:
         return "Miembro del Gobierno"
     if sal:
         circ = sal.get("circunscripcion")
+        if left and (not circ or circ.casefold() == "cargo de gobierno"):
+            return ""              # former cabinet member without a seat
         return gendered(f"Diputado/a por {circ}" if circ and circ.casefold() != "cargo de gobierno" else "Diputado/a", g)
     return ""
 
