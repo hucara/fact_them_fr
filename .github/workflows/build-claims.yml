@@ -34,14 +34,48 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      # The backend sync stores a hash of the published data in sync_state. While it
+      # is unchanged, a code-only push reuses the last download (.data-cache)
+      # instead of paging through every Supabase table again. Empty when the
+      # table is missing → no cache, full download.
+      - name: Read the data version
+        id: data
+        env:
+          SUPABASE_URL:  ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON: ${{ secrets.SUPABASE_ANON }}
+        run: |
+          v=$(curl -sf "$SUPABASE_URL/rest/v1/sync_state?id=eq.1&select=data_hash" \
+                -H "apikey: $SUPABASE_ANON" -H "Authorization: Bearer $SUPABASE_ANON" \
+              | python3 -c "import json,sys; r=json.load(sys.stdin); print(r[0]['data_hash'] if r else '')" 2>/dev/null || true)
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "data version: ${v:-none}"
+
+      - name: Restore the last download
+        id: cache
+        if: steps.data.outputs.version != ''
+        uses: actions/cache/restore@v4
+        with:
+          path: .data-cache
+          key: supabase-data-${{ steps.data.outputs.version }}
+
       - name: Generate claim pages + sitemap
         env:
           SUPABASE_URL:  ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON: ${{ secrets.SUPABASE_ANON }}
+          DATA_VERSION:  ${{ steps.data.outputs.version }}
+          # Manual and sync-triggered runs always download fresh data.
+          FORCE_FETCH:   ${{ github.event_name == 'workflow_dispatch' && '1' || '' }}
         run: python build_claims.py
 
+      - name: Save the download
+        if: steps.data.outputs.version != '' && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .data-cache
+          key: supabase-data-${{ steps.data.outputs.version }}
+
       - name: Keep only the site (sources and tooling are not published)
-        run: rm -rf build_claims.py site_chrome.py requirements.txt REDESIGN_PLAN.md templates tools __pycache__
+        run: rm -rf build_claims.py site_chrome.py requirements.txt REDESIGN_PLAN.md templates tools __pycache__ .data-cache
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

@@ -800,6 +800,47 @@ def fetch_all_claims(supabase):
     return claims
 
 
+# ── Download cache ────────────────────────────────────────────────────────────
+# The backend sync writes a hash of everything it published to sync_state. While
+# that hash is unchanged, a code-only deploy reuses the last download instead of
+# paging through every table again (the pages are still all rendered: ~2 s).
+# FORCE_FETCH=1 (manual / sync-triggered runs) always downloads.
+
+DATA_CACHE_DIR = Path(__file__).parent / ".data-cache"
+DATA_VERSION = os.environ.get("DATA_VERSION", "").strip()  # set by the workflow
+FORCE_FETCH = os.environ.get("FORCE_FETCH", "") == "1"
+
+
+def fetch_data_version(supabase):
+    """sync_state.data_hash, or None (table missing → always download)."""
+    try:
+        rows = supabase.from_("sync_state").select("data_hash").eq("id", 1).execute().data or []
+    except Exception as exc:
+        print(f"  aviso: no se pudo leer sync_state ({exc}); descarga completa")
+        return None
+    return rows[0]["data_hash"] if rows else None
+
+
+def load_cached_data(version):
+    path = DATA_CACHE_DIR / f"{version}.json"
+    if not version or FORCE_FETCH or not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        print(f"  aviso: caché ilegible ({exc}); descarga completa")
+        return None
+
+
+def save_cached_data(version, payload):
+    if not version:
+        return
+    DATA_CACHE_DIR.mkdir(exist_ok=True)
+    for old in DATA_CACHE_DIR.glob("*.json"):
+        old.unlink()
+    (DATA_CACHE_DIR / f"{version}.json").write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+
 def fetch_session_dates(supabase):
     """Returns {session_id: fecha_iso_string}."""
     resp = supabase.from_("session").select("id, fecha").execute()
@@ -2088,16 +2129,30 @@ def main():
     else:
         print("Conectando a Supabase…")
         supabase = create_client(SUPABASE_URL, SUPABASE_ANON)
-        print("Obteniendo afirmaciones…")
-        claims = fetch_all_claims(supabase)
-        print(f"  {len(claims)} afirmaciones obtenidas")
-        guard_claim_count(len(claims))
-        print("Obteniendo fechas de sesión…")
-        session_dates = fetch_session_dates(supabase)
-        print("Obteniendo retribuciones…")
-        salaries = fetch_salaries(supabase)
-        print(f"  {len(salaries)} retribuciones obtenidas")
-        stats = fetch_dashboard_stats(supabase)
+        version = DATA_VERSION or fetch_data_version(supabase)
+        cached = load_cached_data(version)
+        if cached:
+            print(f"Datos sin cambios desde la última descarga ({version[:12]}): usando la caché")
+            claims, session_dates, salaries, stats = (
+                cached["claims"], cached["session_dates"], cached["salaries"], cached["stats"])
+            POL_GENDER.update(cached["pol_gender"])
+            POL_CABINET.update(cached["pol_cabinet"])
+            guard_claim_count(len(claims))
+        else:
+            print("Obteniendo afirmaciones…")
+            claims = fetch_all_claims(supabase)
+            print(f"  {len(claims)} afirmaciones obtenidas")
+            guard_claim_count(len(claims))
+            print("Obteniendo fechas de sesión…")
+            session_dates = fetch_session_dates(supabase)
+            print("Obteniendo retribuciones…")
+            salaries = fetch_salaries(supabase)
+            print(f"  {len(salaries)} retribuciones obtenidas")
+            stats = fetch_dashboard_stats(supabase)
+            save_cached_data(version, {
+                "claims": claims, "session_dates": session_dates, "salaries": salaries, "stats": stats,
+                "pol_gender": POL_GENDER, "pol_cabinet": POL_CABINET,
+            })
 
     OUT_DIR.mkdir(exist_ok=True)
     for f in OUT_DIR.glob("*.html"):

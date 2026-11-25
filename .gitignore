@@ -20,3 +20,4 @@ sesion/
 estadisticas.html
 llms.txt
 llms-full.txt
+.data-cache/
