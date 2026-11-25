@@ -1695,43 +1695,70 @@ function shareButton(el, verdict) {
 
 /* Phones and tablets: the system share sheet; elsewhere our menu, opening
    upwards when there is no room below (screen edge or the feed's scroller). */
-const NATIVE_SHARE = !!navigator.share && !!window.matchMedia && matchMedia('(pointer: coarse)').matches;
+function placeSharePop(btn, pop) {
+  // Opens below its button, or above it when there's no room; kept on screen.
+  pop.classList.remove('up');
+  const b = btn.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+  const below = b.bottom + 6, above = b.top - h - 6;
+  const up = below + h > innerHeight - 8 && above >= 8;
+  pop.style.left = `${Math.max(8, Math.min(b.right - w, innerWidth - w - 8))}px`;
+  pop.style.top = `${up ? above : below}px`;
+  pop.classList.toggle('up', up);
+}
+/* The open menu moves to <body> while open, so no sticky bar, animated card
+   or scrolling feed can cover or clip it, and goes back next to its button
+   when it closes. Same menu on every device (no system share sheet). */
+const openShare = (btn, pop) => {
+  pop._btn = btn; pop.classList.add('floating'); document.body.appendChild(pop);
+  pop.hidden = false; placeSharePop(btn, pop);
+  btn.setAttribute('aria-expanded', 'true'); btn.closest('.f-item')?.classList.add('menu-open');
+};
 const closeShares = (except) => document.querySelectorAll('.share-pop:not([hidden])').forEach((p) => {
   if (p === except) return;
-  p.hidden = true; p.previousElementSibling.setAttribute('aria-expanded', 'false');
-  p.closest('.f-item')?.classList.remove('menu-open');
+  p.hidden = true;
+  const b = p._btn || p.previousElementSibling;
+  b?.setAttribute('aria-expanded', 'false'); b?.closest('.f-item')?.classList.remove('menu-open');
+  if (p._btn) { p._btn.after(p); p.classList.remove('floating', 'up'); p.style.left = p.style.top = ''; p._btn = null; }
 });
+/* Copy that also works where the Clipboard API is missing (plain http, older
+   browsers). Says "copiado" only when it really copied. */
+async function copyText(t) {
+  try { if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(t); return true; } } catch { /* fall back */ }
+  const ta = document.createElement('textarea');
+  ta.value = t; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+  document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, t.length);
+  let ok = false; try { ok = document.execCommand('copy'); } catch { ok = false; }
+  ta.remove(); return ok;
+}
 document.addEventListener('click', (e) => {
-  const btn = e.target.closest('.share-btn');
-  const copy = e.target.closest('[data-copy]');
+  const btn = e.target.closest('.share-btn'), copy = e.target.closest('[data-copy]');
   if (btn) {
     e.preventDefault(); e.stopPropagation();
-    if (NATIVE_SHARE) { navigator.share({ title: 'Facthem', text: btn.dataset.text, url: btn.dataset.url }).catch(() => {}); return; }
-    const pop = btn.nextElementSibling; closeShares(pop);
-    pop.hidden = !pop.hidden; btn.setAttribute('aria-expanded', String(!pop.hidden));
-    if (!pop.hidden) {
-      pop.classList.remove('up');
-      let limit = innerHeight, n = pop.parentElement;
-      while (n && n !== document.body) {
-        const o = getComputedStyle(n).overflowY;
-        if (o === 'auto' || o === 'scroll') { limit = Math.min(limit, n.getBoundingClientRect().bottom); break; }
-        n = n.parentElement;
-      }
-      if (pop.getBoundingClientRect().bottom > limit - 8) pop.classList.add('up');
-    }
-    btn.closest('.f-item')?.classList.toggle('menu-open', !pop.hidden);
+    const isOpen = btn.getAttribute('aria-expanded') === 'true';
+    closeShares();
+    if (!isOpen && btn.nextElementSibling?.classList.contains('share-pop')) openShare(btn, btn.nextElementSibling);
     return;
   }
   if (copy) {
     e.preventDefault(); e.stopPropagation();
-    navigator.clipboard?.writeText(copy.dataset.copy).catch(() => {});
-    copy.textContent = 'Enlace copiado ✓';
-    setTimeout(() => { copy.textContent = 'Copiar enlace'; closeShares(); }, 900);
+    copyText(copy.dataset.copy).then((ok) => {
+      if (!ok) { closeShares(); window.prompt('Copia el enlace:', copy.dataset.copy); return; }
+      copy.textContent = 'Enlace copiado ✓';
+      setTimeout(() => { copy.textContent = 'Copiar enlace'; closeShares(); }, 900);
+    });
     return;
   }
   if (!e.target.closest('.share-pop')) closeShares();
 }, true);
 addEventListener('keydown', (e) => { if (e.key === 'Escape') closeShares(); });
+// The open menu follows its button when anything scrolls (a new claim can move
+// the feed); it closes once the button is off screen.
+const reflowShares = () => document.querySelectorAll('.share-pop.floating:not([hidden])').forEach((pop) => {
+  const btn = pop._btn, r = btn?.getBoundingClientRect();
+  if (!r || r.bottom < 0 || r.top > innerHeight || !r.width) closeShares(); else placeSharePop(btn, pop);
+});
+addEventListener('scroll', reflowShares, true);
+addEventListener('resize', reflowShares);
 
 /* ── debug: text processing ──────────────────────────────────────────────
    What each transcript window looked like when it was handed to the model,

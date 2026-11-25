@@ -96,6 +96,7 @@ body.admin .brand-tag { display: inline; margin-left: -20px; }
   border-radius: var(--r); border: 1px solid var(--line-2); background: var(--surface); box-shadow: 0 20px 40px -12px rgba(0,0,0,.8);
   animation: pop .18s var(--ease-out) both; transform-origin: top right; }
 .share-pop.up { top: auto; bottom: calc(100% + 6px); transform-origin: bottom right; }
+.share-pop.floating { position: fixed; right: auto !important; bottom: auto !important; z-index: 1000; }   /* placed by placeSharePop() */
 .share-pop > * { all: unset; box-sizing: border-box; padding: 8px 10px; border-radius: 6px; font-size: 13px; color: var(--text-2); cursor: pointer; }
 .share-pop > *:hover, .share-pop > *:focus-visible { background: var(--surface-2); color: var(--text); }
 @keyframes pop { from { opacity: 0; transform: translateY(-4px) scale(.98); } }

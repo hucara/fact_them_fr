@@ -446,6 +446,7 @@ mark { background: color-mix(in oklab, var(--accent) 30%, transparent); color: i
   box-shadow: 0 20px 40px -12px rgba(0,0,0,.8); animation: pop .18s var(--ease-out) both; transform-origin: top right;
 }
 .share-pop.up { top: auto; bottom: calc(100% + 6px); transform-origin: bottom right; }
+.share-pop.floating { position: fixed; right: auto !important; bottom: auto !important; z-index: 1000; }   /* placed by placeSharePop() (js/ui.js) */
 .share-pop > * { all: unset; box-sizing: border-box; padding: 8px 10px; border-radius: 6px; font-size: 13px; color: var(--text-2); cursor: pointer; }
 .share-pop > *:hover, .share-pop > *:focus-visible { background: var(--surface-2); color: var(--text); }
 .c-verdict .share { margin-left: auto; }
@@ -775,6 +776,8 @@ mark { background: color-mix(in oklab, var(--accent) 30%, transparent); color: i
 .doc-body { padding-top: 32px; font-size: 17px; line-height: 1.7; }
 .eyebrow-plain { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--accent); }
 .doc-meta { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
+/* "Ver la última sesión" (#session) lands with the sitting's title just under the top bar */
+#session { scroll-margin-top: 76px; }
 .doc-body h2 { margin: 48px 0 12px; font-size: 22px; font-weight: 700; letter-spacing: -.02em; scroll-margin-top: 84px; }
 .doc-body p, .doc-body li { color: var(--text-2); }
 .doc-body ul { padding-left: 20px; display: grid; gap: 6px; }
