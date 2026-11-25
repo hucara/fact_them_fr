@@ -829,7 +829,12 @@ mark { background: color-mix(in oklab, var(--accent) 30%, transparent); color: i
   .nav, .cmdk kbd { display: none; }
   .hero { min-height: 0; }
   /* the whole figure at the hero's height (not a 150%-wide crop of its face) */
-  .hero-art img { right: -22% !important; top: 40px; width: auto; height: calc(100% - 24px); opacity: .45; -webkit-mask-image: linear-gradient(to top, transparent 0%, #000 60%); mask-image: linear-gradient(to top, transparent 0%, #000 60%); }
+  /* The whole figure at the hero's height; every edge that ends inside the hero
+     fades out (the image is mirrored, so "to right" fades its on-screen left edge). */
+  .hero-art img { right: -22% !important; top: 40px; width: auto; height: calc(100% - 24px); opacity: .45;
+    -webkit-mask-image: linear-gradient(to right, #000 40%, transparent 92%), linear-gradient(to bottom, transparent 0%, #000 22%, #000 55%, transparent 100%);
+            mask-image: linear-gradient(to right, #000 40%, transparent 92%), linear-gradient(to bottom, transparent 0%, #000 22%, #000 55%, transparent 100%);
+    -webkit-mask-composite: source-in; mask-composite: intersect; }
   .hero-inner { padding-top: 28px; padding-bottom: 28px; }
   .hero h1 { margin: 8px 0 12px; }
   .hero-sub { font-size: 15px; margin-bottom: 20px; }
