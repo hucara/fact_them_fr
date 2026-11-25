@@ -250,6 +250,17 @@ async function boot() {
   // site falls back to its mirror of the data, /_livedata/.
   if (!window.LIVE_ADMIN && !q.has('data') && location.hostname !== 'facthem.es'
       && !(await fetchPointer('replay'))) bucketBase = '/_livedata/';
+  // ?s=<session> (the share links of before) opens the synced diferido when the
+  // session has one; the archive view is only for sessions without a video replay.
+  if (!window.LIVE_ADMIN && sid && !q.has('replay')) {
+    const rp = await fetchPointer('replay');
+    const list = rp?.status === 'replay' ? (rp.sessions?.length ? rp.sessions : [rp]) : [];
+    if (list.some((x) => x.session_id === sid && x.youtube_id && x.events)) {
+      const u = new URL(location.href); u.searchParams.delete('s'); u.searchParams.set('diferido', sid);
+      location.replace(u);
+      return;
+    }
+  }
   if (!window.LIVE_ADMIN && !sid && !channel && !q.has('diferido') && !q.has('replay')) {
     // Plain /live/ ("Directos"): whatever is on air, on either pointer; with
     // nothing on air, the diferidos grid (bootBuckets → bootReplay).
@@ -468,6 +479,8 @@ async function bootReplay() {
   if (!ptr || !ptr.youtube_id || !ptr.events) return false;
   if (q.has('offset')) ptr.vod_offset = parseFloat(q.get('offset')) || 0;
   if (q.has('start')) ptr.start = parseFloat(q.get('start')) || 0;
+  // A shared claim: start the video at its moment (pipeline time → video time).
+  if (q.has('t')) ptr.start = Math.max(0, (ptr.vod_offset || 0) + (parseFloat(q.get('t')) || 0));
   let data;
   try { data = await fetchJSON(bucketBase + ptr.events); } catch { return false; }
 
@@ -1519,12 +1532,17 @@ const SHARE_VIA = 'facthem_ES';
 
 /* The page as a reader should open it: the TV runner's channel, or the
    replayed session — never the admin token or debug flags. */
-function liveShareUrl() {
+/* A diferido shares the synced replay (?diferido=<session>), at the claim's
+   moment when a claim is shared (&t=<s>, its "Ir a este momento" time). */
+function liveShareUrl(el = null) {
   const q = new URLSearchParams(location.search);
   const p = new URLSearchParams();
   const channel = (q.get('c') || window.LIVE_CHANNEL || '').toLowerCase().replace(/[^a-z0-9-]/g, '');
-  if (replayMode && session?.session_id) p.set('s', session.session_id);
-  else if (channel) p.set('c', channel);
+  if (replayMode && session?.session_id) {
+    p.set('diferido', session.session_id);
+    const at = el ? parseFloat(el.querySelector('.f-time')?.dataset.seek) : NaN;
+    if (at >= 0) p.set('t', String(Math.floor(at)));
+  } else if (channel) p.set('c', channel);
   const qs = p.toString();
   return LIVE_URL + (qs ? `?${qs}` : '');
 }
@@ -1648,7 +1666,7 @@ const shareMenu = (url, text, tweet, label = '') => {
 };
 
 function shareButton(el, verdict) {
-  const url = liveShareUrl();
+  const url = liveShareUrl(el);
   return shareMenu(url, `${shareText(el, verdict)}\n\n${liveCallout()}`, tweetText(el, verdict, url));
 }
 

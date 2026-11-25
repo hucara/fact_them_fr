@@ -1306,7 +1306,7 @@ def _claims_panel(claims):
     return (
         '<details class="sum"><summary><span class="sum-line"><span class="sum-k">Afirmaciones</span>'
         f'<b>{total}</b><span class="sum-unit only-m">afirmaciones</span><span class="sum-sep">·</span><b>{pct}%</b>'
-        '<span class="sum-dim"><span class="only-d">falsas o exageradas</span><span class="only-m">falsas</span></span>'
+        '<span class="sum-dim"><span class="only-d">falsas o exageradas</span><span class="only-m">incorrectas</span></span>'
         f'</span>{chev}{site_chrome.stack(cnt, "stack stack-static sum-bar")}</summary>'
         f'<div class="sum-body"><div class="sum-block">{site_chrome.legend(cnt)}'
         f'<p class="side-note">{total} afirmaciones en {sessions} sesiones · {wrong} falsas, exageradas o inexactas</p></div>'
@@ -1966,6 +1966,22 @@ def write_retired_redirects(retired):
         print(f"  {len(retired)} afirmaciones con veredicto retirado → redirección al perfil")
 
 
+def guard_claim_count(n):
+    """Never publish a gutted site. The home page and every page are generated
+    here (none is committed), so a Supabase that answers with no claims, or far
+    fewer than before (RLS change, half-synced table), instead of an error would
+    deploy a site without them. Compare with the claim URLs in the sitemap of the
+    checkout (the last committed build) and stop the build instead; GitHub Pages
+    then keeps serving the last good deploy. FACTHEM_ALLOW_SHRINK=1 overrides."""
+    previous = 0
+    if SITEMAP_PATH.exists():
+        previous = SITEMAP_PATH.read_text(encoding="utf-8").count("/claim/")
+    floor = int(previous * 0.9)
+    if n == 0 or (n < floor and os.environ.get("FACTHEM_ALLOW_SHRINK") != "1"):
+        sys.exit(f"ERROR: {n} afirmaciones de Supabase, el sitemap tiene {previous} "
+                 f"(mínimo {floor}). No se publica; revisa Supabase o usa FACTHEM_ALLOW_SHRINK=1.")
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
@@ -1984,6 +2000,7 @@ def main():
         print("Obteniendo afirmaciones…")
         claims = fetch_all_claims(supabase)
         print(f"  {len(claims)} afirmaciones obtenidas")
+        guard_claim_count(len(claims))
         print("Obteniendo fechas de sesión…")
         session_dates = fetch_session_dates(supabase)
         print("Obteniendo retribuciones…")

@@ -465,7 +465,7 @@ button.btn.admin.on { background: rgba(217, 112, 138, .12); }
   .feed-new { top: 76px; }
   .weak { margin: 16px 0 0; }
   body:not(.admin) .past { display: none; }
-  body.replay-picker .live { position: static; display: block; padding: 16px; }
+  body.replay-picker .live { position: static; display: block; padding: 76px 16px 16px; }   /* clear of the fixed top bar */
   body.replay-picker.live-body { overflow: auto; }
   body.replay-picker .past { display: block; }
   .past-grid { grid-template-columns: minmax(0, 1fr); }
