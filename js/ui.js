@@ -97,9 +97,7 @@ window.FT = (() => {
     const t = x.slice(0, 200) + (x.length > 200 ? '…' : '');
     return `🔍 ${name || 'Un político'}${party ? ` (${party})` : ''} ${verb}: "${t}"\n${EMOJI[k] || '🔍'} ${VK[k].long}`;
   };
-  // X share = site_chrome.tweet_text (the session thread's rules).
-  const TWEET_VERDICT = { CONFIRMADO: ['✅', 'Confirmado'], CONFIRMADO_CON_MATIZ: ['✅', 'Confirmado con matiz'],
-    SOBREESTIMADO: ['🟠', 'Sobreestimado'], SUBESTIMADO: ['🟠', 'Subestimado'], FALSO: ['❌', 'Falso'], NO_VERIFICABLE: ['🔵', 'No verificable'] };
+  // X share = site_chrome.tweet_text (the session thread's rules); same verdict emoji as shareTextOf.
   const TOPIC_HASHTAGS = {
     'economía': ['#Economía', '#Datos'], 'sanidad': ['#Sanidad', '#Salud'], 'educación': ['#Educación'],
     'vivienda': ['#Vivienda'], 'inmigración': ['#Inmigración'], 'medio_ambiente': ['#MedioAmbiente', '#Clima'],
@@ -121,7 +119,7 @@ window.FT = (() => {
   };
   const xLen = s => s.replace(/https?:\/\/\S+/g, 'u'.repeat(23)).length;   // UTF-16 length: emoji count 2, as on X
   const tweetTextOf = (name, party, handle, text, verdict, tema, geo, url) => {
-    const k = verdictKey(verdict), [emoji, label] = TWEET_VERDICT[k] || ['🔍', VK[k].long];
+    const k = verdictKey(verdict), [emoji, label] = [EMOJI[k] || '🔍', VK[k].long];
     const tags = [...(TOPIC_HASHTAGS[String(tema || '').toLowerCase()] || []), regionHashtag(geo)].filter(Boolean).join(' ');
     const footers = [`"\n${emoji} ${label}\n` + (tags ? `${tags}\n` : '') + url, ...(tags ? [`"\n${emoji} ${label}\n` + url] : [])];
     const who = name || 'Un político', pt = party ? ` (${hashtag(party) || party})` : '', h = handle ? ` (@${handle})` : '';

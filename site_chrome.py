@@ -111,10 +111,7 @@ def share_text(name, party, text, verdict, verb="ha afirmado"):
 # as a hashtag, the claim in quotes, verdict line, topic/region hashtags, link.
 # When it doesn't fit 280, drop "ha afirmado", then the party, then the handle,
 # then the hashtags; cut the claim only as a last resort (keeping the @handle).
-# = tweetTextOf in js/ui.js.
-TWEET_VERDICT = {"CONFIRMADO": ("✅", "Confirmado"), "CONFIRMADO_CON_MATIZ": ("✅", "Confirmado con matiz"),
-                 "SOBREESTIMADO": ("🟠", "Sobreestimado"), "SUBESTIMADO": ("🟠", "Subestimado"),
-                 "FALSO": ("❌", "Falso"), "NO_VERIFICABLE": ("🔵", "No verificable")}
+# = tweetTextOf in js/ui.js. Verdict emoji + label = share_text (one table for every platform).
 TOPIC_HASHTAGS = {   # the thread's table, plus the site's newer topic keys
     "economía": ["#Economía", "#Datos"], "sanidad": ["#Sanidad", "#Salud"], "educación": ["#Educación"],
     "vivienda": ["#Vivienda"], "inmigración": ["#Inmigración"], "medio_ambiente": ["#MedioAmbiente", "#Clima"],
@@ -152,7 +149,7 @@ def x_len(s):
 
 def tweet_text(name, party, handle, text, verdict, tema, geo, url):
     k = verdict_key(verdict)
-    emoji, label = TWEET_VERDICT.get(k, ("🔍", VK[k][2]))
+    emoji, label = VERDICT_EMOJI.get(k, "🔍"), VK[k][2]
     tags = " ".join(t for t in [*TOPIC_HASHTAGS.get(str(tema or "").lower(), []), region_hashtag(geo)] if t)
     footers = [f'"\n{emoji} {label}\n' + (f"{tags}\n" if tags else "") + url]
     if tags:   # a long claim keeps its words before its hashtags
