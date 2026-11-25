@@ -25,7 +25,7 @@
   <!-- Inter is self-hosted by facthem.es (/assets/fonts); elsewhere (the runner's
        own page) the system font stands in. -->
   <link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="css/live.css?v=0669935ca9" />
+  <link rel="stylesheet" href="css/live.css?v=f37a7ed64f" />
 </head>
 <body class="live-body">
   <!-- Structure, class names and motion follow fact_them_fr/mockup/live.html. -->
@@ -57,7 +57,7 @@
   <main class="live" id="live">
     <header class="live-head">
       <div class="live-id">
-        <h1 id="session-title">cargando…</h1>
+        <h1 id="session-title" aria-busy="true"></h1>
         <span class="live-status" id="onair" hidden>En directo</span>
       </div>
       <div class="live-head-right">
@@ -128,6 +128,6 @@
        Set to the R2 custom domain (e.g. https://live-data.facthem.es/) when the
        page is hosted elsewhere. `?data=` on the URL overrides it. -->
   <script>window.LIVE_DATA_BASE = window.LIVE_DATA_BASE || 'https://pub-4b0592b162234f079cbe05777d9aa1f2.r2.dev/';</script>
-  <script src="js/live.js?v=9dc470bdfd"></script>
+  <script src="js/live.js?v=5edf2c197e"></script>
 </body>
 </html>

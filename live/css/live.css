@@ -131,6 +131,10 @@ body.admin .brand-tag { display: inline; margin-left: -20px; }
 /* centre the tag on the title's capitals, not on its line box (which keeps
    room for descenders "Debate a 8" doesn't have) */
 .live-id h1 { text-box: trim-both cap alphabetic; }
+/* Before the first data arrives: a quiet placeholder in the title's place, not "cargando…" */
+#session-title:empty::before { content: ''; display: inline-block; width: min(14ch, 60vw); height: .72em; border-radius: 8px; vertical-align: middle;
+  background: linear-gradient(90deg, var(--surface) 0%, var(--surface-2) 50%, var(--surface) 100%) 0 0 / 200% 100%; animation: title-wait 1.3s ease-in-out infinite; }
+@keyframes title-wait { to { background-position: -200% 0; } }
 @supports not (text-box: trim-both cap alphabetic) { .live-id .live-status { transform: translateY(-3px); } }
 .live-status { display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 11px; flex: none; border-radius: var(--r-sm);
   font-size: 13px; font-weight: 600; color: #ffd9e1; background: rgba(226, 86, 111, .12); border: 1px solid rgba(226, 86, 111, .3); }

@@ -224,8 +224,18 @@ async function fetchJSON(url, opts = {}) {
 const LIVE_STALE_S = 15 * 60;
 const isRunning = (c) => !!c && !!c.status && c.status !== 'ended' && c.listed !== false
   && (!c.updated || Date.now() / 1000 - c.updated < LIVE_STALE_S);
-const fetchPointer = async (key) => {
-  try { return await fetchJSON(`${bucketBase}sessions/${key}.json`, { cache: 'no-store' }); } catch { return null; }
+/* While the page boots, each pointer is fetched once and shared (they are all
+   requested together, see boot); later checks (a live starting while someone
+   watches a replay) fetch fresh. */
+let bootFetches = new Map();
+const fetchPointer = (key) => {
+  const url = `${bucketBase}sessions/${key}.json`;
+  // A request that hangs must not leave the page on its placeholder: give up after 10 s.
+  const timeout = typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? { signal: AbortSignal.timeout(10000) } : {};
+  const get = () => fetchJSON(url, { cache: 'no-store', ...timeout }).catch(() => null);
+  if (!bootFetches) return get();
+  if (!bootFetches.has(url)) bootFetches.set(url, get());
+  return bootFetches.get(url);
 };
 /* The verification on air, Congress stream first, then a TV debate: {cfg, channel} or null. */
 async function runningPointer() {
@@ -261,6 +271,10 @@ async function boot() {
       return;
     }
   }
+  // Everything the first screen may need, requested at once (one round trip,
+  // not one per file): the pointers, the diferidos list and the vocabularies.
+  if (!window.LIVE_ADMIN) ['current', 'current-tv', 'replay'].forEach((k) => fetchPointer(k));
+  const vocabEarly = fetchJSON(bucketBase + 'vocabularies.json').catch(() => null);
   if (!window.LIVE_ADMIN && !sid && !channel && !q.has('diferido') && !q.has('replay')) {
     // Plain /live/ ("Directos"): whatever is on air, on either pointer; with
     // nothing on air, the diferidos grid (bootBuckets → bootReplay).
@@ -285,11 +299,12 @@ async function boot() {
     }
   }
   try {
-    VOCAB = await fetchJSON(mode === 'buckets' ? bucketBase + 'vocabularies.json' : '/vocabularies');
+    VOCAB = (mode === 'buckets' && await vocabEarly) || await fetchJSON(mode === 'buckets' ? bucketBase + 'vocabularies.json' : '/vocabularies');
   } catch {
     VOCAB = {}; // tags fall back to raw values rather than not rendering
   }
-  if (mode === 'buckets') { await bootBuckets(); return setupAdmin(); }
+  if (mode === 'buckets') { await bootBuckets(); bootFetches = null; return setupAdmin(); }
+  bootFetches = null;
 
   // 2. Local API (WebSocket).
   let debates = [];
@@ -467,7 +482,7 @@ async function bootReplay() {
             events: `replays/${encodeURIComponent(want)}.json` };
   } else {
     let pointer = null;
-    try { pointer = await fetchJSON(`${bucketBase}sessions/replay.json`, { cache: 'no-store' }); } catch { pointer = null; }
+    pointer = await fetchPointer('replay');   // already requested at boot
     if (!pointer || pointer.status !== 'replay') return false;
     // The grid, newest first. A pointer of the first version is one session.
     const list = (pointer.sessions?.length ? pointer.sessions : [pointer]).filter((s) => s.youtube_id && s.events);
@@ -481,6 +496,9 @@ async function bootReplay() {
   if (q.has('start')) ptr.start = parseFloat(q.get('start')) || 0;
   // A shared claim: start the video at its moment (pipeline time → video time).
   if (q.has('t')) ptr.start = Math.max(0, (ptr.vod_offset || 0) + (parseFloat(q.get('t')) || 0));
+  // The title and the "Diferido" tag right away, from the list; the events
+  // file (hundreds of KB) follows.
+  if (ptr.title && !$('session-title').textContent) { $('session-title').textContent = ptr.title; showDiferidoBadge(); }
   let data;
   try { data = await fetchJSON(bucketBase + ptr.events); } catch { return false; }
 
@@ -2438,6 +2456,8 @@ function syncTopbar() {
   $('tb-live').classList.toggle('off', onair.hidden || onair.classList.contains('diferido') || onair.classList.contains('paused'));
 }
 new MutationObserver(syncTopbar).observe($('session-title'), { childList: true, characterData: true, subtree: true });
+new MutationObserver(() => { if ($('session-title').textContent) $('session-title').removeAttribute('aria-busy'); })
+  .observe($('session-title'), { childList: true, characterData: true, subtree: true });
 new MutationObserver(syncTopbar).observe($('onair'), { attributes: true, childList: true });
 
 /* Phones scroll only the feed, so a copy of the footer closes it there. */
