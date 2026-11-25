@@ -11,6 +11,7 @@ permissions:
   pages:    write
   id-token: write   # required by actions/deploy-pages
   contents: read
+  actions:  read    # to see when the site artifact is listed (wait step)
 
 jobs:
   deploy:
@@ -46,6 +47,22 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: .   # the generated site (sources removed in the step above)
+
+      # The site artifact is ~260 MB: GitHub can take a while to list it after the
+      # upload, and deploy-pages fails ("No artifacts named github-pages") if it
+      # looks too early. Wait until the artifact is listed (up to 3 minutes).
+      - name: Wait for the artifact to be registered
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for i in $(seq 1 36); do
+            n=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" \
+              | python3 -c "import json,sys; print(sum(a['name'] == 'github-pages' for a in json.load(sys.stdin).get('artifacts', [])))")
+            if [ "$n" -ge 1 ]; then echo "artifact listed after $((i * 5))s"; sleep 10; exit 0; fi
+            sleep 5
+          done
+          echo "artifact still not listed; deploying anyway"
 
       - name: Deploy to GitHub Pages
         id: deploy
