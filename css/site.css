@@ -327,6 +327,8 @@ main { max-width: var(--max); margin: 0 auto; padding: 32px var(--gutter) 80px; 
 }
 .msel-opt { display: grid; grid-template-columns: 16px 18px 1fr auto; align-items: center; gap: 10px; padding: 8px; border-radius: 6px; font-size: 13px; cursor: pointer; }
 .msel-opt:hover { background: var(--surface-2); }
+.msel-opt-plain { grid-template-columns: 16px 1fr auto; }
+#f-tema .msel-pop { max-height: min(60vh, 420px); overflow-y: auto; }
 .msel-opt:has(input:disabled) { opacity: .4; cursor: default; }
 .msel-opt input { margin: 0; accent-color: var(--accent); }
 .msel-opt .n { color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -882,6 +884,7 @@ mark { background: color-mix(in oklab, var(--accent) 30%, transparent); color: i
   .p-head h1 { font-size: 22px; }
   .sums { grid-template-columns: minmax(0, 1fr); }
   .sum-k { display: none; }
+  .sum-sal .sum-k { display: inline; }   /* the figures alone don't say what they are */
   .only-m { display: inline; } .only-d { display: none; }
   .sum-line b { font-size: 16px; }
   .sal-table th, .sal-table td { font-size: 12px; }

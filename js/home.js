@@ -17,7 +17,7 @@
   const fileId = id => String(id).replace(/[^A-Za-z0-9_-]/g, '_');
   const cache = {};
   const load = id => (cache[id] ??= fetch(`/assets/sessions/${fileId(id)}.json`).then(r => (r.ok ? r.json() : [])).catch(() => []));
-  const state = { ids: [], recs: [], v: new Set(), tema: '', party: '', q: '' };
+  const state = { ids: [], recs: [], v: new Set(), tema: new Set(), party: new Set(), q: '' };
   const prerendered = $('#session').dataset.ids.split(',');
   // On /sesion/<id>.html the page IS one sitting: no rail, no calendar, no switching.
   const SITTING_PAGE = document.body.classList.contains('sesion-page');
@@ -90,13 +90,18 @@
   addEventListener('keydown', e => { if (e.key === 'Escape') closeCal(); });
 
   // ── Filters ──────────────────────────────────────────────────────────────
-  const msel = $('#f-res'), mselBtn = $('.msel-btn', msel), mselPop = $('.msel-pop', msel);
-  mselBtn.addEventListener('click', e => { e.stopPropagation(); const open = mselPop.hidden; mselPop.hidden = !open; mselBtn.setAttribute('aria-expanded', String(open)); });
-  document.addEventListener('click', e => { if (!mselPop.hidden && !msel.contains(e.target)) { mselPop.hidden = true; mselBtn.setAttribute('aria-expanded', 'false'); } });
-  mselPop.addEventListener('change', e => { const k = e.target.value; state.v.has(k) ? state.v.delete(k) : state.v.add(k); update(); });
+  // Three multi-selects (verdict, topic, party): one open at a time.
+  const msel = $('#f-res'), mselPop = $('.msel-pop', msel);
+  const mselSets = [[msel, state.v], [$('#f-tema'), state.tema], [$('#f-party'), state.party]];
+  const closeMsels = except => mselSets.forEach(([m]) => { if (m !== except) { $('.msel-pop', m).hidden = true; $('.msel-btn', m).setAttribute('aria-expanded', 'false'); } });
+  mselSets.forEach(([m, set]) => {
+    const btn = $('.msel-btn', m), pop = $('.msel-pop', m);
+    btn.addEventListener('click', e => { e.stopPropagation(); const open = pop.hidden; closeMsels(m); pop.hidden = !open; btn.setAttribute('aria-expanded', String(open)); });
+    pop.addEventListener('change', e => { const k = e.target.value; set.has(k) ? set.delete(k) : set.add(k); update(); });
+  });
+  document.addEventListener('click', e => { if (!mselSets.some(([m]) => m.contains(e.target))) closeMsels(null); });
+  addEventListener('keydown', e => { if (e.key === 'Escape') closeMsels(null); });
   $('#x-stack').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; const k = b.dataset.v; state.v.has(k) ? state.v.delete(k) : state.v.add(k); update(); });
-  $('#f-tema').addEventListener('change', e => { state.tema = e.target.value; update(); });
-  $('#f-party').addEventListener('change', e => { state.party = e.target.value; update(); });
   let qT; $('#f-q').addEventListener('input', e => { clearTimeout(qT); qT = setTimeout(() => { state.q = e.target.value.trim(); update(); }, 120); });
   $('#f-clear').addEventListener('click', () => { clearFilters(); update(); });
   $('#filters-toggle').addEventListener('click', e => {
@@ -104,19 +109,26 @@
     $('#panel').classList.toggle('open', open); e.currentTarget.setAttribute('aria-expanded', String(open));
   });
   function clearFilters() {
-    state.v.clear(); state.tema = state.party = state.q = '';
-    $('#f-tema').value = $('#f-party').value = $('#f-q').value = '';
+    state.v.clear(); state.tema.clear(); state.party.clear(); state.q = '';
+    $('#f-q').value = '';
   }
   const tally = (arr, f) => arr.reduce((m, c) => { const k = f(c); if (k) m[k] = (m[k] || 0) + 1; return m; }, {});
-  const options = (o, label) => Object.entries(o).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<option value="${esc(k)}">${esc(label(k))} (${n})</option>`).join('');
+  // Topic and party options: everything in the sitting, most frequent first.
+  const options = (o, label, set) => Object.entries(o).sort((a, b) => b[1] - a[1]).map(([k, n]) =>
+    `<label class="msel-opt msel-opt-plain"><input type="checkbox" value="${esc(k)}"${set.has(k) ? ' checked' : ''} /><span>${esc(label(k))}</span><span class="n">${n}</span></label>`).join('');
   function fillSelects() {
-    $('#f-tema').innerHTML = '<option value="">Temática</option>' + options(tally(state.recs, r => r.tm || 'other'), temaLabel);
-    $('#f-party').innerHTML = '<option value="">Partido</option>' + options(tally(state.recs, r => r.p), p => p);
+    $('.msel-pop', $('#f-tema')).innerHTML = options(tally(state.recs, r => r.tm || 'other'), temaLabel, state.tema);
+    $('.msel-pop', $('#f-party')).innerHTML = options(tally(state.recs, r => r.p), p => p, state.party);
   }
+  const syncMsel = (m, set) => {
+    const n = $('.msel-n', m); n.hidden = !set.size; n.textContent = set.size;
+    m.classList.toggle('is-set', set.size > 0);
+    m.querySelectorAll('input').forEach(i => { i.checked = set.has(i.value); });
+  };
 
   const base = () => {
     const q = norm(state.q);
-    return state.recs.filter(r => (!state.tema || (r.tm || 'other') === state.tema) && (!state.party || r.p === state.party)
+    return state.recs.filter(r => (!state.tema.size || state.tema.has(r.tm || 'other')) && (!state.party.size || state.party.has(r.p))
       && (!q || (r._q ??= norm(`${r.t} ${r.n} ${r.p}`)).includes(q)));
   };
   const hl = t => {
@@ -135,7 +147,8 @@
       <input type="checkbox" value="${v.k}"${state.v.has(v.k) ? ' checked' : ''} /><span class="vi" aria-hidden="true">${v.i}</span><span>${esc(v.long)}</span><span class="n">${counts[v.k]}</span></label>`).join('');
     const n = $('.msel-n', msel); n.hidden = !state.v.size; n.textContent = state.v.size;
     msel.classList.toggle('is-set', state.v.size > 0);
-    const active = state.v.size + !!state.tema + !!state.party + !!state.q;
+    syncMsel($('#f-tema'), state.tema); syncMsel($('#f-party'), state.party);
+    const active = state.v.size + state.tema.size + state.party.size + !!state.q;
     $('#f-clear').hidden = !active;
     $('#ft-badge').hidden = !active; $('#ft-badge').textContent = active;
     const stack = $('#x-stack');

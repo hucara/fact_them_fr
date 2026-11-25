@@ -1,1 +1,1 @@
-supabase>=2.0.0
+supabase>=2.0.0,<3   # a major release could change the client API

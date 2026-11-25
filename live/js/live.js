@@ -2409,6 +2409,12 @@ function syncTopbar() {
 new MutationObserver(syncTopbar).observe($('session-title'), { childList: true, characterData: true, subtree: true });
 new MutationObserver(syncTopbar).observe($('onair'), { attributes: true, childList: true });
 
+/* The footer's contact address, assembled here as on the site (js/ui.js). */
+document.querySelectorAll('a.footer-email').forEach((el) => {
+  const a = `${el.dataset.u || 'contacto'}@${el.dataset.d || 'facthem.es'}`;
+  el.href = `mailto:${a}`; el.textContent = a;
+});
+
 /* Phones: the ☰ menu (as on the rest of the site, js/ui.js). */
 (() => {
   const btn = document.querySelector('.menu-btn'), nav = $('mnav');

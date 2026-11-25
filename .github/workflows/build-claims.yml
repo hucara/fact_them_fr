@@ -39,10 +39,13 @@ jobs:
           SUPABASE_ANON: ${{ secrets.SUPABASE_ANON }}
         run: python build_claims.py
 
+      - name: Keep only the site (sources and tooling are not published)
+        run: rm -rf build_claims.py site_chrome.py requirements.txt REDESIGN_PLAN.md templates tools __pycache__
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .   # deploy the whole repo dir (claim/ now included after generation)
+          path: .   # the generated site (sources removed in the step above)
 
       - name: Deploy to GitHub Pages
         id: deploy

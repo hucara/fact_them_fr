@@ -305,7 +305,15 @@ body.admin .brand-tag { display: inline; margin-left: -20px; }
 @keyframes card-flash { 0% { border-color: var(--c); box-shadow: 0 0 0 1px var(--c), 0 8px 30px -8px color-mix(in oklab, var(--c) 45%, transparent); } 100% { border-color: var(--line); box-shadow: none; } }
 
 /* ── Footer ──────────────────────────────────────────────────────────────── */
-.footer { border-top: 1px solid var(--line); padding: 20px var(--gutter); font-size: 12px; line-height: 1.5; color: var(--muted); }
+.footer { border-top: 1px solid var(--line); }
+.footer-inner { max-width: var(--max); margin: 0 auto; padding: 40px var(--gutter) 32px; display: grid; grid-template-columns: auto 1fr auto; gap: 24px 40px; align-items: center; font-size: 13px; }
+.footer-note { grid-column: 1 / -1; margin: 0; color: var(--muted); }
+.footer nav { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.footer nav a, .footer-social a { color: var(--text-2); text-decoration: none; }
+.footer nav a:hover, .footer-social a:hover { color: var(--text); }
+.footer-social { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+.footer-support { color: var(--muted); }
+@media (max-width: 860px) { .footer-inner { grid-template-columns: 1fr; } }
 
 /* ── Real page additions ─────────────────────────────────────────────────── */
 /* the participants' rail and how the speaker was identified: operator page only */
@@ -416,8 +424,8 @@ button.btn.admin.on { background: rgba(217, 112, 138, .12); }
    speaker and transcript); the claims column scrolls inside, the verdict
    bar fixed at its top. The picker grid and the operator page scroll as usual. */
 @media (min-width: 861px) {
-  body.live-body:not(.admin):not(.replay-picker) { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
-  body.live-body:not(.admin):not(.replay-picker) .footer { display: none; }
+  body.live-body:not(.admin):not(.replay-picker):not(.idle) { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+  body.live-body:not(.admin):not(.replay-picker):not(.idle) .footer { display: none; }
   body:not(.admin):not(.replay-picker) .live { flex: 1; min-height: 0; width: 100%; max-width: 1680px; display: flex; flex-direction: column; padding-top: 8px; padding-bottom: 16px; }
   body:not(.admin):not(.replay-picker) .live-head { flex: none; padding: 6px 0 16px; }
   body:not(.admin):not(.replay-picker) .live-cols { flex: 1; min-height: 0; align-items: stretch;
@@ -443,7 +451,7 @@ button.btn.admin.on { background: rgba(217, 112, 138, .12); }
    counter or filters. (mock.css) ────────────────────────────────────────── */
 @media (max-width: 860px) {
   body:not(.admin).live-body { overflow: hidden; }
-  body:not(.admin) .footer { display: none; }
+  body:not(.admin):not(.replay-picker) .footer { display: none; }
   /* The whole live view is pinned under the top bar: video and bar never
      move; only the feed scrolls (also on iOS Safari). */
   body:not(.admin) .live { position: fixed; top: 60px; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; height: auto; padding: 0; max-width: none; background: var(--bg); }

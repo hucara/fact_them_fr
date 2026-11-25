@@ -40,7 +40,7 @@
   const list = document.getElementById('r-list'); if (!list) return;
   const $ = id => document.getElementById(id);
   const { norm } = window.FT;
-  const cards = [...list.querySelectorAll('.card')].map(el => ({ el, v: el.dataset.v, t: el.dataset.t, q: norm(el.querySelector('.claim-q').textContent) }));
+  const cards = [...list.querySelectorAll('.card')].map(el => ({ el, v: el.dataset.v, t: el.dataset.t, q: norm(el.querySelector('.claim-q').textContent + ' ' + (el.querySelector('.card-meta-inline')?.textContent || '')) }));   // text, topic and region
   const st = { v: '', t: '', q: '' };
   function apply() {
     let shown = 0;

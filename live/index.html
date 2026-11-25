@@ -25,7 +25,7 @@
   <!-- Inter is self-hosted by facthem.es (/assets/fonts); elsewhere (the runner's
        own page) the system font stands in. -->
   <link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="css/live.css?v=8c3649fcb0" />
+  <link rel="stylesheet" href="css/live.css?v=00ffad704f" />
 </head>
 <body class="live-body">
   <!-- Structure, class names and motion follow fact_them_fr/mockup/live.html. -->
@@ -107,15 +107,26 @@
     </section>
   </main>
 
-  <footer class="footer">
-    Las verificaciones se generan en directo mediante un proceso automatizado con IA y pueden contener
-    inexactitudes. El archivo definitivo se reverifica después con el pipeline completo.
-  </footer>
+  <!-- The site's footer (fact_them_fr/site_chrome.footer), with the live page's own note. -->
+  <footer class="footer"><div class="footer-inner">
+    <span class="wordmark">Facthem</span>
+    <nav aria-label="Pie">
+      <a href="/metodologia.html">Metodología</a><a href="/archive.html">Archivo</a><a href="/blog.html">Blog</a><a href="/acerca.html">Acerca de</a><a href="/aviso.html">Aviso legal</a>
+    </nav>
+    <div class="footer-social">
+      <a href="https://x.com/facthem_es" target="_blank" rel="noopener">X</a>
+      <a href="https://www.youtube.com/@facthem_es" target="_blank" rel="noopener">YouTube</a>
+      <a class="footer-email" href="#" data-u="contacto" data-d="facthem.es">Contacto</a>
+      <span class="footer-support">♥ Apóyanos: <a href="https://paypal.me/hcasero" target="_blank" rel="noopener">PayPal</a> · <a href="https://ko-fi.com/hugocasero" target="_blank" rel="noopener">Ko-fi</a></span>
+    </div>
+    <p class="footer-note">Las verificaciones se generan en directo mediante un proceso automatizado con IA y pueden contener
+      inexactitudes. El archivo definitivo se reverifica después con el pipeline completo.</p>
+  </div></footer>
 
   <!-- Data plane. Empty = same origin (local API, or nginx/cloudflared on aton).
        Set to the R2 custom domain (e.g. https://live-data.facthem.es/) when the
        page is hosted elsewhere. `?data=` on the URL overrides it. -->
   <script>window.LIVE_DATA_BASE = window.LIVE_DATA_BASE || 'https://pub-4b0592b162234f079cbe05777d9aa1f2.r2.dev/';</script>
-  <script src="js/live.js?v=839538af84"></script>
+  <script src="js/live.js?v=555ec13a16"></script>
 </body>
 </html>

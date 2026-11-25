@@ -620,7 +620,7 @@ CLAIM_FIELDS = (
     "id, session_id, politician_id, intervention_id, texto_normalizado, texto_original, "
     "ambito_geografico, ambito_tematico"
 )
-POLITICIAN_FIELDS = "id, nombre_completo, partido, grupo_parlamentario"
+POLITICIAN_FIELDS = "id, nombre_completo, partido, grupo_parlamentario, genero"
 SESSION_FIELDS = "id, fecha, organo, legislatura, tipo, numero"
 VERIFICATION_FIELDS = "claim_id, resultado, confidence_score, afirmacion_correcta, omisiones, errores, fuentes, created_at"
 
@@ -760,6 +760,7 @@ def fetch_all_claims(supabase):
         p["id"]: p
         for p in _paginate_table(supabase, "politician", POLITICIAN_FIELDS, "políticos", page_size=1000)
     }
+    POL_GENDER.update({pid: p.get("genero") for pid, p in politicians.items() if p.get("genero")})
     sessions = {
         s["id"]: s
         for s in _paginate_table(supabase, "session", SESSION_FIELDS, "sesiones", page_size=1000)
@@ -1202,17 +1203,32 @@ def build_roster(claims_with_slugs, salaries=None):
     return roster
 
 
+POL_GENDER = {}   # politician id → 'M' / 'F' (politician.genero), filled by fetch_all_claims
+
+
+def gendered(label, genero):
+    """'Ministro/a' → 'Ministra' (F) / 'Ministro' (M); unknown keeps '/a'."""
+    if genero not in ("M", "F"):
+        return label
+    fem = genero == "F"
+    label = re.sub(r"(\w+)o/a\b", lambda m: m.group(1) + ("a" if fem else "o"), label)
+    return re.sub(r"(\w+)e/a\b", lambda m: m.group(1) + ("a" if fem else "e"), label)
+
+
 def _person_role(info):
-    """'Ministro/a' / 'Diputado/a por Asturias' / '' (debate guests)."""
+    """'Ministra' / 'Diputado por Asturias' / '' (debate guests), in the person's
+    gender when the politician record has it ('Diputado/a' otherwise)."""
     sal = info.get("salary") or {}
+    g = next((POL_GENDER[p] for p in info.get("pol_ids") or () if p in POL_GENDER),
+             POL_GENDER.get(sal.get("politician_id")))
     gov = _salary_value(sal, ["government_role"])
     if gov:
-        return GOVERNMENT_ROLE_LABELS.get(gov, snake_to_label(gov))
+        return gendered(GOVERNMENT_ROLE_LABELS.get(gov, snake_to_label(gov)), g)
     if info.get("grupo") == "Cargo de Gobierno":
         return "Miembro del Gobierno"
     if sal:
         circ = sal.get("circunscripcion")
-        return f"Diputado/a por {circ}" if circ and circ.casefold() != "cargo de gobierno" else "Diputado/a"
+        return gendered(f"Diputado/a por {circ}" if circ and circ.casefold() != "cargo de gobierno" else "Diputado/a", g)
     return ""
 
 
@@ -1478,16 +1494,18 @@ def generate_directory(people):
     for i, p in enumerate(people):
         photo = (f'<img src="{esc(p["f"])}" alt="" loading="lazy" width="44" height="44" />' if p["f"]
                  else f'<span class="person-ph" aria-hidden="true">{esc("".join(w[0] for w in p["n"].split()[:2]).upper())}</span>')
-        meta = " · ".join(esc(x) for x in (p["p"], re.sub(r"^Diputado/a por ", "", p["c"])) if x)
+        meta = " · ".join(esc(x) for x in (p["p"], re.sub(r"^Diputad[oa](?:/a)? por ", "", p["c"])) if x)
         stats = []
         if p["k"]:
             stats.append(f'<span class="person-k">{p["k"]} afirmaci{"ón" if p["k"] == 1 else "ones"}</span>')
         if p["m"]:
             stats.append(f'<span class="person-sal">{_format_eur(p["m"], compact=True)}/mes</span>')
+        # search both forms of a neutral role ("Ministro/a" → "ministro ministra")
+        role_q = re.sub(r"(\w+)([oe])/a\b", r"\1\2 \1a", p["c"])
         items.append(
             f'<li><a class="person" href="/politician/{esc(p["s"])}.html" data-o="{esc(_sort_key(p["o"]))}" '
             f'data-p="{esc(p["p"] or "Sin partido")}" data-k="{p["k"]}" data-m="{p["m"]}" '
-            f'data-q="{esc(_sort_key(p["n"] + " " + p["p"] + " " + p["c"]))}">{photo}'
+            f'data-q="{esc(_sort_key(p["n"] + " " + p["p"] + " " + role_q))}">{photo}'
             f'<span class="person-txt"><span class="person-name">{esc(p["n"])}</span>'
             f'<span class="person-meta"><span class="pdot" style="--pc:{party_color(p["p"])}"></span>{meta}</span></span>'
             f'<span class="person-stats">{"".join(stats)}</span></a></li>')
@@ -1502,7 +1520,7 @@ def generate_directory(people):
         lazy = ' loading="lazy"' if i >= 4 else ""
         photo = (f'<img src="{esc(p["f"])}" alt="" width="88" height="88"{lazy} />' if p["f"]
                  else f'<span class="person-ph" aria-hidden="true">{esc("".join(w[0] for w in p["n"].split()[:2]).upper())}</span>')
-        role = re.sub(r"^Diputado/a por .*$", "Diputado/a", p["c"]) or ""
+        role = re.sub(r"^(Diputad[oa](?:/a)?) por .*$", r"\1", p["c"]) or ""
         stats = [f'{p["k"]} afirmaci{"ón" if p["k"] == 1 else "ones"}']
         if p["m"]:
             stats.append(f'{_format_eur(p["m"], compact=True)}/mes')
@@ -1514,8 +1532,8 @@ def generate_directory(people):
             f'<span class="vip-stats">{"".join(f"<span>{x}</span>" for x in stats)}</span></a></li>')
     popts = "".join(f'<option value="{esc(k)}">{esc(k)} ({n})</option>'
                     for k, n in sorted(parties.items(), key=lambda kv: -kv[1]))
-    n_dip = sum(1 for p in people if p["c"].startswith("Diputado"))
-    n_gov = sum(1 for p in people if p["c"] and not p["c"].startswith("Diputado"))
+    n_dip = sum(1 for p in people if p["c"].startswith("Diputad"))
+    n_gov = sum(1 for p in people if p["c"] and not p["c"].startswith("Diputad"))
     body = f"""<main class="page" id="main">
 <header class="page-head"><h1>Representantes</h1>
 <p class="muted">Diputados del Congreso y miembros del Gobierno: sus afirmaciones verificadas y su retribución pública.</p></header>
@@ -1706,8 +1724,8 @@ def render_session_block(s, recs):
 <div class="panel-toggle-row"><button type="button" class="filters-toggle" id="filters-toggle" aria-expanded="false" aria-controls="panel-controls"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 6h16M8 12h12M12 18h8"/></svg>Filtros<span class="ft-badge" id="ft-badge" hidden></span><svg class="chev" viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button><span class="ft-count" id="ft-count"><strong>{len(recs)}</strong> afirmaciones</span></div>
 <div class="panel-controls" id="panel-controls">
 <div class="msel" id="f-res"><button type="button" class="msel-btn" aria-haspopup="true" aria-expanded="false"><span class="msel-label">Resultado</span><span class="msel-n" hidden></span>{CHEV}</button><div class="msel-pop" role="group" aria-label="Filtrar por resultado" hidden></div></div>
-<label class="select"><span class="sr">Temática</span><select id="f-tema"><option value="">Temática</option>{topts}</select></label>
-<label class="select"><span class="sr">Partido</span><select id="f-party"><option value="">Partido</option>{popts}</select></label>
+<div class="msel" id="f-tema"><button type="button" class="msel-btn" aria-haspopup="true" aria-expanded="false"><span class="msel-label">Temática</span><span class="msel-n" hidden></span>{CHEV}</button><div class="msel-pop" role="group" aria-label="Filtrar por temática" hidden></div></div>
+<div class="msel" id="f-party"><button type="button" class="msel-btn" aria-haspopup="true" aria-expanded="false"><span class="msel-label">Partido</span><span class="msel-n" hidden></span>{CHEV}</button><div class="msel-pop" role="group" aria-label="Filtrar por partido" hidden></div></div>
 <label class="search">{site_chrome.ICON_SEARCH}<input id="f-q" type="search" placeholder="Buscar" aria-label="Buscar en esta sesión" /></label>
 <button type="button" class="link-btn" id="f-clear" hidden>Limpiar</button>
 <p class="panel-count" id="count-line" aria-live="polite"><strong>{len(recs)}</strong> afirmaciones</p>
