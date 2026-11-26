@@ -163,6 +163,14 @@ button { font: inherit; color: inherit; }
   -webkit-mask-image: linear-gradient(to right, #000 50%, transparent 98%); /* flipped by scaleX(-1) */
           mask-image: linear-gradient(to right, #000 50%, transparent 98%); /* flipped by scaleX(-1) */
 }
+/* Wider than --max + 80px: the image stops short of the screen's right edge, so fade
+   that edge too (on-screen right is the image's left, it is mirrored). */
+@media (min-width: 1441px) {
+  .hero-art img {
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 18%, #000 50%, transparent 98%);
+            mask-image: linear-gradient(to right, transparent 0%, #000 18%, #000 50%, transparent 98%);
+  }
+}
 @keyframes settle { from { opacity: 0; transform: scaleX(-1) scale(1.06); } to { opacity: 1; transform: scaleX(-1) scale(1); } }
 .hero-art::after {   /* bottom fade + film grain */
   content: ''; position: absolute; inset: 0;
