@@ -190,6 +190,7 @@ body.admin .brand-tag { display: inline; margin-left: -20px; }
 .f-item.filtered { display: none; }
 .feed { margin: 0; padding: 14px 0 0; display: grid; gap: 10px; overflow-anchor: none; grid-template-columns: minmax(0, 1fr); }
 .feed-empty { padding: 40px 0; text-align: center; color: var(--muted); font-size: 14px; }
+.feed-empty.waiting { padding: 48px 12px; font-size: 19px; font-weight: 700; line-height: 1.5; letter-spacing: -.01em; color: var(--text); }
 
 /* live card: same surface as the session cards */
 .f-item { position: relative; display: grid; gap: 10px; padding: 16px 18px; border-radius: var(--r); border: 1px solid var(--line); background: var(--bg-2); min-width: 0; grid-template-columns: minmax(0, 1fr); }

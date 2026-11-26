@@ -2205,20 +2205,40 @@ async function pollManifest() {
 setInterval(pollManifest, 3000);
 
 const PAUSED_MESSAGE = 'La verificación está pausada temporalmente. Se reanudará cuando continúe el debate.';
+// A session started with --paused (the stream opens on the pre-debate show):
+// nothing has been checked yet, so "se reanudará" would be wrong.
+const NOT_STARTED_MESSAGE = 'La verificación todavía no está activa. Empezará cuando comience el debate.';
+let switchEverOn = false;          // fact-checking has been on at some point this session
+let feedEmptyText = null;          // the panel's own placeholder, put back once checking starts
 function renderSwitch(active) {
   switchActive = active;
+  if (active !== false) switchEverOn = true;
   // Everyone sees the pause, not just the operator: the transcript box
   // carries the notice (nothing else arrives while paused), and the pill
   // says "en pausa" instead of "en directo".
   const paused = active === false;
+  const waiting = paused && !switchEverOn && !claims.size;
   const cap = $('caption');
   cap.classList.toggle('paused', paused);
-  if (paused) { captionParts = []; cap.textContent = PAUSED_MESSAGE; }
+  if (paused) { captionParts = []; cap.textContent = waiting ? NOT_STARTED_MESSAGE : PAUSED_MESSAGE; }
   else if (cap.classList.contains('was-paused')) { cap.textContent = ''; }
   cap.classList.toggle('was-paused', paused);
+  // The claims panel is where people look: say it there too, big, until the
+  // switch first goes on (then back to the usual "Escuchando el debate…").
+  const empty = $('feed-empty');
+  if (empty && !empty.classList.contains('idle')) {
+    if (waiting) {
+      feedEmptyText ??= empty.textContent;
+      empty.textContent = NOT_STARTED_MESSAGE;
+      empty.classList.add('waiting');
+    } else if (empty.classList.contains('waiting')) {
+      empty.textContent = feedEmptyText ?? '';
+      empty.classList.remove('waiting');
+    }
+  }
   const pill = $('onair');
   pill.classList.toggle('paused', paused);
-  pill.textContent = paused ? 'En pausa' : 'En directo';
+  pill.textContent = waiting ? 'En espera' : paused ? 'En pausa' : 'En directo';
   const btn = $('btn-switch');
   btn.textContent = active === false ? '▶ Activar verificación' : '⏸ Pausar verificación';
   btn.classList.toggle('on', active !== false);
